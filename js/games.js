@@ -17,7 +17,7 @@ const App = (() => {
   let guest = ls.get('baba_guest', null);
   if (guest && inviteCode(guest.name) !== guest.code) guest = null;
   const isOwner = () => unlocked, isGuest = () => !unlocked && !!guest, canIn = () => unlocked || !!guest;
-  const OWNER_ONLY = ['is', 'erisim'];
+  const OWNER_ONLY = ['is', 'erisim', 'cbn'];
   const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const root = () => document.getElementById('view');
   let cleanup = [];
@@ -88,14 +88,15 @@ const App = (() => {
       { id: 'dost', n: '02', t: 'Dost', d: 'Seni dinleyen sohbet arkadaşı', cls: 'c-dost' },
       { id: 'oyunlar', n: '03', t: 'Oyunlar', d: 'Süper Lig Draft · Empires of the Valley · 2048 · Sudoku · Mayın · Blok', cls: 'c-oyun' },
       { id: 'seyahat', n: '04', t: 'Seyahat', d: 'Booking · Airbnb · Skyscanner · Gezilerim 3D dünya', cls: 'c-sey' },
-      { id: 'foto', n: '05', t: 'Fotoğraf', d: 'Pexels · günün fotoğrafçısı · 3D sokak galerisi', cls: 'c-foto' }
+      { id: 'foto', n: '05', t: 'Fotoğraf', d: 'Pexels · günün fotoğrafçısı · 3D sokak galerisi', cls: 'c-foto' },
+      ...(isOwner() ? [{ id: 'cbn', n: '06', t: 'CBN<i>Personal OS</i>', d: 'Notlar · görevler · takvim · hızlı kayıt — ikinci beynin, yalnızca bu cihazda', cls: 'c-cbn' }] : [])
     ];
     root().innerHTML = `
       <section class="hero hub-hero"><p class="eyebrow">${esc(name || '')} · ${d.toLocaleDateString('tr-TR', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
         <h1 class="display xl">BABA<em>.</em></h1>
         <p class="lead">İş, dinlenme, oyun ve yolculuk — hepsi tek yerde, sadece davetlilere açık.</p></section>
       <section class="hub">${CATS.map(c => `<a class="hub-card ${c.cls}" href="#${c.id}"><span class="hub-n">${c.n}</span><h2>${c.t}</h2><p>${c.d}</p><span class="arrow">↗</span></a>`).join('')}</section>
-      <footer class="foot"><div class="foot-word">BABA<span>.</span></div><div class="foot-row">${isOwner() ? '<button class="link" data-a="pin">Şifreyi değiştir</button><a class="link" href="#erisim">Davetler &amp; erişim</a><button class="link" data-a="lock">Kilitle</button>' : '<button class="link" data-a="gout">Bu cihazdan çık</button>'}<span class="muted">Yalnızca davetliler için · sürüm 12</span></div></footer>`;
+      <footer class="foot"><div class="foot-word">BABA<span>.</span></div><div class="foot-row">${isOwner() ? '<button class="link" data-a="pin">Şifreyi değiştir</button><a class="link" href="#erisim">Davetler &amp; erişim</a><button class="link" data-a="lock">Kilitle</button>' : '<button class="link" data-a="gout">Bu cihazdan çık</button>'}<span class="muted">Yalnızca davetliler için · sürüm 13</span></div></footer>`;
     const q = s => root().querySelector(s);
     if (q('[data-a=pin]')) q('[data-a=pin]').onclick = () => { click(); changePin(); };
     if (q('[data-a=lock]')) q('[data-a=lock]').onclick = () => { click(); lock(); };
@@ -412,7 +413,7 @@ const App = (() => {
 
   /* ---------------- yönlendirme ---------------- */
   function lockScreen() {
-    document.body.classList.add('locked'); document.body.classList.remove('work-mode', 'dark-mode');
+    document.body.classList.add('locked'); document.body.classList.remove('work-mode', 'dark-mode', 'cbn-mode', 'cbn-dark');
     const m = location.hash.match(/davet=([^&]+)&ad=([^&]+)/), pc = m ? decodeURIComponent(m[1]) : '', pn = m ? decodeURIComponent(m[2]) : '';
     root().innerHTML = `<section class="hero lockhero"><p class="eyebrow">Özel alan · yalnızca davetliler</p><h1 class="display xl">BABA<em>.</em></h1>
       <div class="lock-opts">
@@ -431,16 +432,21 @@ const App = (() => {
   }
   function render() {
     leave(); if (typeof Draft !== 'undefined') Draft.stop();
+    if (typeof CBN !== 'undefined') CBN.leave();
     document.querySelectorAll('.bb-pin-ov').forEach(e => e.remove());
     if (!canIn()) return lockScreen();
     document.body.classList.remove('locked');
     let r = location.hash.slice(1); if (r.startsWith('davet=')) { r = ''; history.replaceState(null, '', location.pathname); }
-    if (OWNER_ONLY.includes(r) && !isOwner()) r = '';
+    const isCbn = r === 'cbn' || r.startsWith('cbn/');
+    if ((OWNER_ONLY.includes(r) || isCbn) && !isOwner()) r = '';
+    const cbnOn = isCbn && r !== '' && typeof CBN !== 'undefined';
+    document.body.classList.toggle('cbn-mode', cbnOn); if (!cbnOn) document.body.classList.remove('cbn-dark');
     document.body.classList.toggle('guest', isGuest());
     document.body.classList.toggle('work-mode', r === 'is');
     document.body.classList.toggle('dark-mode', ['seyahat', 'gezilerim', 'foto'].includes(r));
-    document.querySelectorAll('.nav a[data-r]').forEach(a => a.classList.toggle('on', a.dataset.r === r || (a.dataset.r === 'oyunlar' && GAMES.some(g => g.id === r))));
-    if (r === 'draft') { root().innerHTML = '<section class="game-page"><div class="gp-head"><a class="back" href="#oyunlar">← Oyunlar</a></div><div id="draftRoot"></div></section>'; window.scrollTo(0, 0); Draft.open(root().querySelector('#draftRoot')); }
+    document.querySelectorAll('.nav a[data-r]').forEach(a => a.classList.toggle('on', a.dataset.r === r || (a.dataset.r === 'cbn' && cbnOn) || (a.dataset.r === 'oyunlar' && GAMES.some(g => g.id === r))));
+    if (cbnOn) { root().innerHTML = '<div id="cbnRoot"></div>'; window.scrollTo(0, 0); CBN.open(root().querySelector('#cbnRoot'), r); }
+    else if (r === 'draft') { root().innerHTML = '<section class="game-page"><div class="gp-head"><a class="back" href="#oyunlar">← Oyunlar</a></div><div id="draftRoot"></div></section>'; window.scrollTo(0, 0); Draft.open(root().querySelector('#draftRoot')); }
     else if (r === 'is' && typeof Is !== 'undefined') { root().innerHTML = '<div id="isRoot"></div>'; window.scrollTo(0, 0); Is.open(root().querySelector('#isRoot')); }
     else if (r === 'dost' && typeof Dost !== 'undefined') { root().innerHTML = '<section class="game-page"><div class="gp-head"><a class="back" href="#">← Ana sayfa</a></div><div id="dostRoot"></div></section>'; window.scrollTo(0, 0); Dost.open(root().querySelector('#dostRoot')); }
     else if (r === 'vadi') vadi();

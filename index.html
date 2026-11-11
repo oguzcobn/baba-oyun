@@ -11,32 +11,40 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="img/icon-180.png">
 <link rel="icon" href="img/icon-192.png">
-<link rel="stylesheet" href="css/app.css?v=12">
-<link rel="stylesheet" href="css/v2.css?v=12">
+<link rel="stylesheet" href="css/app.css?v=13">
+<link rel="stylesheet" href="css/v2.css?v=13">
+<link rel="stylesheet" href="css/cbn.css?v=13">
 <title>BABA.</title>
 </head>
 <body>
 <header class="nav">
   <a class="logo" href="#">BABA<span>.</span></a>
-  <nav class="nav-links"><a href="#is" data-r="is" class="nav-is owner-only">İş</a><a href="#dost" data-r="dost">Dost</a><a href="#oyunlar" data-r="oyunlar">Oyunlar</a><a href="#seyahat" data-r="seyahat">Seyahat</a><a href="#foto" data-r="foto">Fotoğraf</a></nav>
+  <nav class="nav-links"><a href="#is" data-r="is" class="nav-is owner-only">İş</a><a href="#dost" data-r="dost">Dost</a><a href="#oyunlar" data-r="oyunlar">Oyunlar</a><a href="#seyahat" data-r="seyahat">Seyahat</a><a href="#foto" data-r="foto">Fotoğraf</a><a href="#cbn" data-r="cbn" class="owner-only">CBN</a></nav>
   <div class="nav-r"><button class="icon" id="snd" aria-label="Ses">🔊</button><button class="pill sm" id="lockBtn">Kilitle</button></div>
 </header>
 <main id="view"></main>
-<script src="js/core.js?v=12"></script>
-<script src="js/draft-data.js?v=12"></script>
-<script src="js/draft-nat.js?v=12"></script>
-<script src="js/draft.js?v=12"></script>
-<script src="js/dost.js?v=12"></script>
-<script src="js/is.js?v=12"></script>
-<script src="js/travel.js?v=12"></script>
-<script src="js/foto.js?v=12"></script>
-<script src="js/games.js?v=12"></script>
+<script src="js/core.js?v=13"></script>
+<script src="js/draft-data.js?v=13"></script>
+<script src="js/draft-nat.js?v=13"></script>
+<script src="js/draft.js?v=13"></script>
+<script src="js/dost.js?v=13"></script>
+<script src="js/is.js?v=13"></script>
+<script src="js/travel.js?v=13"></script>
+<script src="js/foto.js?v=13"></script>
+<script src="js/cbn/core.js?v=13"></script>
+<script src="js/cbn/tasks.js?v=13"></script>
+<script src="js/cbn/notes.js?v=13"></script>
+<script src="js/cbn/calendar.js?v=13"></script>
+<script src="js/cbn/home.js?v=13"></script>
+<script src="js/cbn/settings.js?v=13"></script>
+<script src="js/games.js?v=13"></script>
 <script>
   const sb=document.getElementById('snd');sb.textContent=Snd.on?'🔊':'🔇';
   sb.onclick=()=>{sb.textContent=Snd.toggle()?'🔊':'🔇'};
   document.getElementById('lockBtn').onclick=()=>App.lock();
   App.render();
   try{Is.start()}catch(e){}
+  try{if(App.isOwner())CBN.start()}catch(e){}
   if('serviceWorker' in navigator&&location.protocol.startsWith('http')){const had=!!navigator.serviceWorker.controller;navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(r=>{r.update();document.addEventListener('visibilitychange',()=>{if(!document.hidden)r.update()})}).catch(()=>{});let done=false;navigator.serviceWorker.addEventListener('controllerchange',()=>{if(had&&!done){done=true;location.reload()}})}
 </script>
 </body>
