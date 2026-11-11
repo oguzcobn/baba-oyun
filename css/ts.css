@@ -1,0 +1,45 @@
+/* Trabzonspor sayfası — bordo (#7A1F3D) ve mavi (#56B4E9) */
+.ts{--bordo:#7A1F3D;--mavi:#56B4E9;--ink:#15121a;font-family:"Inter",var(--sans);padding-top:18px;color:var(--ink)}
+.ts *{box-sizing:border-box}
+.ts-hero{position:relative;overflow:hidden;display:flex;justify-content:space-between;align-items:flex-end;gap:18px;flex-wrap:wrap;border-radius:28px;padding:clamp(22px,4vw,48px);color:#fff;background:linear-gradient(100deg,var(--bordo) 0 50%,var(--mavi) 50% 100%)}
+.ts-hero::after{content:'';position:absolute;inset:0;background:repeating-linear-gradient(100deg,transparent 0 46px,rgba(255,255,255,.07) 46px 92px);pointer-events:none}
+.ts-hero>*{position:relative;z-index:1}
+.ts-hero h1{font-size:clamp(40px,8vw,104px);font-weight:800;letter-spacing:-.06em;line-height:.9;margin:0;text-shadow:0 2px 0 rgba(0,0,0,.18)}
+.ts-hero h1 i{font-style:normal;color:var(--mavi)}
+.ts-eye{font:600 11.5px ui-monospace,Menlo,monospace;letter-spacing:.12em;text-transform:uppercase;margin:0 0 10px;opacity:.9}
+.ts-sub{margin:10px 0 0;font-size:16px;opacity:.92}
+.ts-links{display:flex;gap:8px;flex-wrap:wrap}
+.ts-btn{display:inline-flex;align-items:center;gap:6px;background:#fff;color:var(--bordo);border:2px solid #fff;border-radius:999px;padding:12px 20px;font:inherit;font-weight:800;font-size:15px;text-decoration:none;cursor:pointer;transition:transform .15s,background .2s}
+.ts-btn:hover{transform:translateY(-2px);background:var(--ink);border-color:var(--ink);color:#fff}
+.ts-btn.ghost{background:rgba(21,18,26,.28);color:#fff;border-color:rgba(255,255,255,.7);font-weight:700}
+.ts-btn.sm{padding:6px 14px;font-size:13px;background:#fff;color:var(--bordo);border-color:var(--bordo);margin-left:8px}
+.ts-btn:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+.ts-next{margin-top:18px;border-radius:26px;padding:clamp(20px,3.4vw,38px);background:var(--ink);color:#fff}
+.ts-next .ts-eye{color:var(--mavi)}
+.ts-vs{display:flex;align-items:baseline;gap:.35em;flex-wrap:wrap;font-size:clamp(28px,5.6vw,68px);font-weight:800;letter-spacing:-.05em;line-height:1}
+.ts-vs span{opacity:.5}.ts-vs b.me{color:var(--mavi)}
+.ts-when{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-top:20px}
+.ts-when div{background:rgba(255,255,255,.08);border-radius:16px;padding:14px 16px}
+.ts-when small{display:block;font:600 11px ui-monospace,Menlo,monospace;letter-spacing:.1em;text-transform:uppercase;opacity:.7;margin-bottom:4px}
+.ts-when b{font-size:clamp(18px,2.2vw,24px);letter-spacing:-.02em}
+.ts-cd{margin:14px 0 0;font-size:14px;opacity:.85}
+.ts-cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.5fr);gap:18px;margin-top:18px;align-items:start}
+.ts-card{background:#fff;border:1px solid #e7e2ea;border-radius:24px;padding:22px}
+.ts-card h2{font-size:24px;font-weight:800;letter-spacing:-.04em;margin:0 0 14px;display:flex;align-items:baseline;gap:10px}
+.ts-card h2 small{font-size:13px;font-weight:600;color:#756d7c;letter-spacing:0}
+.ts-card h3{font:600 11.5px ui-monospace,Menlo,monospace;letter-spacing:.1em;text-transform:uppercase;color:var(--bordo);margin:16px 0 8px}
+.ts-form{display:flex;gap:6px;margin-bottom:12px}
+.ts-form i,.ts-row>i{width:30px;height:30px;flex:none;border-radius:9px;display:inline-flex;align-items:center;justify-content:center;font-style:normal;font-weight:800;font-size:13px;color:#fff;background:#8b8591}
+.ts .w{background:#12996b}.ts .d{background:#c58a00}.ts .l{background:#cf2f3f}
+.ts-row{display:flex;gap:12px;align-items:center;padding:10px 0;border-top:1px solid #eee9f0}
+.ts-row span{display:flex;flex-direction:column;min-width:0}.ts-row b{overflow-wrap:anywhere}.ts-row small{color:#756d7c;font-size:12.5px}
+.ts-squad{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:8px}
+.ts-p{display:flex;align-items:center;gap:10px;background:#f7f4f8;border-radius:14px;padding:8px 10px;min-width:0}
+.ts-p i{width:36px;height:36px;flex:none;border-radius:50%;background:var(--bordo);color:#fff;display:flex;align-items:center;justify-content:center;font-style:normal;font-weight:800;font-size:14px;border:2px solid var(--mavi)}
+.ts-p span{display:flex;flex-direction:column;min-width:0}.ts-p b{font-size:14.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ts-p small{color:#756d7c;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ts-msg{color:#756d7c;margin:8px 0}.ts-next .ts-msg{color:rgba(255,255,255,.8)}.ts>.ts-msg{padding:30px 0;text-align:center}
+.ts-note{font-size:12.5px;color:#756d7c;margin:12px 0 0}
+.ts-foot{font-size:12.5px;color:#756d7c;margin:16px 0 0;line-height:1.7}
+@media(max-width:900px){.ts-cols{grid-template-columns:minmax(0,1fr)}}
+.hub-card.c-ts{grid-column:1/-1!important;min-height:170px;color:#fff;background:linear-gradient(100deg,#7A1F3D 0 50%,#56B4E9 50% 100%)}
+@media(prefers-reduced-motion:reduce){.ts *{transition:none!important}}

@@ -35,3 +35,6 @@ Oyuncu puanları oyun içi tahmini değerlerdir. Şifre yalnızca çocukların y
 - **Veri:** IndexedDB şema v2 (`items` deposu eklendi; mevcut kayıtlar korunur). Yedekler v1 ve v2 biçimini içe alır.
 - **Henüz yok (altyapı gerekir):** bulut senkronizasyonu, Vault, arka plan bildirimleri, Google Calendar, kur dönüşümü.
 - **Dosyalar:** `js/cbn/{kit,life,money,work}.js` eklendi.
+
+### Trabzonspor sayfası (sürüm 17)
+`#ts` — en yakın maç (tarih, Türkiye saati, geri sayım), son 5 maç, kadro, TS Club ve resmî site bağlantıları. Veri tarayıcıda ücretsiz, anahtarsız kaynaklardan çekilir (maçlar: TheSportsDB herkese açık API; kadro: Wikipedia, olmazsa TheSportsDB) ve 30 dk önbelleklenir. Dosyalar: `js/ts.js`, `css/ts.css`.
