@@ -59,7 +59,7 @@ const App = (() => {
 
   /* ---------------- menü ---------------- */
   const GAMES = [
-    { id: 'draft', name: 'Süper Lig Draft', tags: ['Futbol', '18 kulüp'], best: () => ls.get('draft_best', 0) + ' p' },
+    { id: 'draft', name: 'Süper Lig Draft', tags: ['Futbol', '18 kulüp', 'İstatistik'], best: () => ls.get('draft_best', 0) + ' p' },
     { id: '2048', name: '2048', tags: ['Bulmaca', 'Kaydır'], best: () => ls.get('bb_best_2048', 0) },
     { id: 'sudoku', name: 'Sudoku', tags: ['Mantık', '3 seviye'], best: () => { const b = ls.get('bb_best_sudoku', null); return b ? fmtT(b) : '—'; } },
     { id: 'mines', name: 'Mayın Tarlası', tags: ['Klasik', 'Dikkat'], best: () => { const b = ls.get('bb_best_mines', null); return b ? fmtT(b) : '—'; } },

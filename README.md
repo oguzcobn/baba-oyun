@@ -2,7 +2,7 @@
 
 Oğuzhan'ın şifreli oyun odası (Lale & Ela oyunundan ayrı uygulama).
 
-- **Süper Lig Draft** — çark 18 Süper Lig kulübü arasında eşit şansla döner (karıştırılmış torba: her kulüp bir kez gelir). Gelen kulübün son 10 yıllık kadrosundan seç, 11+2 kur, teknik direktör ve taktik seç, 34 maçlık sezonu oynat (hedef 102 puan). Güncel kadro puanları EA SPORTS FC 27 resmî derecelendirmelerinden (ea.com); geçmiş sezon oyuncuları "tahmini" etiketlidir.
+- **Süper Lig Draft** — 2026-27 Trendyol Süper Lig'in 18 kulübü, tamamı EA SPORTS FC 27 resmî kadroları ve puanlarıyla (ea.com); ayrıca son 10 yılın yıldızları ("tahmini" etiketli). Kulüpler karıştırılmış bir torbadan eşit şansla çekilir. 11+2 kur, teknik direktör ve taktik seç, 34 maç oyna. Rakipler kendi kadrolarıyla oynar; sezon sonunda puan durumu, gol krallığı, asist krallığı, altın eldiven ve yılın oyuncusu.
 - **Dost** — seni yargılamadan dinleyen sohbet arkadaşı: duygu yansıtma, açık uçlu sorular, özetleme, düşünce kaydı, kutu nefesi, 5-4-3-2-1 topraklanma. Psikolog değildir; kriz ifadelerinde 112'ye yönlendirir. Sohbet yalnızca cihazda saklanır. İsteğe bağlı gelişmiş mod: kendi Claude API anahtarın (yalnızca bu cihazda tutulur).
 - **2048**, **Sudoku**, **Mayın Tarlası**, **Blok Yığ**
 
