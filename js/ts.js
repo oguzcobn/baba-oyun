@@ -8,7 +8,7 @@
    ===================================================================== */
 const TS = (() => {
   const API = 'https://www.thesportsdb.com/api/v1/json/123/', KEY = 'baba_ts_cache2', TTL = 30 * 60000;
-  const LINKS = [['TS Club', 'https://www.tsclub.com.tr/'], ['Resmî site', 'https://www.trabzonspor.org.tr/']];
+  const LINKS = [['TS Club', 'https://trabzonspor.com.tr/'], ['Resmî site', 'https://www.trabzonspor.org.tr/']];
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const TZ = 'Europe/Istanbul', isTS = n => /trabzonspor/i.test(n || '');
   const POS = { GK: 'Kaleci', DF: 'Defans', MF: 'Orta saha', FW: 'Forvet' };
