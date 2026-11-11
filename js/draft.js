@@ -5,6 +5,7 @@
 const Draft = (() => {
   const ls = { get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } }, set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} } };
   const rnd = n => Math.floor(Math.random() * n);
+  const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = rnd(i + 1); [a[i], a[j]] = [a[j], a[i]]; } return a; };
   const avg = a => a.length ? a.reduce((s, v) => s + v, 0) / a.length : 70;
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   let S = null, el = null, timers = [];
@@ -12,7 +13,7 @@ const Draft = (() => {
   function stop() { timers.forEach(clearTimeout); timers = []; }
 
   function fresh(mode) {
-    return { mode: mode || ls.get('draft_mode', 'normal'), picks: {}, bench: [null, null], jokers: 2, club: null, rot: 0, coach: null, tac: { tempo: 'dengeli', pres: 'orta', hat: 'dengeli', yon: 'dengeli' }, phase: 'draft' };
+    return { v: 2, bag: shuffle(DRAFT_CLUBS.map((c, i) => i)), mode: mode || ls.get('draft_mode', 'normal'), picks: {}, bench: [null, null], jokers: 2, club: null, rot: 0, coach: null, tac: { tempo: 'dengeli', pres: 'orta', hat: 'dengeli', yon: 'dengeli' }, phase: 'draft' };
   }
   const picked = () => [...Object.values(S.picks), ...S.bench].filter(Boolean);
   const count = () => picked().length;
@@ -22,14 +23,14 @@ const Draft = (() => {
   const hide = () => S.mode === 'sefir';
 
   /* ---------------- ana çizim ---------------- */
-  function open(root) { el = root; stop(); S = ls.get('draft_state', null) || fresh(); if (S.phase === 'season') S.phase = 'tactics'; render(); }
+  function open(root) { el = root; stop(); S = ls.get('draft_state', null); if (!S || S.v !== 2) S = fresh(); if (S.phase === 'season') S.phase = 'tactics'; render(); }
   function save() { ls.set('draft_state', S); }
   function render() {
     save();
     if (S.phase === 'tactics') return renderTactics();
     const n = count();
     el.innerHTML = `
-      <section class="dr-hero"><p class="eyebrow">Süper Lig · Efsaneler</p><h1 class="display">Kadro<br>kur. <em>102</em><br>puanı vur.</h1>
+      <section class="dr-hero"><p class="eyebrow">Süper Lig · 18 kulüp · son 10 yıl</p><h1 class="display">Kadro<br>kur. <em>102</em><br>puanı vur.</h1>
         <div class="dr-meta"><span class="chip">Seçim <b>${n}/13</b></span><span class="chip">Joker <b>${S.jokers}</b></span>
           <button class="chip toggle ${hide() ? 'on' : ''}" data-a="mode">${hide() ? '🙈 Ligin Sefiri' : '👁 Normal mod'}</button>
           <span class="chip">🏆 Rekor <b>${ls.get('draft_best', 0)}</b></span></div></section>
@@ -51,18 +52,19 @@ const Draft = (() => {
     const n = DRAFT_CLUBS.length, a = 360 / n;
     return DRAFT_CLUBS.map((c, i) => {
       const a0 = (i * a - 90) * Math.PI / 180, a1 = ((i + 1) * a - 90) * Math.PI / 180, mid = ((i + .5) * a - 90) * Math.PI / 180;
-      return `<path d="M0 0 L${96 * Math.cos(a0)} ${96 * Math.sin(a0)} A96 96 0 0 1 ${96 * Math.cos(a1)} ${96 * Math.sin(a1)}Z" fill="${c.c1}" stroke="#fff" stroke-width="2"/>
-        <text x="${62 * Math.cos(mid)}" y="${62 * Math.sin(mid)}" fill="${c.c2 === '#ffffff' && c.c1 === '#111111' ? '#fff' : c.c2}" font-size="15" font-weight="900" text-anchor="middle" dominant-baseline="middle" transform="rotate(${(i + .5) * a} ${62 * Math.cos(mid)} ${62 * Math.sin(mid)})">${c.short}</text>`;
+      return `<path data-club="${c.id}" d="M0 0 L${96 * Math.cos(a0)} ${96 * Math.sin(a0)} A96 96 0 0 1 ${96 * Math.cos(a1)} ${96 * Math.sin(a1)}Z" fill="${c.c1}" stroke="#fff" stroke-width="2"/>
+        <text x="${64 * Math.cos(mid)}" y="${64 * Math.sin(mid)}" fill="${c.c2}" font-size="10.5" font-weight="900" text-anchor="middle" dominant-baseline="middle" transform="rotate(${(i + .5) * a - 90 + ((i + .5) * a > 180 ? 180 : 0)} ${64 * Math.cos(mid)} ${64 * Math.sin(mid)})">${c.short}</text>`;
     }).join('') + '<circle r="16" fill="#111"/><circle r="6" fill="#fff"/>';
   }
   const rating = p => hide() ? '?' : p[2];
+  const eraTxt = e => e === 'FC27' ? 'EA FC 27' : e.startsWith('~FC') ? 'güncel · tahmini' : e.replace('~', '') + ' · tahmini';
   function cardInner(p) { const c = DRAFT_CLUBS.find(c => c.id === p.club); return `<i style="background:${c.c1}"></i><b>${esc(p.name)}</b><small>${p.pos} · ${hide() ? '??' : p.r}</small>`; }
   function slotHtml(s) { const p = S.picks[s.id]; return `<div class="slot ${p ? 'full' : ''}" style="left:${s.x}%;top:${s.y}%">${p ? cardInner(p) : `<span>${s.pos}</span>`}</div>`; }
   function pickPanel() {
-    if (!S.club) return `<p class="muted">Çarkı çevir, gelen takımdan bir efsane seç. Yerleşeceği mevki boşsa sahaya, değilse yedeğe geçer.</p>`;
+    if (!S.club) return `<p class="muted">Çarkı çevir: 18 kulübün her biri torbada bir kez var, hepsinin gelme şansı eşit. Gelen takımın son 10 yıllık kadrosundan bir oyuncu seç. Yerleşeceği mevki boşsa sahaya, değilse yedeğe geçer.</p>`;
     const c = DRAFT_CLUBS.find(c => c.id === S.club);
     return `<div class="club-head"><i style="background:linear-gradient(90deg,${c.c1} 50%,${c.c2} 50%)"></i><h3>${c.name}</h3>${S.jokers > 0 ? `<button class="pill ghost sm" data-a="joker">↻ Joker (${S.jokers})</button>` : ''}</div>
-      <div class="plist">${c.players.map((p, i) => { const ok = canTake(p); return `<button class="pl ${ok ? '' : 'no'}" data-i="${i}" ${ok ? '' : 'disabled'}><span class="pos">${p[1]}</span><b>${esc(p[0])}</b><span class="rt">${rating(p)}</span></button>`; }).join('')}</div>`;
+      <div class="plist">${c.players.map((p, i) => { const ok = canTake(p); return `<button class="pl ${ok ? '' : 'no'}" data-i="${i}" ${ok ? '' : 'disabled'}><span class="pos">${p[1]}</span><b>${esc(p[0])}<small class="era ${p[3] === 'FC27' ? 'off' : ''}">${eraTxt(p[3])}</small></b><span class="rt">${rating(p)}</span></button>`; }).join('')}</div>`;
   }
   function bind() {
     const q = s => el.querySelector(s);
@@ -75,15 +77,26 @@ const Draft = (() => {
   }
   function spin() {
     stop();
-    const pool = DRAFT_CLUBS.map((c, i) => i).filter(i => DRAFT_CLUBS[i].players.some(canTake));
-    if (!pool.length) return;
-    const k = pool[rnd(pool.length)], n = DRAFT_CLUBS.length, seg = 360 / n;
+    const k = drawClub();
+    if (k < 0) return;
+    const n = DRAFT_CLUBS.length, seg = 360 / n;
     const target = 360 - (k * seg + seg / 2);
     S.rot = S.rot - (S.rot % 360) + 360 * 5 + target;
     const w = el.querySelector('.wheel'); w.style.transition = 'transform 2.6s cubic-bezier(.12,.75,.12,1)'; w.style.transform = `rotate(${S.rot}deg)`;
     el.querySelector('[data-a=spin]').disabled = true;
     tickSound();
     later(() => { S.club = DRAFT_CLUBS[k].id; render(); }, 2700);
+  }
+  /* eşit şans: 18 kulüp karıştırılmış bir torbada; torba bitince yeniden doldurulur.
+     Böylece hiçbir kulüp (ör. Trabzonspor) atlanamaz, her biri aynı olasılıkla gelir. */
+  function drawClub() {
+    if (!Array.isArray(S.bag)) S.bag = [];
+    for (let tries = 0; tries < DRAFT_CLUBS.length * 2; tries++) {
+      if (!S.bag.length) S.bag = shuffle(DRAFT_CLUBS.map((c, i) => i));
+      const k = S.bag.shift();
+      if (DRAFT_CLUBS[k].players.some(canTake)) return k;
+    }
+    return -1;
   }
   function tickSound() { if (typeof AdvAudio === 'undefined') return; for (let i = 0; i < 18; i++) later(() => AdvAudio.note(900, .03, 'square', .02), i * i * 8); }
   function take(i) {
@@ -141,7 +154,8 @@ const Draft = (() => {
   function season() {
     stop(); S.phase = 'season'; save();
     const st = strength(), m = mods(st.xi), ME = 'Senin Takımın';
-    const teams = [{ name: ME, s: 0, me: true }, ...DRAFT_LEAGUE.map(([name, s]) => ({ name, s }))];
+    const out = DRAFT_LEAGUE[rnd(DRAFT_LEAGUE.length)];
+    const teams = [{ name: ME, s: 0, me: true }, ...DRAFT_LEAGUE.filter(x => x !== out).map(([name, s]) => ({ name, s }))];
     teams.forEach(t => Object.assign(t, { p: 0, w: 0, d: 0, l: 0, gf: 0, ga: 0 }));
     // çember yöntemiyle fikstür (17 hafta) + rövanş
     const N = teams.length, idx = teams.map((_, i) => i), rounds = [];
@@ -164,7 +178,7 @@ const Draft = (() => {
     }
     el.innerHTML = `<section class="dr-hero"><p class="eyebrow">Sezon simülasyonu</p><h1 class="display">Hafta <em class="wk">0</em><span class="slash">/34</span></h1>
       <div class="dr-meta"><span class="chip">Puan <b class="pts">0</b></span><span class="chip">G-B-M <b class="wdl">0-0-0</b></span><span class="chip">Gol <b class="gl">0:0</b></span><button class="chip toggle" data-a="fast">⏩ Hızlandır</button></div></section>
-      <section class="season"><div class="live"><div class="live-card"><span class="eyebrow lc-t">Maç günü</span><div class="score"><span class="tn h">—</span><b class="sc">0 – 0</b><span class="tn a">—</span></div><div class="minute"><i></i></div><div class="feed"></div></div>
+      <section class="season"><div class="live"><div class="live-card"><span class="eyebrow lc-t">Bu sezon ${esc(out[0])}'in yerini sen aldın</span><div class="score"><span class="tn h">—</span><b class="sc">0 – 0</b><span class="tn a">—</span></div><div class="minute"><i></i></div><div class="feed"></div></div>
         <div class="bar"><i></i></div></div>
         <div class="table-wrap"><table class="tbl"><thead><tr><th>#</th><th>Takım</th><th>O</th><th>G</th><th>B</th><th>M</th><th>A</th><th>P</th></tr></thead><tbody></tbody></table></div></section>`;
     const q = s => el.querySelector(s), me = teams[0];
@@ -210,5 +224,5 @@ const Draft = (() => {
     window.__draftSeason = { fast: () => { speed = 1; } };
   }
 
-  return { open, stop, get state() { return S; }, _take: take, _spin: spin };
+  return { open, stop, get state() { return S; }, _take: take, _spin: spin, _draw: () => drawClub() };
 })();

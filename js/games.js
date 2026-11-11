@@ -59,7 +59,7 @@ const App = (() => {
 
   /* ---------------- menü ---------------- */
   const GAMES = [
-    { id: 'draft', name: 'Efsaneler Draft', tags: ['Futbol', '34 maç'], best: () => ls.get('draft_best', 0) + ' p' },
+    { id: 'draft', name: 'Süper Lig Draft', tags: ['Futbol', '18 kulüp'], best: () => ls.get('draft_best', 0) + ' p' },
     { id: '2048', name: '2048', tags: ['Bulmaca', 'Kaydır'], best: () => ls.get('bb_best_2048', 0) },
     { id: 'sudoku', name: 'Sudoku', tags: ['Mantık', '3 seviye'], best: () => { const b = ls.get('bb_best_sudoku', null); return b ? fmtT(b) : '—'; } },
     { id: 'mines', name: 'Mayın Tarlası', tags: ['Klasik', 'Dikkat'], best: () => { const b = ls.get('bb_best_mines', null); return b ? fmtT(b) : '—'; } },
@@ -80,7 +80,8 @@ const App = (() => {
         <h1 class="display xl">Kafa<br>dinle.<br><em>Kadro kur.</em></h1>
         <div class="hero-row"><p class="lead">Beş oyun, sıfır reklam. Futbol draftından Sudoku’ya, kısa molalar için seçilmiş bir koleksiyon.</p>
           <a class="pill big" href="#draft">Draft’a başla ↗</a></div></section>
-      <section class="feature"><a href="#draft" class="feat-card"><div class="feat-art">${ART.draft}</div><div class="feat-txt"><span class="badge">Günün oyunu</span><h2>Süper Lig<br>Efsaneler Draft</h2><p>Çarkı çevir, gelen takımdan bir efsane seç, 11+2 kur. Teknik direktörünü ve taktiğini belirle, 34 maçlık sezonu canlı izle. Hedef: 102 puan.</p><div class="card-tags"><span class="chip">Futbol</span><span class="chip">Strateji</span><span class="chip dark">🏆 ${ls.get('draft_best', 0)} puan</span></div></div></a></section>
+      <section class="feature"><a href="#draft" class="feat-card"><div class="feat-art">${ART.draft}</div><div class="feat-txt"><span class="badge">Günün oyunu</span><h2>Süper Lig<br>Draft</h2><p>Çark 18 Süper Lig kulübü arasında eşit şansla döner; gelen takımın son 10 yıllık kadrosundan seç, 11+2 kur. Teknik direktörünü ve taktiğini belirle, 34 maçlık sezonu canlı izle. Hedef: 102 puan.</p><div class="card-tags"><span class="chip">Futbol</span><span class="chip">Strateji</span><span class="chip dark">🏆 ${ls.get('draft_best', 0)} puan</span></div></div></a></section>
+      <section class="dost-promo"><a href="#dost" class="feat-card dost-card"><div class="dost-art"><span>D</span></div><div class="feat-txt"><span class="badge">Yeni</span><h2>Dost</h2><p>Kafan doluysa yaz. Seni yargılamadan dinleyen, düşüncelerini toparlamana yardım eden bir sohbet arkadaşı. Nefes egzersizi ve düşünce kaydı içerir; sohbet yalnızca bu cihazda kalır.</p><div class="card-tags"><span class="chip">Dinleme</span><span class="chip">Nefes</span><span class="chip">Düşünce kaydı</span></div></div></a></section>
       <section class="list"><div class="list-head"><h2 class="display sm">Koleksiyon</h2><span class="muted">${GAMES.length} oyun</span></div>
         <div class="cards">${GAMES.map(card).join('')}</div></section>
       <footer class="foot"><div class="foot-word">BABA<span>.</span>OYUN</div><div class="foot-row"><button class="link" data-a="pin">Şifreyi değiştir</button><button class="link" data-a="lock">Kilitle</button><span class="muted">Lale & Ela oyunundan ayrı, yalnızca yetişkinler için.</span></div></footer>`;
@@ -360,6 +361,7 @@ const App = (() => {
     const r = location.hash.slice(1);
     document.querySelectorAll('.nav a[data-r]').forEach(a => a.classList.toggle('on', a.dataset.r === r));
     if (r === 'draft') { root().innerHTML = '<section class="game-page"><div class="gp-head"><a class="back" href="#">← Tüm oyunlar</a></div><div id="draftRoot"></div></section>'; window.scrollTo(0, 0); Draft.open(root().querySelector('#draftRoot')); }
+    else if (r === 'dost' && typeof Dost !== 'undefined') { root().innerHTML = '<section class="game-page"><div class="gp-head"><a class="back" href="#">← Ana sayfa</a></div><div id="dostRoot"></div></section>'; window.scrollTo(0, 0); Dost.open(root().querySelector('#dostRoot')); }
     else if (r === '2048') g2048();
     else if (r === 'sudoku') sudoku();
     else if (r === 'mines') mines();
