@@ -81,6 +81,7 @@ const App = (() => {
         <div class="hero-row"><p class="lead">Beş oyun, sıfır reklam. Futbol draftından Sudoku’ya, kısa molalar için seçilmiş bir koleksiyon.</p>
           <a class="pill big" href="#draft">Draft’a başla ↗</a></div></section>
       <section class="feature"><a href="#draft" class="feat-card"><div class="feat-art">${ART.draft}</div><div class="feat-txt"><span class="badge">Günün oyunu</span><h2>Süper Lig<br>Draft</h2><p>Çark 18 Süper Lig kulübü arasında eşit şansla döner; gelen takımın son 10 yıllık kadrosundan seç, 11+2 kur. Teknik direktörünü ve taktiğini belirle, 34 maçlık sezonu canlı izle. Hedef: 102 puan.</p><div class="card-tags"><span class="chip">Futbol</span><span class="chip">Strateji</span><span class="chip dark">🏆 ${ls.get('draft_best', 0)} puan</span></div></div></a></section>
+      <section class="is-promo"><a href="#is" class="is-card"><span class="is-card-l">DSAN / İŞ MASASI</span><b>Hatırlatmalar, notlar,<br>Travel App &amp; şoför takvimi.</b><span class="is-card-go">AÇ ↗</span></a></section>
       <section class="dost-promo"><a href="#dost" class="feat-card dost-card"><div class="dost-art"><span>D</span></div><div class="feat-txt"><span class="badge">Yeni</span><h2>Dost</h2><p>Kafan doluysa yaz. Seni yargılamadan dinleyen, düşüncelerini toparlamana yardım eden bir sohbet arkadaşı. Nefes egzersizi ve düşünce kaydı içerir; sohbet yalnızca bu cihazda kalır.</p><div class="card-tags"><span class="chip">Dinleme</span><span class="chip">Nefes</span><span class="chip">Düşünce kaydı</span></div></div></a></section>
       <section class="list"><div class="list-head"><h2 class="display sm">Koleksiyon</h2><span class="muted">${GAMES.length} oyun</span></div>
         <div class="cards">${GAMES.map(card).join('')}</div></section>
@@ -359,8 +360,10 @@ const App = (() => {
     document.querySelectorAll('.bb-pin-ov').forEach(e => e.remove());
     if (!unlocked) return lockScreen();
     const r = location.hash.slice(1);
+    document.body.classList.toggle('work-mode', r === 'is');
     document.querySelectorAll('.nav a[data-r]').forEach(a => a.classList.toggle('on', a.dataset.r === r));
     if (r === 'draft') { root().innerHTML = '<section class="game-page"><div class="gp-head"><a class="back" href="#">← Tüm oyunlar</a></div><div id="draftRoot"></div></section>'; window.scrollTo(0, 0); Draft.open(root().querySelector('#draftRoot')); }
+    else if (r === 'is' && typeof Is !== 'undefined') { root().innerHTML = '<div id="isRoot"></div>'; window.scrollTo(0, 0); Is.open(root().querySelector('#isRoot')); }
     else if (r === 'dost' && typeof Dost !== 'undefined') { root().innerHTML = '<section class="game-page"><div class="gp-head"><a class="back" href="#">← Ana sayfa</a></div><div id="dostRoot"></div></section>'; window.scrollTo(0, 0); Dost.open(root().querySelector('#dostRoot')); }
     else if (r === '2048') g2048();
     else if (r === 'sudoku') sudoku();
