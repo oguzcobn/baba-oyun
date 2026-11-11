@@ -5,7 +5,7 @@
   const { S, L, esc, uid, pad, put, today, addDays, pd, ymd, fmtDate, fmtDay, toast, empty, loc } = CBN;
   let editing = false, capType = 'note', clock = null, dragId = null;
   const TYPES = [['note', 'Not', 'Note'], ['task', 'Görev', 'Task'], ['event', 'Etkinlik', 'Event'], ['idea', 'Fikir', 'Idea'], ['expense', 'Harcama', 'Expense'], ['reminder', 'Hatırlatma', 'Reminder']];
-  const NAMES = { overview: ['Bugüne bakış', 'Today Overview'], capture: ['Hızlı kayıt', 'Quick Capture'], focus: ['Günün odağı', 'Daily Focus'], upcoming: ['Yaklaşan 7 gün', 'Upcoming 7 days'], recent: ['Son notlar', 'Recent Notes'], ai: ['AI özeti', 'AI Briefing'] };
+  const NAMES = { overview: ['Bugüne bakış', 'Today Overview'], capture: ['Hızlı kayıt', 'Quick Capture'], focus: ['Günün odağı', 'Daily Focus'], upcoming: ['Yaklaşan 7 gün', 'Upcoming 7 days'], recent: ['Son notlar', 'Recent Notes'] };
   const T = () => CBN.tasks;
   const stats = () => {
     const td = today(), open = S.tasks.filter(T().isOpen), wk = addDays(td, 6);
@@ -38,8 +38,7 @@
     recent() {
       const a = S.notes.filter(n => !n.deletedAt && !n.archivedAt).sort((x, y) => y.updatedAt - x.updatedAt).slice(0, 5);
       return a.length ? a.map(n => `<a class="rc-it" href="#cbn/notes/${encodeURIComponent(n.id)}"><b>${esc(CBN.notes.title(n))}</b><p>${esc(n.text.slice(0, 90))}</p><time>${esc(fmtDate(n.updatedAt))}${CBN.notes.folderName(n.folderId) ? ' · ' + esc(CBN.notes.folderName(n.folderId)) : ''}</time></a>`).join('') : empty('📝', L('Henüz not yok', 'No notes yet'), '', `<a class="cbn-btn ghost sm" href="#cbn/notes">${L('Notlara git', 'Go to notes')}</a>`);
-    },
-    ai() { return /^https:\/\//i.test(S.settings.aiUrl || '') ? `<div class="ai-off"><span class="cbn-badge ok">${L('Bağlı', 'Connected')}</span><p>${L('Günlük plan ve özet için asistana sor.', 'Ask the assistant for a daily plan and briefing.')}</p><a class="cbn-btn ghost sm" href="#cbn/ai">${L('Asistanı aç', 'Open assistant')}</a></div>` : `<div class="ai-off"><span class="cbn-badge">${L('Bağlı değil', 'Not connected')}</span><p>${L('CBN AI için güvenli bir sunucu bağlantısı gerekiyor. Bağlanana kadar hiçbir yapay zekâ yanıtı üretilmez.', 'CBN AI needs a secure server connection. No AI output is generated until one is connected.')}</p><a class="cbn-btn ghost sm" href="#cbn/ai">${L('Bağlantıyı kur', 'Set up connection')}</a></div>`; }
+    }
   };
 
   function render(main) {

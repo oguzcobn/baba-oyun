@@ -58,7 +58,6 @@
       [L('Yeni etkinlik', 'New Event'), () => CBN.calendar.form(null)],
       [L('Proje oluştur', 'Create Project'), () => CBN.projects.form(null)],
       [L('Takvimi aç', 'Open Calendar'), () => CBN.go('calendar')],
-      [L('AI asistanı aç', 'Open AI Assistant'), () => CBN.go('ai')],
       [L('Temayı değiştir', 'Switch Theme'), () => CBN.toggleTheme()],
       [L('Yedek indir', 'Download backup'), () => CBN.settings.exportAll()],
       ...CBN.MODS.map(m => [L('Aç: ', 'Open: ') + CBN.modName(m), () => CBN.go(m)])

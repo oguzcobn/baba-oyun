@@ -1,5 +1,5 @@
 "use strict";
-/* CBN · Work Space, Voice Inbox, CBN AI (yalnızca kullanıcının bağladığı güvenli proxy ile), Knowledge Graph */
+/* CBN · Work Space, Voice Inbox, Knowledge Graph */
 (() => {
   const { S, L, esc, uid, put, today, fmtDate, fmtDay, fmtStamp, toast, empty, modal } = CBN;
   const I = k => CBN.items(k), save = o => CBN.saveItem(o);
@@ -75,42 +75,6 @@
     }); });
   }
   CBN.register('inbox', { render: inbox });
-
-  /* ================= CBN AI ================= */
-  let chat = [], busy = false;
-  function ai(main) {
-    const url = /^https:\/\//i.test(S.settings.aiUrl || '') ? S.settings.aiUrl : '', sc = S.settings.aiScopes || (S.settings.aiScopes = { notes: false, tasks: true, events: true, projects: false });
-    const SC = { notes: L('Notlar', 'Notes'), tasks: L('Görevler', 'Tasks'), events: L('Takvim', 'Calendar'), projects: L('Projeler', 'Projects') };
-    if (!url) {
-      main.innerHTML = CBN.head('ai', L('Kişisel asistan', 'Personal assistant')) + `<section class="cbn-card ai-setup"><span class="cbn-badge">${L('Bağlı değil', 'Not connected')}</span><h2>${L('CBN AI için güvenli bir sunucu bağlantısı gerekiyor', 'CBN AI needs a secure server connection')}</h2>
-        <p>${L('BABA. GitHub Pages üzerinde statik bir sitedir; yapay zekâ anahtarını sayfaya ya da depoya koymak onu herkese açar. Bu yüzden asistan, anahtarı kendi içinde tutan küçük bir sunucu (AI proxy; örneğin Cloudflare Worker) üzerinden çalışır. Bağlantı kurulana kadar asistan hiçbir yanıt üretmez.', 'BABA. is a static site on GitHub Pages; putting an AI key in the page or repository would expose it to everyone. So the assistant works through a small server that keeps the key (an AI proxy, e.g. a Cloudflare Worker). Until one is connected, the assistant produces no answers.')}</p>
-        <form class="tk-quick"><input name="u" type="url" placeholder="https://…/cbn-ai" aria-label="${L('AI proxy adresi', 'AI proxy URL')}"><button class="cbn-btn sm">${L('Bağla', 'Connect')}</button></form>
-        <p class="cbn-hint">${L('Sunucu sözleşmesi: POST, JSON gövde { messages:[{role,content}], context:{…}, lang } → yanıt { reply:"…" }. CBN yalnızca aşağıda izin verdiğin kayıt türlerini gönderir.', 'Server contract: POST with JSON body { messages:[{role,content}], context:{…}, lang } → response { reply:"…" }. CBN only sends the record types you allow below.')}</p></section>`;
-      main.querySelector('form').onsubmit = e => { e.preventDefault(); const u = e.target.u.value.trim(); if (!/^https:\/\/\S+$/i.test(u)) return toast(L('Adres https:// ile başlamalı', 'URL must start with https://'), { type: 'err' }); S.settings.aiUrl = u; CBN.saveSettings(); CBN.refresh(); };
-      return;
-    }
-    const ctx = () => { const c = {}; if (sc.notes) c.notes = S.notes.filter(n => !n.deletedAt).sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 40).map(n => ({ title: n.title, text: n.text.slice(0, 1500), tags: n.tags, folder: CBN.notes.folderName(n.folderId) })); if (sc.tasks) c.tasks = S.tasks.filter(t => t.status !== 'cancelled').slice(-150).map(t => ({ title: t.title, status: t.status, due: t.due, priority: t.priority, project: t.project, completedAt: t.completedAt ? new Date(t.completedAt).toISOString() : null })); if (sc.events) c.events = S.events.filter(e => e.date >= CBN.addDays(today(), -30)).slice(0, 100).map(e => ({ title: e.title, date: e.date, start: e.start, cat: e.cat, location: e.location })); if (sc.projects) c.projects = I('project').map(p => ({ name: p.name, status: p.status, goals: p.goals, progress: CBN.projects.prog(p) })); return c; };
-    const EX = [L('Bugünkü işlerimi planla.', 'Plan my day.'), L('Geçen hafta hangi işleri tamamladım?', 'What did I complete last week?'), L('Görevlerimi önceliklendir.', 'Prioritise my tasks.')];
-    main.innerHTML = CBN.head('ai', `<span class="cbn-badge ok">${L('Bağlı', 'Connected')}</span> ${esc(url.replace(/^https:\/\//, '').slice(0, 40))} <button type="button" class="cbn-link-btn" data-a="off">${L('bağlantıyı kes', 'disconnect')}</button>`) + `<div class="ai"><div class="ai-scope" role="group" aria-label="${L('Asistanın görebileceği kayıtlar', 'Records the assistant may see')}"><b>${L('Asistan şunları görebilir:', 'The assistant may see:')}</b>${Object.keys(SC).map(k => `<label class="st-sw"><input type="checkbox" data-sc="${k}" ${sc[k] ? 'checked' : ''}> ${esc(SC[k])}</label>`).join('')}</div>
-      <div class="ai-log" role="log" aria-live="polite">${chat.map((m, i) => `<div class="ai-m ${m.role}"><p>${esc(m.content)}</p>${m.role === 'assistant' ? `<small>${m.used ? esc(m.used) + ' · ' : ''}<button type="button" class="cbn-link-btn" data-save="${i}">${L('not olarak kaydet', 'save as note')}</button></small>` : ''}</div>`).join('') || `<div class="ai-ex">${EX.map(x => `<button type="button" class="cbn-btn ghost sm" data-ex>${esc(x)}</button>`).join('')}</div>`}${busy ? `<div class="ai-m assistant"><p class="muted">${L('Yanıt bekleniyor…', 'Waiting for a reply…')}</p></div>` : ''}</div>
-      <form class="ai-in"><textarea name="q" rows="2" maxlength="4000" placeholder="${L('Asistana yaz…', 'Message the assistant…')}" aria-label="${L('Mesaj', 'Message')}" ${busy ? 'disabled' : ''}></textarea><button class="cbn-btn" ${busy ? 'disabled' : ''}>${L('Gönder', 'Send')}</button></form>
-      <p class="cbn-hint">${L('Yanıtlar bağladığın sunucudan gelir. Asistan kayıtlarını kendiliğinden değiştirmez; bir yanıtı saklamak için “not olarak kaydet”i kullan. Sohbet bu sayfada kalır, kaydedilmez.', 'Replies come from the server you connected. The assistant never changes your records on its own; use “save as note” to keep a reply. The chat stays on this page and is not stored.')}</p></div>`;
-    const log = main.querySelector('.ai-log'); log.scrollTop = log.scrollHeight;
-    const send = async q => {
-      if (busy || !q) return; const c = ctx(), used = Object.keys(c).map(k => `${c[k].length} ${SC[k]}`).join(', ');
-      chat.push({ role: 'user', content: q }); busy = true; CBN.refresh();
-      try { const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messages: chat.map(m => ({ role: m.role, content: m.content })), context: c, lang: S.settings.lang }) }); const j = await r.json().catch(() => null); if (!r.ok) throw new Error((j && j.error) || 'HTTP ' + r.status); if (!j || typeof j.reply !== 'string') throw new Error(L('beklenmeyen yanıt biçimi', 'unexpected response format')); chat.push({ role: 'assistant', content: j.reply.slice(0, 20000), used: used ? L('Kullanılan kayıtlar: ', 'Records used: ') + used : L('Kayıt paylaşılmadı', 'No records shared') }); }
-      catch (e) { chat.pop(); toast(L('Asistana ulaşılamadı: ', 'Could not reach the assistant: ') + (e.message || e), { type: 'err' }); }
-      busy = false; if (CBN.cur.mod === 'ai') CBN.refresh();
-    };
-    const f = main.querySelector('.ai-in'); f.onsubmit = e => { e.preventDefault(); send(f.q.value.trim()); };
-    f.q.onkeydown = e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); f.requestSubmit(); } };
-    main.querySelectorAll('[data-ex]').forEach(b => b.onclick = () => send(b.textContent));
-    main.querySelectorAll('[data-sc]').forEach(c => c.onchange = () => { sc[c.dataset.sc] = c.checked; CBN.saveSettings(); });
-    main.querySelectorAll('[data-save]').forEach(b => b.onclick = async () => { const m = chat[+b.dataset.save], n = await CBN.notes.create({ title: 'CBN AI · ' + fmtDate(today()), content: m.content.split('\n').map(l => `<p>${esc(l) || '<br>'}</p>`).join(''), tags: ['ai'] }); toast(L('Not olarak kaydedildi', 'Saved as a note'), { action: L('Aç', 'Open'), onAction: () => CBN.go('notes/' + n.id) }); });
-    main.querySelector('[data-a=off]').onclick = () => { S.settings.aiUrl = ''; chat = []; CBN.saveSettings(); CBN.refresh(); };
-  }
-  CBN.register('ai', { render: ai });
 
   /* ================= BİLGİ HARİTASI ================= */
   let gf = '';

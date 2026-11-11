@@ -41,10 +41,10 @@ const CBN = (() => {
   }
 
   /* ---------- varsayılanlar ---------- */
-  const MODS = ['home', 'notes', 'tasks', 'calendar', 'projects', 'family', 'finance', 'goals', 'work', 'inbox', 'ai', 'graph', 'settings'];
-  const COLORS = { home: '#6366F1', notes: '#F59E0B', tasks: '#2563EB', calendar: '#EF4444', projects: '#10B981', family: '#EC4899', finance: '#14B8A6', goals: '#F97316', work: '#0EA5E9', inbox: '#8B5CF6', ai: '#D946EF', graph: '#84CC16', settings: '#64748B' };
-  const MOD_NAME = { home: ['Ana Sayfa', 'Home'], notes: ['Notlar', 'Notes'], tasks: ['Görevler', 'Tasks'], calendar: ['Takvim', 'Calendar'], projects: ['Projeler', 'Projects'], family: ['Aile', 'Family'], finance: ['Finans', 'Finance'], goals: ['Hedefler', 'Goals'], work: ['İş Alanı', 'Work'], inbox: ['Sesli Kutu', 'Voice Inbox'], ai: ['CBN AI', 'CBN AI'], graph: ['Bilgi Haritası', 'Knowledge Graph'], settings: ['Ayarlar', 'Settings'] };
-  const WIDGETS = [{ id: 'overview', w: 3 }, { id: 'capture', w: 2 }, { id: 'focus', w: 1 }, { id: 'upcoming', w: 1 }, { id: 'recent', w: 1 }, { id: 'ai', w: 1 }];
+  const MODS = ['home', 'notes', 'tasks', 'calendar', 'projects', 'family', 'finance', 'goals', 'work', 'inbox', 'graph', 'settings'];
+  const COLORS = { home: '#6366F1', notes: '#F59E0B', tasks: '#2563EB', calendar: '#EF4444', projects: '#10B981', family: '#EC4899', finance: '#14B8A6', goals: '#F97316', work: '#0EA5E9', inbox: '#8B5CF6', graph: '#84CC16', settings: '#64748B' };
+  const MOD_NAME = { home: ['Ana Sayfa', 'Home'], notes: ['Notlar', 'Notes'], tasks: ['Görevler', 'Tasks'], calendar: ['Takvim', 'Calendar'], projects: ['Projeler', 'Projects'], family: ['Aile', 'Family'], finance: ['Finans', 'Finance'], goals: ['Hedefler', 'Goals'], work: ['İş Alanı', 'Work'], inbox: ['Sesli Kutu', 'Voice Inbox'], graph: ['Bilgi Haritası', 'Knowledge Graph'], settings: ['Ayarlar', 'Settings'] };
+  const WIDGETS = [{ id: 'overview', w: 3 }, { id: 'capture', w: 2 }, { id: 'focus', w: 1 }, { id: 'upcoming', w: 1 }, { id: 'recent', w: 1 }];
   const SEED_FOLDERS = ['Personal', 'Family', 'Damen / Work', 'Scotland', 'Photography', 'Game Development', 'Ideas', 'Travel', 'Important'];
   const defaults = () => ({ lang: 'tr', theme: 'system', dateFmt: 'dmy', startPage: 'home', notif: true, modules: MODS.map(id => ({ id, hidden: false, name: '' })), widgets: WIDGETS.map(w => ({ id: w.id, w: w.w, hidden: false })), focus: [], notesView: 'list', tasksView: 'today', calView: 'month', lastBackup: null });
   function normSettings(v) {
