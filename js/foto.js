@@ -120,7 +120,7 @@ const Foto = (() => {
     const world = el.querySelector('.ft-world'), tun = el.querySelector('.ft-tunnel'), lb = el.querySelector('.ft-lb');
     el.querySelector('.ft-load').remove();
     const GAP = 560, N = list.length;
-    world.innerHTML = list.map((p, i) => { const side = i % 2 ? 1 : -1, x = side * (180 + (i * 37 % 90)), y = ((i * 53) % 120) - 60, ry = -side * 18; return `<figure class="ft-fr" data-i="${i}" style="--x:${x}px;--y:${y}px;--z:${-i * GAP}px;--ry:${ry}deg"><img src="${p.src}" alt="${esc(p.title)}" loading="lazy" referrerpolicy="no-referrer" onerror="this.closest('figure').classList.add('bad')"><figcaption><b>${esc(p.artist)}</b>${p.year ? ' · ' + esc(p.year) : ''}</figcaption></figure>`; }).join('');
+    world.innerHTML = list.map((p, i) => `<figure class="ft-fr" data-i="${i}"><img src="${p.src}" alt="${esc(p.title)}" loading="lazy" referrerpolicy="no-referrer" onerror="this.closest('figure').classList.add('bad')"><figcaption><b>${esc(p.artist)}</b>${p.year ? ' · ' + esc(p.year) : ''}</figcaption></figure>`).join('');
     const frames = [...world.children];
     let z = 0, tz = 0, auto = true;
     const max = (N - 1) * GAP;
@@ -136,8 +136,16 @@ const Foto = (() => {
       raf = requestAnimationFrame(loop);
       if (auto) tz = Math.min(max, tz + 0.6);
       z += (tz - z) * .08;
-      world.style.transform = `translateZ(${z}px)`;
-      frames.forEach((f, i) => { const d = -i * GAP + z; const o = d > 260 ? 0 : d < -3800 ? 0 : d < -2600 ? (3800 + d) / 1200 : d > 0 ? 1 - d / 260 : 1; f.style.opacity = o.toFixed(3); f.style.visibility = o < .02 ? 'hidden' : 'visible'; });
+      // yakındaki kare ortaya kayar, uzaktakiler iki yana açılır
+      const W = tun.clientWidth, spread = Math.min(W * .44, 320);
+      frames.forEach((f, i) => {
+        const d = -i * GAP + z - 320, o = d > 160 ? 0 : d < -4200 ? 0 : d < -3000 ? (4200 + d) / 1200 : d > 0 ? 1 - d / 160 : 1;
+        f.style.opacity = o.toFixed(3); f.style.visibility = o < .02 ? 'hidden' : 'visible'; if (o < .02) return;
+        const k = Math.max(0, Math.min(1, (-d - 330) / 900)), side = i % 2 ? 1 : -1;
+        const x = side * spread * k, y = (((i * 53) % 120) - 60) * k, ry = -side * 22 * k;
+        f.style.transform = `translate(-50%,-50%) translate3d(${x.toFixed(1)}px,${y.toFixed(1)}px,${d.toFixed(1)}px) rotateY(${ry.toFixed(1)}deg)`;
+        f.style.zIndex = String(Math.round(5000 + d));
+      });
       pos.textContent = Math.min(N, Math.round(z / GAP) + 1) + ' / ' + N;
     };
     cancelAnimationFrame(raf); loop();
