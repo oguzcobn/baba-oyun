@@ -99,7 +99,7 @@
     const send = async q => {
       if (busy || !q) return; const c = ctx(), used = Object.keys(c).map(k => `${c[k].length} ${SC[k]}`).join(', ');
       chat.push({ role: 'user', content: q }); busy = true; CBN.refresh();
-      try { const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messages: chat.map(m => ({ role: m.role, content: m.content })), context: c, lang: S.settings.lang }) }); if (!r.ok) throw new Error('HTTP ' + r.status); const j = await r.json(); if (!j || typeof j.reply !== 'string') throw new Error(L('beklenmeyen yanıt biçimi', 'unexpected response format')); chat.push({ role: 'assistant', content: j.reply.slice(0, 20000), used: used ? L('Kullanılan kayıtlar: ', 'Records used: ') + used : L('Kayıt paylaşılmadı', 'No records shared') }); }
+      try { const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messages: chat.map(m => ({ role: m.role, content: m.content })), context: c, lang: S.settings.lang }) }); const j = await r.json().catch(() => null); if (!r.ok) throw new Error((j && j.error) || 'HTTP ' + r.status); if (!j || typeof j.reply !== 'string') throw new Error(L('beklenmeyen yanıt biçimi', 'unexpected response format')); chat.push({ role: 'assistant', content: j.reply.slice(0, 20000), used: used ? L('Kullanılan kayıtlar: ', 'Records used: ') + used : L('Kayıt paylaşılmadı', 'No records shared') }); }
       catch (e) { chat.pop(); toast(L('Asistana ulaşılamadı: ', 'Could not reach the assistant: ') + (e.message || e), { type: 'err' }); }
       busy = false; if (CBN.cur.mod === 'ai') CBN.refresh();
     };
