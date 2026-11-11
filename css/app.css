@@ -275,3 +275,4 @@ main{padding:0 clamp(14px,4vw,40px) 40px;max-width:1360px;margin:0 auto}
 .db-ring.out,.db-ring.rest{transform:scale(1)}
 .db-t{font-size:28px}.db-n{font-size:20px;opacity:.8}
 .dost-breath .pill.ghost{color:#fff;box-shadow:inset 0 0 0 1px rgba(255,255,255,.4)}
+.dost-mode{display:inline-block;margin-left:6px;font-size:12px;font-weight:700;color:#3f7d5a}

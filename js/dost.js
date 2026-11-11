@@ -242,7 +242,7 @@ const Dost = (() => {
   function open(root) {
     el = root; S = ls.get('dost_chat', null) || fresh(); busy = false;
     el.innerHTML = `<section class="dost">
-      <div class="dost-head"><div><p class="eyebrow">Sohbet · yalnızca bu cihazda</p><h1 class="display sm">Dost<em>.</em></h1><p class="muted">Seni yargılamadan dinleyen bir sohbet arkadaşı.</p></div>
+      <div class="dost-head"><div><p class="eyebrow">Sohbet · yalnızca bu cihazda</p><h1 class="display sm">Dost<em>.</em></h1><p class="muted">Seni yargılamadan dinleyen bir sohbet arkadaşı. <span class="dost-mode">${ls.get('dost_key', '') ? '● Claude ile' : '○ Cihaz içi mod'}</span></p></div>
         <div class="dost-tools"><button class="chip" data-a="breath">🫁 Nefes</button><button class="chip" data-a="rec">📝 Düşünce kaydı</button><button class="chip" data-a="set">⚙︎</button><button class="chip" data-a="clear">Sohbeti sil</button></div></div>
       <div class="dost-note">Dost bir psikolog değildir, tanı koymaz ve tedavinin yerini tutmaz. <b>Acil bir durumda 112'yi ara.</b></div>
       <div class="dost-log" aria-live="polite"></div>
@@ -286,7 +286,7 @@ const Dost = (() => {
     let reply = null;
     const lt = low(text), safety = has(lt, CRISIS) || has(lt, VIOLENCE) || has(lt, HARM_OTHERS);
     if (S.msgs.filter(m => m.me).length === 1 && S.mood0 !== null && text.length < 30) reply = S.mood0 <= 3 ? 'Zor bir gün geçiriyorsun gibi; burada olman iyi. Bugün seni en çok ne zorladı?' : S.mood0 <= 6 ? 'İdare eder bir gün. Aklını en çok meşgul eden şey ne?' : 'Bunu duymak güzel. Yine de konuşmak istediğin bir şey varsa buradayım; bugün aklında ne var?';
-    if (!reply && !safety && !S.flow) { try { reply = await remote(); } catch (e) { console.warn('Dost gelişmiş mod:', e.message); } }
+    if (!reply && !safety && !S.flow) { try { reply = await remote(); if (reply) S.apiOk = true; } catch (e) { console.warn('Dost gelişmiş mod:', e.message); if (!S.apiWarned) { S.apiWarned = true; bot(`<small>⚠︎ Claude'a bağlanılamadı (${esc(e.message)}). Anahtarı ⚙︎ ile kontrol et; 401 = anahtar hatalı, 400/403 = anahtarı "Default" workspace'e bağlı oluştur, 402/429 = kredi/limit. Şimdilik cihaz içi Dost yanıt veriyor.</small>`); } } }
     if (!reply) { await new Promise(r => setTimeout(r, 500 + Math.random() * 700)); reply = local(text); } else S.turn++;
     busy = false; const ty = log.querySelector('.typing'); if (ty) ty.remove();
     bot(reply);
@@ -307,7 +307,7 @@ const Dost = (() => {
     const v = prompt('İsteğe bağlı gelişmiş mod: kendi Claude API anahtarını yapıştırırsan Dost daha doğal yanıt verir.\nAnahtar YALNIZCA bu cihazda saklanır; mesajların Anthropic API\'sine gider.\nKapatmak için boş bırak.', cur ? '•••• kayıtlı (değiştirmek için yenisini yaz, silmek için boş bırak)' : '');
     if (v === null) return;
     if (!v.trim()) { ls.del('dost_key'); bot('Gelişmiş mod kapalı. Cihaz içi Dost ile devam ediyoruz.'); }
-    else if (!v.startsWith('••••')) { ls.set('dost_key', v.trim()); bot('Gelişmiş mod açık. Güvenlik kontrolleri yine cihaz içinde yapılır.'); }
+    else if (!v.startsWith('••••')) { ls.set('dost_key', v.trim()); S.apiWarned = false; bot('Gelişmiş mod açık: artık Claude ile konuşuyorsun. Güvenlik kontrolleri yine cihaz içinde yapılır.'); }
   }
   return { open, _reply: t => local(t), _reset: () => { S = fresh(); }, get state() { return S; } };
 })();
