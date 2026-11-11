@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#ffffff">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Baba.Oyun">
+<meta name="robots" content="noindex">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="img/icon-180.png">
+<link rel="icon" href="img/icon-192.png">
+<link rel="stylesheet" href="css/app.css">
+<title>Baba.Oyun — Oğuzhan'ın oyun odası</title>
+</head>
+<body>
+<header class="nav">
+  <a class="logo" href="#">BABA<span>.</span>OYUN</a>
+  <nav class="nav-links"><a href="#draft" data-r="draft">Draft</a><a href="#2048" data-r="2048">2048</a><a href="#sudoku" data-r="sudoku">Sudoku</a><a href="#mines" data-r="mines">Mayın</a><a href="#blocks" data-r="blocks">Blok</a></nav>
+  <div class="nav-r"><button class="icon" id="snd" aria-label="Ses">🔊</button><button class="pill sm" id="lockBtn">Kilitle</button></div>
+</header>
+<main id="view"></main>
+<script src="js/core.js"></script>
+<script src="js/draft-data.js"></script>
+<script src="js/draft.js"></script>
+<script src="js/games.js"></script>
+<script>
+  const sb=document.getElementById('snd');sb.textContent=Snd.on?'🔊':'🔇';
+  sb.onclick=()=>{sb.textContent=Snd.toggle()?'🔊':'🔇'};
+  document.getElementById('lockBtn').onclick=()=>App.lock();
+  App.render();
+  if('serviceWorker' in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('sw.js').catch(()=>{});
+</script>
+</body>
+</html>
