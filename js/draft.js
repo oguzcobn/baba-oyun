@@ -11,9 +11,13 @@ const Draft = (() => {
   const avg = a => a.length ? a.reduce((s, v) => s + v, 0) / a.length : 68;
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const CLUB = id => DRAFT_CLUBS.find(c => c.id === id);
-  const OPP_BONUS = -5.5;       // rakiplere zorluk payı (test ile ayarlandı)
+  /* gerçekçi simülasyon ayarları (çok sezonluk testlerle ayarlandı):
+     güç = mevki ağırlıklı ortalama reyting + kimya; reyting farkı gol beklentisine üstel yansır,
+     her maçta form dalgası, iç saha avantajı ve senin takımında sakatlıklar var */
+  const CFG = { opp: 0, K: 12.5, base: 1.2, home: 1.12, away: .92, noise: 2.2, inj: .011, tac: .5, coach: .5 };
+  const gauss = () => { let u = 0, v = 0; while (!u) u = Math.random(); while (!v) v = Math.random(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
   const ME = 'Senin Takımın';
-  const CHEM_MAX = 6;          // tam kimya (100) = +6 reyting puanı
+  const CHEM_MAX = 4;          // tam kimya (100) = +4 reyting puanı
   const TR_FIRST = /^(Kaan|Kerem|Arda|Emre|Okan|Ozan|Okay|Mert|Can|Berat|Yunus|Eren|Efe|Ege|Deniz|Umut|Onur|Volkan|Fatih|Taha|Taylan|Zafer|Mithat|Yusuf|Emin|Bertuğ|Berkay|Batuhan|Hamza|Celil|Samed|Enes|Bilal|Yalçın|Kamil|Ali|Ayberk|Atakan|Melih|Arif|Adil|Rayyan|Bahadır|Baran|Fatih|Tayfur|Bedirhan|Emir|Mustafa|Sefa|Mehmet|Furkan|Veysel|Kahraman|Gökhan|Serdar|Berat|Ahmed|Hasan|Erhan|Metehan|Abdurrahim|Ensar|Salih|Cenk|Sinan|Semih|Rıdvan|Ilhan|Kartal|Doğan|Burak|Hakan|Selçuk|Gökdeniz|Volkan|Serkan|Ömer|Ertuğrul|Yakup|Orhan|Murat|Umut)\b/;
   const nation = p => DRAFT_NAT[p.name] || (/[çğıışşİÇĞŞÖÜöü]/.test(p.name) || TR_FIRST.test(p.name) ? 'TR' : null);
   // her oyuncu: aynı kulüpten ya da aynı ülkeden takım arkadaşı başına 1 bağ → 0..3 kimya
@@ -63,7 +67,7 @@ const Draft = (() => {
         <div class="dr-right">
           <div class="pitch">${DRAFT_SLOTS.map(slotHtml).join('')}<div class="pitch-lines"></div></div>
           <div class="bench"><span class="eyebrow">Yedekler</span>${S.bench.map((p, i) => `<div class="bslot ${p ? 'full' : ''}">${p ? cardInner(p) : '<span>Yedek ' + (i + 1) + '</span>'}</div>`).join('')}</div>
-          <div class="dr-actions"><p class="muted sm chem-help">Kimya: aynı kulüpten ya da aynı ülkeden gelen her takım arkadaşı bir bağ kurar (●○○ → ●●●). Maç gücü = ortalama reyting + kimya (en çok +${CHEM_MAX}).</p><button class="pill ghost" data-a="reset">Sıfırla</button><button class="pill" data-a="next" ${n < 13 ? 'disabled' : ''}>Teknik direktör ve taktik →</button></div>
+          <div class="dr-actions"><p class="muted sm chem-help">Kimya: aynı kulüpten ya da aynı ülkeden gelen her takım arkadaşı bir bağ kurar (●○○ → ●●●). Maç gücü = ortalama reyting + kimya (en çok +${CHEM_MAX}); her maçta form ve sakatlık şansı var.</p><button class="pill ghost" data-a="reset">Sıfırla</button><button class="pill" data-a="next" ${n < 13 ? 'disabled' : ''}>Teknik direktör ve taktik →</button></div>
         </div>
       </section>`;
     bind();
@@ -169,7 +173,7 @@ const Draft = (() => {
     let { att, def } = baseAD(xi);
     const cp = chemOf(xi).pct, chem = cp / 100 * CHEM_MAX;
     const benchAvg = avg(S.bench.filter(Boolean).map(p => p.r)); att += (benchAvg - 75) * .02; def += (benchAvg - 75) * .02;
-    if (S.coach !== null) { att += DRAFT_COACHES[S.coach].att; def += DRAFT_COACHES[S.coach].def; }
+    if (S.coach !== null) { att += DRAFT_COACHES[S.coach].att * CFG.coach; def += DRAFT_COACHES[S.coach].def * CFG.coach; }
     return { att: att + chem, def: def + chem, chem, cp, xi };
   }
   function mods(xi) {
@@ -179,7 +183,7 @@ const Draft = (() => {
     if (t.hat === 'onde') { a *= 1.05; d *= 1.07; } else if (t.hat === 'geride') { a *= .94; d *= .9; }
     const kn = avg(xi.filter(p => p.pos === 'KN').map(p => p.r)), os = avg(xi.filter(p => p.pos === 'OS').map(p => p.r));
     if (t.yon === 'kanat') a *= kn >= os ? 1.06 : .98; else if (t.yon === 'merkez') a *= os >= kn ? 1.06 : .98;
-    return { a, d };
+    return { a: 1 + (a - 1) * CFG.tac, d: 1 + (d - 1) * CFG.tac };
   }
   // rakip kulübün en iyi 11'i (4-3-3) — senin seçtiğin oyuncular o kulüpten "transfer" olmuş sayılır
   function clubXI(c, taken) {
@@ -191,7 +195,7 @@ const Draft = (() => {
   }
   const poisson = l => { let L = Math.exp(-l), k = 0, p = 1; do { k++; p *= Math.random(); } while (p > L); return k - 1; };
   const wpick = (arr, wf) => { const w = arr.map(wf), tot = w.reduce((s, v) => s + v, 0); let r = Math.random() * tot; for (let i = 0; i < arr.length; i++) { r -= w[i]; if (r <= 0) return arr[i]; } return arr[0]; };
-  const SC_W = { FV: 4.2, KN: 3, OS: 1.5, ST: .45, BK: .6, KL: 0 }, AS_W = { FV: 2, KN: 4.5, OS: 3, ST: .4, BK: 1.8, KL: .05 };
+  const SC_W = { FV: 2.6, KN: 2.2, OS: 1.5, ST: .55, BK: .55, KL: 0 }, AS_W = { FV: 2, KN: 4.5, OS: 3, ST: .4, BK: 1.8, KL: .05 };
 
   /* ---------------- sezon ---------------- */
   function season() {
@@ -200,7 +204,7 @@ const Draft = (() => {
     const taken = new Set(picked().map(p => p.name));
     const out = DRAFT_CLUBS[rnd(DRAFT_CLUBS.length)];
     const teams = [{ name: ME, short: 'SEN', id: 'me', me: true, xi: st.xi, c1: '#ff4d00' }];
-    DRAFT_CLUBS.filter(c => c !== out).forEach(c => { const xi = clubXI(c, taken), ad = baseAD(xi), oc = chemOf(xi).pct / 100 * CHEM_MAX; ad.att += oc; ad.def += oc; teams.push({ name: c.name, short: c.short, id: c.id, xi, att: ad.att + OPP_BONUS, def: ad.def + OPP_BONUS, c1: c.c1 }); });
+    DRAFT_CLUBS.filter(c => c !== out).forEach(c => { const xi = clubXI(c, taken), ad = baseAD(xi), oc = chemOf(xi).pct / 100 * CHEM_MAX; ad.att += oc; ad.def += oc; teams.push({ name: c.name, short: c.short, id: c.id, xi, att: ad.att + CFG.opp, def: ad.def + CFG.opp, c1: c.c1 }); });
     teams.forEach(t => Object.assign(t, { p: 0, w: 0, d: 0, l: 0, gf: 0, ga: 0, form: [] }));
     const stats = {}; // key -> {name, team, pos, r, g, a, cs, apps}
     const key = (t, p) => t.id + '|' + p.name;
@@ -208,10 +212,19 @@ const Draft = (() => {
     const N = teams.length, idx = teams.map((_, i) => i), rounds = [];
     for (let r = 0; r < N - 1; r++) { const pr = []; for (let i = 0; i < N / 2; i++) pr.push(r % 2 ? [idx[N - 1 - i], idx[i]] : [idx[i], idx[N - 1 - i]]); rounds.push(pr); idx.splice(1, 0, idx.pop()); }
     const all = [...rounds, ...rounds.map(r => r.map(([h, a]) => [a, h]))];
-    const lam = (att, def) => Math.max(.15, Math.min(3.6, 1.38 * Math.exp((att - def) / 17)));
+    const lam = (att, def) => Math.max(.12, Math.min(4.2, CFG.base * Math.exp((att - def) / CFG.K)));
+    // sakatlıklar (yalnızca senin takımında görünür): yerine en iyi yedek, mevki dışıysa -4
+    const inj = {}, bench = S.bench.filter(Boolean);
+    function injPenalty() {
+      let pen = 0; const used = new Set();
+      Object.entries(inj).forEach(([name, wks]) => { if (wks <= 0) return; const p = st.xi.find(x => x.name === name); if (!p) return;
+        const sub = bench.filter(b => !used.has(b.name) && !inj[b.name]).sort((a, b) => (b.pos === p.pos) - (a.pos === p.pos) || b.r - a.r)[0];
+        if (sub) used.add(sub.name); const r = sub ? sub.r - (sub.pos === p.pos ? 0 : 4) : 58; pen += (r - p.r) / 11; });
+      return pen;
+    }
     function goals(t, n, list) {
       for (let k = 0; k < n; k++) {
-        const sc = wpick(t.xi, p => SC_W[p.pos] * Math.pow(p.r / 75, 3)); stats[key(t, sc)].g++;
+        const sc = wpick(t.xi, p => SC_W[p.pos] * Math.pow(p.r / 75, 2)); stats[key(t, sc)].g++;
         let as = null;
         if (Math.random() < .78) { as = wpick(t.xi.filter(p => p !== sc), p => AS_W[p.pos] * Math.pow(p.r / 75, 4)); stats[key(t, as)].a++; }
         list.push({ t: t.id, sc: sc.name, as: as && as.name, min: 1 + rnd(90) });
@@ -220,9 +233,10 @@ const Draft = (() => {
     function play(h, a) {
       const H = teams[h], A = teams[a];
       let lh, la;
-      if (H.me) { lh = lam(st.att, A.def) * m.a * 1.08; la = lam(A.att, st.def) / m.d * .95; }
-      else if (A.me) { lh = lam(H.att, st.def) / m.d * 1.05; la = lam(st.att, H.def) * m.a; }
-      else { lh = lam(H.att, A.def) * 1.08; la = lam(A.att, H.def); }
+      const fh = gauss() * CFG.noise, fa = gauss() * CFG.noise, pen = (H.me || A.me) ? injPenalty() : 0;
+      const ha = (H.me ? st.att + pen : H.att) + fh, hd = (H.me ? st.def + pen : H.def) + fh, aa = (A.me ? st.att + pen : A.att) + fa, ad2 = (A.me ? st.def + pen : A.def) + fa;
+      lh = lam(ha, ad2) * CFG.home; la = lam(aa, hd) * CFG.away;
+      if (H.me) { lh *= m.a; la /= m.d; } else if (A.me) { la *= m.a; lh /= m.d; }
       const gh = poisson(lh), ga = poisson(la), ev = [];
       goals(H, gh, ev); goals(A, ga, ev); ev.sort((x, y) => x.min - y.min);
       H.gf += gh; H.ga += ga; A.gf += ga; A.ga += gh;
@@ -252,6 +266,9 @@ const Draft = (() => {
     function week() {
       if (wk >= all.length) return finish();
       const res = all[wk].map(([h, a]) => play(h, a)), mine = res.find(r => teams[r.h].me || teams[r.a].me);
+      Object.keys(inj).forEach(k => { inj[k]--; if (inj[k] <= 0) delete inj[k]; });
+      let injMsg = '';
+      st.xi.forEach(p => { if (!inj[p.name] && Math.random() < CFG.inj) { const w = 1 + Math.floor(Math.random() * Math.random() * 7); inj[p.name] = w; injMsg = `🚑 ${p.name} sakatlandı (${w} hafta)`; } });
       wk++;
       q('.wk').textContent = wk; q('.pts').textContent = me.p; q('.wdl').textContent = `${me.w}-${me.d}-${me.l}`; q('.gl').textContent = `${me.gf}:${me.ga}`;
       q('.bar i').style.width = (wk / 34 * 100) + '%';
@@ -262,7 +279,7 @@ const Draft = (() => {
       const mn = q('.minute i'); mn.style.transition = 'none'; mn.style.width = '0'; void mn.offsetWidth; mn.style.transition = `width ${Math.max(40, speed * .7)}ms linear`; mn.style.width = '100%';
       q('.sc').textContent = `${mine.gh} – ${mine.ga}`; q('.live-card').dataset.r = r;
       q('.goals-ev').innerHTML = mine.ev.map(e => `<span class="${e.t === 'me' ? 'mine' : ''}">⚽ ${e.min}' ${esc(e.sc)}${e.as ? ` <small>(${esc(e.as)})</small>` : ''}</span>`).join('');
-      const f = q('.feed'); f.insertAdjacentHTML('afterbegin', `<div class="fr ${r}"><span>${wk}</span><b>${r}</b> ${home ? '' : '@ '}${esc(opp.name)} <em>${myG}–${opG}</em></div>`); while (f.children.length > 5) f.lastChild.remove();
+      const f = q('.feed'); f.insertAdjacentHTML('afterbegin', `<div class="fr ${r}"><span>${wk}</span><b>${r}</b> ${home ? '' : '@ '}${esc(opp.name)} <em>${myG}–${opG}</em></div>${injMsg ? `<div class="fr inj">${esc(injMsg)}</div>` : ''}`); while (f.children.length > 5) f.lastChild.remove();
       if (typeof AdvAudio !== 'undefined' && speed > 100) AdvAudio.note(r === 'G' ? 784 : r === 'B' ? 523 : 330, .12, 'triangle', .04);
       table(); kings(); later(week, speed);
     }
@@ -316,5 +333,5 @@ const Draft = (() => {
     save();
   }
 
-  return { open, stop, get state() { return S; }, _take: take, _spin: spin, _draw: () => drawClub() };
+  return { open, stop, _cfg: CFG, get state() { return S; }, _take: take, _spin: spin, _draw: () => drawClub() };
 })();
