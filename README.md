@@ -1,4 +1,4 @@
-# Baba.Oyun
+# BABA.
 
 Oğuzhan'ın şifreli oyun odası (Lale & Ela oyunundan ayrı uygulama).
 
@@ -10,3 +10,10 @@ Başlangıç şifresi `1967`; uygulamanın altındaki "Şifreyi değiştir" ile 
 Oyuncu puanları oyun içi tahmini değerlerdir. Şifre yalnızca çocukların yanlışlıkla girmesini önler, gerçek bir güvenlik değildir.
 
 - **İş Masası** (`#is`) — ayrı, koyu "kontrol paneli" tasarımı: DSAn Travel App ve Şoför Takvimi kısayolları, bildirimli hatırlatmalar (tek sefer / her gün / hafta içi / haftalık / aylık; telefon takvimine .ics veya Google Takvim ile eklenebilir) ve aranabilir, sabitlenebilir notlar. Veriler yalnızca cihazda.
+
+## BABA. v2
+- **Kategoriler:** İş · Dost · Oyunlar · Seyahat · Fotoğraf
+- **Erişim:** sahibi PIN ile girer; diğerleri yalnızca sahibinin oluşturduğu davet koduyla (Davetler & erişim sayfası) ya da giriş ekranından katılma isteği göndererek. Davetliler İş sayfasını görmez.
+- **İş:** Brandlos (Awwwards nominee, Kas 2026) tasarım diliyle; DSAn Travel App, Şoför Takvimi, LinkedIn, hatırlatmalar ve notlar.
+- **Seyahat:** Booking.com · Airbnb · Skyscanner; **Gezilerim**: three.js ile 3D dünya, şehir pinleri (Natural Earth / world-atlas sınırları; şehir arama: yerleşik liste + OpenStreetMap Nominatim).
+- **Fotoğraf:** Pexels sayfası, günün fotoğrafçısı, sözler, Wikimedia Commons'taki kamu malı sokak fotoğraflarıyla 3D galeri.

@@ -11,6 +11,14 @@ const App = (() => {
   const ls = { get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } }, set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} } };
   const storedHash = () => ls.get('baba_pin_hash', null) || DEFAULT_HASH;
   let unlocked = false; try { unlocked = sessionStorage.getItem('baba_ok') === '1'; } catch (e) {}
+  // misafir: sahibinin verdiği davet koduyla bu cihazda açılır
+  const norm = n => String(n || '').trim().toLocaleLowerCase('tr-TR').replace(/\s+/g, ' ');
+  const inviteCode = name => 'B-' + cyrb('baba-davet:' + norm(name)).slice(0, 6).toUpperCase();
+  let guest = ls.get('baba_guest', null);
+  if (guest && inviteCode(guest.name) !== guest.code) guest = null;
+  const isOwner = () => unlocked, isGuest = () => !unlocked && !!guest, canIn = () => unlocked || !!guest;
+  const OWNER_ONLY = ['is', 'erisim'];
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const root = () => document.getElementById('view');
   let cleanup = [];
   const onLeave = f => cleanup.push(f);
@@ -42,7 +50,7 @@ const App = (() => {
     addEventListener('keydown', kd); const obs = new MutationObserver(() => { if (!ov.isConnected) { removeEventListener('keydown', kd); obs.disconnect(); } }); obs.observe(document.body, { childList: true });
   }
   function askOpen() {
-    pinPad('Baba.Oyun', pin => {
+    pinPad('BABA.', pin => {
       if (hash(pin) !== storedHash()) return 'Şifre yanlış, tekrar dene';
       unlocked = true; try { sessionStorage.setItem('baba_ok', '1'); } catch (e) {}
       render(); return true;
@@ -55,6 +63,7 @@ const App = (() => {
     }, { msg: 'Bu cihazda kullanılacak yeni 4 haneli şifre' });
   }
   function lock() { unlocked = false; try { sessionStorage.removeItem('baba_ok'); } catch (e) {} if (location.hash) location.hash = ''; else render(); }
+  function guestOut() { guest = null; try { localStorage.removeItem('baba_guest'); } catch (e) {} location.hash = ''; render(); }
   function toast(t) { const d = document.createElement('div'); d.className = 'bb-toast'; d.textContent = t; document.body.appendChild(d); setTimeout(() => d.remove(), 1800); }
 
   /* ---------------- menü ---------------- */
@@ -67,27 +76,62 @@ const App = (() => {
   ];
   const fmtT = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
   function shell(title, inner, tag) {
-    root().innerHTML = `<section class="game-page"><div class="gp-head"><a class="back" href="#">← Tüm oyunlar</a><p class="eyebrow">${tag || 'Zekâ oyunu'}</p><h1 class="display sm">${title}</h1></div><div class="bb-body">${inner}</div></section>`;
+    root().innerHTML = `<section class="game-page"><div class="gp-head"><a class="back" href="#oyunlar">← Oyunlar</a><p class="eyebrow">${tag || 'Zekâ oyunu'}</p><h1 class="display sm">${title}</h1></div><div class="bb-body">${inner}</div></section>`;
     window.scrollTo(0, 0);
     return root().querySelector('.bb-body');
+  }
+  function hub() {
+    const d = new Date(), name = isOwner() ? 'Oğuzhan' : (guest && guest.name);
+    const CATS = [
+      ...(isOwner() ? [{ id: 'is', n: '01', t: 'İş', d: 'DSAn kısayolları, hatırlatmalar, notlar, LinkedIn', cls: 'c-is' }] : []),
+      { id: 'dost', n: '02', t: 'Dost', d: 'Seni dinleyen sohbet arkadaşı', cls: 'c-dost' },
+      { id: 'oyunlar', n: '03', t: 'Oyunlar', d: 'Süper Lig Draft · 2048 · Sudoku · Mayın · Blok', cls: 'c-oyun' },
+      { id: 'seyahat', n: '04', t: 'Seyahat', d: 'Booking · Airbnb · Skyscanner · Gezilerim 3D dünya', cls: 'c-sey' },
+      { id: 'foto', n: '05', t: 'Fotoğraf', d: 'Pexels · günün fotoğrafçısı · 3D sokak galerisi', cls: 'c-foto' }
+    ];
+    root().innerHTML = `
+      <section class="hero hub-hero"><p class="eyebrow">${esc(name || '')} · ${d.toLocaleDateString('tr-TR', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
+        <h1 class="display xl">BABA<em>.</em></h1>
+        <p class="lead">İş, dinlenme, oyun ve yolculuk — hepsi tek yerde, sadece davetlilere açık.</p></section>
+      <section class="hub">${CATS.map(c => `<a class="hub-card ${c.cls}" href="#${c.id}"><span class="hub-n">${c.n}</span><h2>${c.t}</h2><p>${c.d}</p><span class="arrow">↗</span></a>`).join('')}</section>
+      <footer class="foot"><div class="foot-word">BABA<span>.</span></div><div class="foot-row">${isOwner() ? '<button class="link" data-a="pin">Şifreyi değiştir</button><a class="link" href="#erisim">Davetler &amp; erişim</a><button class="link" data-a="lock">Kilitle</button>' : '<button class="link" data-a="gout">Bu cihazdan çık</button>'}<span class="muted">Yalnızca davetliler için.</span></div></footer>`;
+    const q = s => root().querySelector(s);
+    if (q('[data-a=pin]')) q('[data-a=pin]').onclick = () => { click(); changePin(); };
+    if (q('[data-a=lock]')) q('[data-a=lock]').onclick = () => { click(); lock(); };
+    if (q('[data-a=gout]')) q('[data-a=gout]').onclick = () => { if (confirm('Davetli erişimi bu cihazdan kaldırılsın mı?')) guestOut(); };
+    window.scrollTo(0, 0);
+  }
+  /* ---------------- davetler (yalnızca sahibi) ---------------- */
+  function access() {
+    const list = ls.get('baba_invites', []);
+    const link = (n, c) => location.href.split('#')[0] + '#davet=' + encodeURIComponent(c) + '&ad=' + encodeURIComponent(n);
+    root().innerHTML = `<section class="game-page"><div class="gp-head"><a class="back" href="#">← Ana sayfa</a><p class="eyebrow">Yalnızca sahibi görür</p><h1 class="display sm">Davetler &amp; erişim</h1></div>
+      <div class="acc">
+        <form class="acc-form"><input name="n" placeholder="Davet edeceğin kişinin adı (ör. Nicole)" required maxlength="40"><button class="pill">Davet kodu oluştur</button></form>
+        <div class="acc-list">${list.length ? list.slice().reverse().map(x => `<div class="acc-item"><div><b>${esc(x.name)}</b><code>${x.code}</code><small class="muted">${new Date(x.at).toLocaleDateString('tr-TR')}</small></div><div class="acc-acts"><button class="pill ghost sm" data-share="${esc(x.name)}">Paylaş</button><button class="pill ghost sm" data-del="${esc(x.code)}">Listeden sil</button></div></div>`).join('') : '<p class="muted">Henüz davet yok.</p>'}</div>
+        <div class="acc-note"><h3>Nasıl çalışır?</h3><p>Uygulamaya yalnızca senin şifrenle ya da senin verdiğin davet koduyla girilir. Katılmak isteyen biri giriş ekranından sana istek mesajı gönderir; uygun görürsen buradan ona özel bir kod oluşturup paylaşırsın. Davetliler İş sayfasını göremez; notları, hatırlatmaları ve gezileri yalnızca kendi cihazlarında tutulur.</p>
+        <p class="muted sm">Not: Site GitHub Pages'te durduğu için bu bir “kapı kilidi”dir, banka kasası değil — kişisel verilerin zaten hiçbir sunucuda değil, yalnızca senin cihazında. Gerçek sunucu tarafı onay istersen Cloudflare Access ile e-postayla giriş kurabiliriz.</p></div>
+      </div></section>`;
+    const f = root().querySelector('.acc-form');
+    const share = n => { const c = inviteCode(n), u = link(n, c), t = `Merhaba ${n}, BABA. uygulamama davetlisin 🙂\nGiriş kodun: ${c}\n${u}`; if (navigator.share) navigator.share({ title: 'BABA. daveti', text: t }).catch(() => {}); else { navigator.clipboard && navigator.clipboard.writeText(t); toast('📋 Davet metni kopyalandı'); } };
+    f.onsubmit = e => { e.preventDefault(); const n = f.n.value.trim(); if (!n) return; const c = inviteCode(n); const l = ls.get('baba_invites', []).filter(x => x.code !== c); l.push({ name: n, code: c, at: Date.now() }); ls.set('baba_invites', l); access(); share(n); };
+    root().querySelectorAll('[data-share]').forEach(b => b.onclick = () => share(b.dataset.share));
+    root().querySelectorAll('[data-del]').forEach(b => b.onclick = () => { ls.set('baba_invites', ls.get('baba_invites', []).filter(x => x.code !== b.dataset.del)); access(); });
+    window.scrollTo(0, 0);
   }
   function menu() {
     const card = (g, i) => `<a class="card ${g.id}" href="#${g.id}"><div class="card-art art-${g.id}">${ART[g.id]}</div>
       <div class="card-meta"><span class="num">0${i + 1}</span><h3>${g.name}</h3><span class="arrow">↗</span></div>
       <div class="card-tags">${g.tags.map(t => `<span class="chip">${t}</span>`).join('')}<span class="chip dark">🏆 ${g.best()}</span></div></a>`;
     root().innerHTML = `
-      <section class="hero"><p class="eyebrow">Oğuzhan’ın oyun odası · ${new Date().toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' })}</p>
+      <section class="hero"><a class="back" href="#">← Ana sayfa</a><p class="eyebrow">Oyunlar · ${new Date().toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' })}</p>
         <h1 class="display xl">Kafa<br>dinle.<br><em>Kadro kur.</em></h1>
         <div class="hero-row"><p class="lead">Beş oyun, sıfır reklam. Futbol draftından Sudoku’ya, kısa molalar için seçilmiş bir koleksiyon.</p>
           <a class="pill big" href="#draft">Draft’a başla ↗</a></div></section>
       <section class="feature"><a href="#draft" class="feat-card"><div class="feat-art">${ART.draft}</div><div class="feat-txt"><span class="badge">Günün oyunu</span><h2>Süper Lig<br>Draft</h2><p>Çark 18 Süper Lig kulübü arasında eşit şansla döner; gelen takımın son 10 yıllık kadrosundan seç, 11+2 kur. Teknik direktörünü ve taktiğini belirle, 34 maçlık sezonu canlı izle. Hedef: 102 puan.</p><div class="card-tags"><span class="chip">Futbol</span><span class="chip">Strateji</span><span class="chip dark">🏆 ${ls.get('draft_best', 0)} puan</span></div></div></a></section>
-      <section class="is-promo"><a href="#is" class="is-card"><span class="is-card-l">DSAN / İŞ MASASI</span><b>Hatırlatmalar, notlar,<br>Travel App &amp; şoför takvimi.</b><span class="is-card-go">AÇ ↗</span></a></section>
-      <section class="dost-promo"><a href="#dost" class="feat-card dost-card"><div class="dost-art"><span>D</span></div><div class="feat-txt"><span class="badge">Yeni</span><h2>Dost</h2><p>Kafan doluysa yaz. Seni yargılamadan dinleyen, düşüncelerini toparlamana yardım eden bir sohbet arkadaşı. Nefes egzersizi ve düşünce kaydı içerir; sohbet yalnızca bu cihazda kalır.</p><div class="card-tags"><span class="chip">Dinleme</span><span class="chip">Nefes</span><span class="chip">Düşünce kaydı</span></div></div></a></section>
       <section class="list"><div class="list-head"><h2 class="display sm">Koleksiyon</h2><span class="muted">${GAMES.length} oyun</span></div>
         <div class="cards">${GAMES.map(card).join('')}</div></section>
-      <footer class="foot"><div class="foot-word">BABA<span>.</span>OYUN</div><div class="foot-row"><button class="link" data-a="pin">Şifreyi değiştir</button><button class="link" data-a="lock">Kilitle</button><span class="muted">Lale & Ela oyunundan ayrı, yalnızca yetişkinler için.</span></div></footer>`;
-    root().querySelector('[data-a=pin]').onclick = () => { click(); changePin(); };
-    root().querySelector('[data-a=lock]').onclick = () => { click(); lock(); };
+`;
     window.scrollTo(0, 0);
   }
   const ART = {
@@ -352,25 +396,47 @@ const App = (() => {
 
   /* ---------------- yönlendirme ---------------- */
   function lockScreen() {
-    root().innerHTML = `<section class="hero lockhero"><p class="eyebrow">Özel alan</p><h1 class="display xl">Baba<br><em>oyun</em><br>odası.</h1><button class="pill big" data-a="open">🔒 Şifreyle gir</button></section>`;
-    root().querySelector('[data-a=open]').onclick = askOpen; askOpen();
+    document.body.classList.add('locked'); document.body.classList.remove('work-mode', 'dark-mode');
+    const m = location.hash.match(/davet=([^&]+)&ad=([^&]+)/), pc = m ? decodeURIComponent(m[1]) : '', pn = m ? decodeURIComponent(m[2]) : '';
+    root().innerHTML = `<section class="hero lockhero"><p class="eyebrow">Özel alan · yalnızca davetliler</p><h1 class="display xl">BABA<em>.</em></h1>
+      <div class="lock-opts">
+        <button class="pill big" data-a="open">🔒 Sahibi olarak gir</button>
+        <form class="lock-card" data-f="inv"><h3>🎟 Davet kodum var</h3><input name="n" placeholder="Adın" value="${esc(pn)}" required maxlength="40"><input name="c" placeholder="Kod (ör. B-1A2B3C)" value="${esc(pc)}" required maxlength="12"><button class="pill">Giriş yap</button><p class="lock-msg"></p></form>
+        <form class="lock-card" data-f="req"><h3>✋ Katılma isteği gönder</h3><p class="muted sm">BABA. yalnızca Oğuzhan’ın onay verdiği kişilere açık. İsteğini gönder; uygun görürse sana bir davet kodu yollar.</p><input name="n" placeholder="Adın" required maxlength="40"><textarea name="m" rows="2" placeholder="Kısa bir not (isteğe bağlı)" maxlength="300"></textarea><button class="pill ghost">İsteği gönder</button></form>
+      </div></section>`;
+    const q = s => root().querySelector(s);
+    q('[data-a=open]').onclick = askOpen;
+    q('[data-f=inv]').onsubmit = e => { e.preventDefault(); const f = e.target, n = f.n.value.trim(), c = f.c.value.trim().toUpperCase();
+      if (inviteCode(n) !== c) { f.querySelector('.lock-msg').textContent = 'Kod bu isimle eşleşmiyor. Adını davetteki gibi yaz.'; return; }
+      guest = { name: n, code: c, at: Date.now() }; ls.set('baba_guest', guest); location.hash = ''; render(); };
+    q('[data-f=req]').onsubmit = e => { e.preventDefault(); const f = e.target, t = `Merhaba Oğuzhan, BABA. uygulamasına katılmak istiyorum.\nAdım: ${f.n.value.trim()}${f.m.value.trim() ? '\nNot: ' + f.m.value.trim() : ''}`;
+      if (navigator.share) navigator.share({ title: 'BABA. katılma isteği', text: t }).catch(() => {}); else window.open('https://wa.me/?text=' + encodeURIComponent(t), '_blank', 'noopener'); };
+    if (!m) askOpen();
   }
   function render() {
     leave(); if (typeof Draft !== 'undefined') Draft.stop();
     document.querySelectorAll('.bb-pin-ov').forEach(e => e.remove());
-    if (!unlocked) return lockScreen();
-    const r = location.hash.slice(1);
+    if (!canIn()) return lockScreen();
+    document.body.classList.remove('locked');
+    let r = location.hash.slice(1); if (r.startsWith('davet=')) { r = ''; history.replaceState(null, '', location.pathname); }
+    if (OWNER_ONLY.includes(r) && !isOwner()) r = '';
+    document.body.classList.toggle('guest', isGuest());
     document.body.classList.toggle('work-mode', r === 'is');
-    document.querySelectorAll('.nav a[data-r]').forEach(a => a.classList.toggle('on', a.dataset.r === r));
-    if (r === 'draft') { root().innerHTML = '<section class="game-page"><div class="gp-head"><a class="back" href="#">← Tüm oyunlar</a></div><div id="draftRoot"></div></section>'; window.scrollTo(0, 0); Draft.open(root().querySelector('#draftRoot')); }
+    document.body.classList.toggle('dark-mode', ['seyahat', 'gezilerim', 'foto'].includes(r));
+    document.querySelectorAll('.nav a[data-r]').forEach(a => a.classList.toggle('on', a.dataset.r === r || (a.dataset.r === 'oyunlar' && GAMES.some(g => g.id === r))));
+    if (r === 'draft') { root().innerHTML = '<section class="game-page"><div class="gp-head"><a class="back" href="#oyunlar">← Oyunlar</a></div><div id="draftRoot"></div></section>'; window.scrollTo(0, 0); Draft.open(root().querySelector('#draftRoot')); }
     else if (r === 'is' && typeof Is !== 'undefined') { root().innerHTML = '<div id="isRoot"></div>'; window.scrollTo(0, 0); Is.open(root().querySelector('#isRoot')); }
     else if (r === 'dost' && typeof Dost !== 'undefined') { root().innerHTML = '<section class="game-page"><div class="gp-head"><a class="back" href="#">← Ana sayfa</a></div><div id="dostRoot"></div></section>'; window.scrollTo(0, 0); Dost.open(root().querySelector('#dostRoot')); }
     else if (r === '2048') g2048();
     else if (r === 'sudoku') sudoku();
     else if (r === 'mines') mines();
     else if (r === 'blocks') blocks();
-    else menu();
+    else if (r === 'oyunlar') menu();
+    else if (r === 'erisim') access();
+    else if ((r === 'seyahat' || r === 'gezilerim') && typeof Travel !== 'undefined') { root().innerHTML = '<div id="tvRoot"></div>'; window.scrollTo(0, 0); Travel.open(root().querySelector('#tvRoot'), r); onLeave(() => Travel.leave()); }
+    else if (r === 'foto' && typeof Foto !== 'undefined') { root().innerHTML = '<div id="ftRoot"></div>'; window.scrollTo(0, 0); Foto.open(root().querySelector('#ftRoot')); onLeave(() => Foto.leave()); }
+    else hub();
   }
   addEventListener('hashchange', render);
-  return { render, leave, askOpen, lock: () => lock(), get unlocked() { return unlocked; } };
+  return { render, leave, askOpen, lock: () => { if (isOwner()) lock(); else if (confirm('Davetli erişimi bu cihazdan kaldırılsın mı?')) guestOut(); }, isOwner, get unlocked() { return unlocked; } };
 })();

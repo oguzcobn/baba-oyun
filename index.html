@@ -6,18 +6,19 @@
 <meta name="theme-color" content="#ffffff">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Baba.Oyun">
+<meta name="apple-mobile-web-app-title" content="BABA.">
 <meta name="robots" content="noindex">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="img/icon-180.png">
 <link rel="icon" href="img/icon-192.png">
 <link rel="stylesheet" href="css/app.css">
-<title>Baba.Oyun — Oğuzhan'ın oyun odası</title>
+<link rel="stylesheet" href="css/v2.css">
+<title>BABA.</title>
 </head>
 <body>
 <header class="nav">
-  <a class="logo" href="#">BABA<span>.</span>OYUN</a>
-  <nav class="nav-links"><a href="#draft" data-r="draft">Draft</a><a href="#2048" data-r="2048">2048</a><a href="#sudoku" data-r="sudoku">Sudoku</a><a href="#mines" data-r="mines">Mayın</a><a href="#blocks" data-r="blocks">Blok</a><a href="#dost" data-r="dost">Dost</a><a href="#is" data-r="is" class="nav-is">İş</a></nav>
+  <a class="logo" href="#">BABA<span>.</span></a>
+  <nav class="nav-links"><a href="#is" data-r="is" class="nav-is owner-only">İş</a><a href="#dost" data-r="dost">Dost</a><a href="#oyunlar" data-r="oyunlar">Oyunlar</a><a href="#seyahat" data-r="seyahat">Seyahat</a><a href="#foto" data-r="foto">Fotoğraf</a></nav>
   <div class="nav-r"><button class="icon" id="snd" aria-label="Ses">🔊</button><button class="pill sm" id="lockBtn">Kilitle</button></div>
 </header>
 <main id="view"></main>
@@ -27,6 +28,8 @@
 <script src="js/draft.js"></script>
 <script src="js/dost.js"></script>
 <script src="js/is.js"></script>
+<script src="js/travel.js"></script>
+<script src="js/foto.js"></script>
 <script src="js/games.js"></script>
 <script>
   const sb=document.getElementById('snd');sb.textContent=Snd.on?'🔊':'🔇';

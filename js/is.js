@@ -84,33 +84,44 @@ const Is = (() => {
   function open(root) {
     el = root; start();
     const now = new Date(), dflt = new Date(now.getTime() + 60 * 60000);
-    el.innerHTML = `<div class="work">
-      <header class="w-top"><div class="w-id"><span class="w-mono">DSAN / İŞ MASASI</span><span class="w-mono w-dim">ANTALYA · TSİ +03</span></div>
-        <div class="w-clock"><span class="w-time">--:--</span><span class="w-date w-mono"></span></div>
-        <div class="w-next w-mono"></div></header>
-      <section class="w-links">${LINKS.map(l => `<a class="w-link" href="${l.u}" target="_blank" rel="noopener"><span class="w-mono w-n">${l.n}</span><h2>${l.t}</h2><p class="w-mono">${l.d}</p><span class="w-arrow">↗</span><span class="w-url w-mono">${esc(l.u.replace('https://', '').slice(0, 42))}…</span></a>`).join('')}</section>
-      <section class="w-grid">
-        <div class="w-panel w-rem">
-          <div class="w-ph"><span class="w-mono">[ HATIRLATMALAR ]</span><button class="w-btn w-perm" data-a="perm"></button></div>
+    const li = ls.get('is_linkedin', '');
+    el.innerHTML = `<div class="bl">
+      <div class="bl-reveal"></div>
+      <section class="bl-hero">
+        <div class="bl-top"><span class="bl-tag">DSAn® · İş Masası</span><span class="bl-pill bl-clock"><b class="w-time">--:--</b><span class="w-date"></span></span></div>
+        <h1>Sıradan bir iş günü?<br><span class="bl-u">Yok öyle.</span></h1>
+        <div class="bl-row"><p class="bl-lead">Ziyaretler, transferler, toplantılar — hepsi burada. Hatırlatmayı kur, notu düş, gerisini BABA. halletsin.</p><span class="bl-pill bl-next w-next"></span></div>
+      </section>
+      <div class="bl-marquee" aria-hidden="true"><div>${'<span>Damen Shipyards Antalya</span><i>✺</i><span>Travel App</span><i>✺</i><span>Şoför takvimi</span><i>✺</i><span>Hatırlatmalar</span><i>✺</i><span>Notlar</span><i>✺</i>'.repeat(4)}</div></div>
+      <section class="bl-links">
+        ${LINKS.map((l, i) => `<a class="bl-card bl-c${i}" href="${l.u}" target="_blank" rel="noopener"><span class="bl-n">${l.n}</span><h2>${l.t}</h2><p>${l.d}</p><span class="bl-go">Hadi gidelim ↗</span></a>`).join('')}
+        <a class="bl-card bl-c2 bl-li" href="${li ? esc(li) : '#'}" target="_blank" rel="noopener" data-li="${li ? 1 : 0}"><span class="bl-n">03</span><h2>LinkedIn</h2><p>${li ? 'Profilime git' : 'Profil adresini bir kez ekle'}</p><span class="bl-go">${li ? 'Profile git ↗' : 'Bağla +'}</span></a>
+      </section>
+      <section class="bl-grid">
+        <div class="bl-panel w-rem">
+          <div class="w-ph"><h3>Hatırlatmalar<sup class="bl-count"></sup></h3><button class="bl-btn bl-ghost w-perm" data-a="perm"></button></div>
           <form class="w-form">
             <input name="title" placeholder="Ne hatırlatılsın? (ör. Pacific heyeti havalimanı karşılama)" maxlength="120" required>
             <div class="w-row"><input type="date" name="d" value="${dflt.getFullYear()}-${pad(dflt.getMonth() + 1)}-${pad(dflt.getDate())}" required><input type="time" name="t" value="${pad(dflt.getHours())}:${pad(dflt.getMinutes())}" required>
               <select name="rep">${Object.entries(REP).map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}</select></div>
-            <div class="w-row w-quick">${[['+15 dk', 15], ['+1 sa', 60], ['Yarın 09:00', 'y9'], ['Pzt 08:30', 'p830']].map(([t, v]) => `<button type="button" class="w-chip" data-q="${v}">${t}</button>`).join('')}</div>
+            <div class="w-quick">${[['+15 dk', 15], ['+1 sa', 60], ['Yarın 09:00', 'y9'], ['Pzt 08:30', 'p830']].map(([t, v]) => `<button type="button" class="w-chip" data-q="${v}">${t}</button>`).join('')}</div>
             <textarea name="note" rows="2" placeholder="Not (isteğe bağlı)" maxlength="500"></textarea>
-            <button class="w-btn w-primary">HATIRLATMA KUR →</button>
+            <button class="bl-btn">Hatırlatmayı kur →</button>
           </form>
           <div class="w-list"></div>
-          <p class="w-mono w-dim w-hint">Bildirimler uygulama açıkken ya da arka planda çalışırken gelir. Telefon kilitliyken de kesin çalması için hatırlatmayı <b>📅 Takvim</b> ile telefonunun takvimine ekle. iPhone'da önce siteyi “Ana Ekrana Ekle” ile kur.</p>
+          <p class="w-hint">Bildirimler uygulama açıkken ya da arka planda çalışırken gelir. Telefon kilitliyken de kesin çalsın istiyorsan hatırlatmayı <b>📅</b> ile telefon takvimine ekle. iPhone'da önce siteyi “Ana Ekrana Ekle” ile kur.</p>
         </div>
-        <div class="w-panel w-notes">
-          <div class="w-ph"><span class="w-mono">[ NOTLAR ]</span><input class="w-search" placeholder="ara…"></div>
-          <form class="w-nform"><textarea name="n" rows="3" placeholder="Hızlı not… (Enter: kaydet, Shift+Enter: yeni satır)" maxlength="4000"></textarea><button class="w-btn w-primary">NOT EKLE +</button></form>
+        <div class="bl-panel bl-yellow w-notes">
+          <div class="w-ph"><h3>Notlar</h3><input class="w-search" placeholder="ara…"></div>
+          <form class="w-nform"><textarea name="n" rows="3" placeholder="Hızlı not… (Enter: kaydet, Shift+Enter: yeni satır)" maxlength="4000"></textarea><button class="bl-btn">Not ekle +</button></form>
           <div class="w-nlist"></div>
         </div>
       </section>
-      <footer class="w-foot w-mono"><span>VERİLER YALNIZCA BU CİHAZDA</span><span>BABA.OYUN / İŞ</span></footer>
+      <footer class="bl-foot"><b>Sıradan olmak çok sıradan.</b><span>Veriler yalnızca bu cihazda · BABA.</span></footer>
     </div>`;
+    const liA = el.querySelector('.bl-li');
+    liA.onclick = e => { if (liA.dataset.li === '1' && !e.altKey) return; e.preventDefault(); const v = prompt('LinkedIn profil adresin (ör. https://www.linkedin.com/in/kullanici-adin)', ls.get('is_linkedin', '') || 'https://www.linkedin.com/in/'); if (v === null) return; const u = v.trim(); if (u && !/^https:\/\/([a-z]+\.)?linkedin\.com\//i.test(u)) return alert('Lütfen linkedin.com ile başlayan bir adres gir.'); ls.set('is_linkedin', u); open(el); };
+    liA.oncontextmenu = e => { e.preventDefault(); liA.dataset.li = '0'; liA.click(); };
     const f = el.querySelector('.w-form');
     f.onsubmit = e => { e.preventDefault(); const fd = new FormData(f); const at = new Date(fd.get('d') + 'T' + fd.get('t')).getTime(); if (!fd.get('title').trim() || isNaN(at)) return;
       const a = rems(); a.push({ id: uid(), title: fd.get('title').trim(), note: fd.get('note').trim(), at, rep: fd.get('rep'), done: false, fired: null, created: Date.now() }); saveR(a);
@@ -128,7 +139,7 @@ const Is = (() => {
   function clock() {
     if (!el || !el.isConnected) return;
     const d = new Date(); el.querySelector('.w-time').textContent = pad(d.getHours()) + ':' + pad(d.getMinutes());
-    el.querySelector('.w-date').textContent = d.toLocaleDateString('tr-TR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).toLocaleUpperCase('tr-TR');
+    el.querySelector('.w-date').textContent = d.toLocaleDateString('tr-TR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
     nextLine();
     el.querySelectorAll('[data-rel]').forEach(s => s.textContent = rel(+s.dataset.rel));
     setTimeout(clock, 20000 - (Date.now() % 20000));
@@ -136,12 +147,12 @@ const Is = (() => {
   function nextLine() {
     const n = el && el.querySelector('.w-next'); if (!n) return;
     const up = rems().filter(r => !r.done && r.at > Date.now()).sort((a, b) => a.at - b.at)[0];
-    n.innerHTML = up ? `SIRADAKİ → <b>${esc(up.title)}</b> · ${rel(up.at)}` : 'SIRADA HATIRLATMA YOK';
+    n.innerHTML = up ? `⏰ Sıradaki: <b>${esc(up.title)}</b> · ${rel(up.at)}` : '☕ Sırada hatırlatma yok';
   }
   function permBtn() {
     const b = el && el.querySelector('[data-a=perm]'); if (!b) return;
     const p = 'Notification' in window ? Notification.permission : 'unsupported';
-    b.textContent = p === 'granted' ? '● BİLDİRİM AÇIK' : p === 'denied' ? '○ BİLDİRİM ENGELLİ' : p === 'unsupported' ? '○ BİLDİRİM YOK' : '○ BİLDİRİMLERİ AÇ';
+    b.textContent = p === 'granted' ? '🔔 Bildirim açık' : p === 'denied' ? '🔕 Bildirim engelli' : p === 'unsupported' ? '🔕 Bildirim yok' : '🔔 Bildirimleri aç';
     b.classList.toggle('on', p === 'granted');
   }
   async function askPerm(silent) {
@@ -154,12 +165,13 @@ const Is = (() => {
   function drawRems() {
     const box = el && el.querySelector('.w-list'); if (!box) return;
     nextLine();
+    const cnt = el.querySelector('.bl-count'); if (cnt) { const k = rems().filter(r => !r.done).length; cnt.textContent = k || ''; }
     const a = rems().sort((x, y) => (x.done - y.done) || x.at - y.at);
     box.innerHTML = a.length ? a.map(r => `<div class="w-item ${r.done ? 'done' : ''} ${!r.done && r.at < Date.now() ? 'late' : ''}" data-id="${r.id}">
-        <div class="w-when w-mono"><b>${esc(fmtDT(r.at))}</b><span data-rel="${r.at}">${rel(r.at)}</span>${r.rep !== 'yok' ? `<em>↻ ${REP[r.rep]}</em>` : ''}</div>
+        <div class="w-when"><b>${esc(fmtDT(r.at))}</b><span data-rel="${r.at}">${rel(r.at)}</span>${r.rep !== 'yok' ? `<em>↻ ${REP[r.rep]}</em>` : ''}</div>
         <div class="w-what"><b>${esc(r.title)}</b>${r.note ? `<p>${esc(r.note)}</p>` : ''}</div>
         <div class="w-acts"><button data-x="done" title="Tamamlandı">${r.done ? '↺' : '✓'}</button><button data-x="ics" title="Telefon takvimine ekle">📅</button><a href="${gcal(r)}" target="_blank" rel="noopener" title="Google Takvim">G</a><button data-x="del" title="Sil">✕</button></div></div>`).join('')
-      : `<div class="w-empty w-mono">HENÜZ HATIRLATMA YOK — YUKARIDAN EKLE</div>`;
+      : `<div class="w-empty">Henüz hatırlatma yok. Yukarıdan bir tane kur 👆</div>`;
     box.querySelectorAll('.w-item').forEach(it => it.querySelectorAll('[data-x]').forEach(b => b.onclick = () => {
       const all = rems(), r = all.find(x => x.id === it.dataset.id); if (!r) return;
       if (b.dataset.x === 'done') r.done = !r.done; else if (b.dataset.x === 'ics') return ics(r); else if (b.dataset.x === 'del') { if (!confirm('Hatırlatma silinsin mi?')) return; all.splice(all.indexOf(r), 1); }
@@ -168,8 +180,8 @@ const Is = (() => {
   function drawNotes() {
     const box = el && el.querySelector('.w-nlist'); if (!box) return;
     const a = notes().filter(n => !q || n.t.toLocaleLowerCase('tr-TR').includes(q)).sort((x, y) => (y.pin - x.pin) || y.at - x.at);
-    box.innerHTML = a.length ? a.map(n => `<article class="w-note ${n.pin ? 'pin' : ''}" data-id="${n.id}"><div class="w-nh w-mono"><span>${esc(fmtDT(n.at))}</span><span><button data-x="pin">${n.pin ? '★' : '☆'}</button><button data-x="copy">⧉</button><button data-x="del">✕</button></span></div><div class="w-nt" contenteditable="true" spellcheck="false">${esc(n.t)}</div></article>`).join('')
-      : `<div class="w-empty w-mono">${q ? 'EŞLEŞEN NOT YOK' : 'HENÜZ NOT YOK'}</div>`;
+    box.innerHTML = a.length ? a.map(n => `<article class="w-note ${n.pin ? 'pin' : ''}" data-id="${n.id}"><div class="w-nh"><span>${esc(fmtDT(n.at))}</span><span><button data-x="pin">${n.pin ? '★' : '☆'}</button><button data-x="copy">⧉</button><button data-x="del">✕</button></span></div><div class="w-nt" contenteditable="true" spellcheck="false">${esc(n.t)}</div></article>`).join('')
+      : `<div class="w-empty">${q ? 'Eşleşen not yok' : 'Henüz not yok ✍️'}</div>`;
     box.querySelectorAll('.w-note').forEach(it => {
       const id = it.dataset.id, upd = f => { const all = notes(), n = all.find(x => x.id === id); if (n) { f(n, all); saveN(all); } };
       it.querySelector('.w-nt').onblur = e => upd(n => { const v = e.target.innerText.trim(); if (v && v !== n.t) { n.t = v; n.at = Date.now(); } });
