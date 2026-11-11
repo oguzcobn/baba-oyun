@@ -295,6 +295,6 @@
   }
 
   function render(main, sub) { if (flush) flush(); if (sub[0]) editor(main, sub[0]); else list(main); }
-  CBN.notes = { create, title, folderName, toMd };
+  CBN.notes = { scope: s => { st.scope = s; }, create, title, folderName, toMd };
   CBN.register('notes', { render });
 })();

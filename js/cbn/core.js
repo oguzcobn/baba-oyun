@@ -6,11 +6,11 @@
    Modüller CBN.register(id, { render }) ile eklenir; yönlendirme #cbn/<modül>/<alt>.
    ===================================================================== */
 const CBN = (() => {
-  const SCHEMA = 1, DB_NAME = 'cbn';
+  const SCHEMA = 2, DB_NAME = 'cbn';
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
   const pad = n => String(n).padStart(2, '0');
-  const S = { notes: [], folders: [], tasks: [], events: [], settings: null };
+  const S = { notes: [], folders: [], tasks: [], events: [], items: [], settings: null };
   const mods = {};
   let db = null, readyP = null, el = null, cur = { mod: 'home', sub: [] }, leaveFns = [], ticker = null;
 
@@ -41,8 +41,9 @@ const CBN = (() => {
   }
 
   /* ---------- varsayılanlar ---------- */
-  const MODS = ['home', 'notes', 'tasks', 'calendar', 'settings'];
-  const MOD_NAME = { home: ['Ana Sayfa', 'Home'], notes: ['Notlar', 'Notes'], tasks: ['Görevler', 'Tasks'], calendar: ['Takvim', 'Calendar'], settings: ['Ayarlar', 'Settings'] };
+  const MODS = ['home', 'notes', 'tasks', 'calendar', 'projects', 'family', 'finance', 'goals', 'work', 'inbox', 'ai', 'graph', 'settings'];
+  const COLORS = { home: '#6366F1', notes: '#F59E0B', tasks: '#2563EB', calendar: '#EF4444', projects: '#10B981', family: '#EC4899', finance: '#14B8A6', goals: '#F97316', work: '#0EA5E9', inbox: '#8B5CF6', ai: '#D946EF', graph: '#84CC16', settings: '#64748B' };
+  const MOD_NAME = { home: ['Ana Sayfa', 'Home'], notes: ['Notlar', 'Notes'], tasks: ['Görevler', 'Tasks'], calendar: ['Takvim', 'Calendar'], projects: ['Projeler', 'Projects'], family: ['Aile', 'Family'], finance: ['Finans', 'Finance'], goals: ['Hedefler', 'Goals'], work: ['İş Alanı', 'Work'], inbox: ['Sesli Kutu', 'Voice Inbox'], ai: ['CBN AI', 'CBN AI'], graph: ['Bilgi Haritası', 'Knowledge Graph'], settings: ['Ayarlar', 'Settings'] };
   const WIDGETS = [{ id: 'overview', w: 3 }, { id: 'capture', w: 2 }, { id: 'focus', w: 1 }, { id: 'upcoming', w: 1 }, { id: 'recent', w: 1 }, { id: 'ai', w: 1 }];
   const SEED_FOLDERS = ['Personal', 'Family', 'Damen / Work', 'Scotland', 'Photography', 'Game Development', 'Ideas', 'Travel', 'Important'];
   const defaults = () => ({ lang: 'tr', theme: 'system', dateFmt: 'dmy', startPage: 'home', notif: true, modules: MODS.map(id => ({ id, hidden: false, name: '' })), widgets: WIDGETS.map(w => ({ id: w.id, w: w.w, hidden: false })), focus: [], notesView: 'list', tasksView: 'today', calView: 'month', lastBackup: null });
@@ -69,6 +70,7 @@ const CBN = (() => {
         const v = mk('versions', { keyPath: 'id' }); if (v) v.createIndex('noteId', 'noteId');
         const f = mk('files', { keyPath: 'id' }); if (f) f.createIndex('noteId', 'noteId');
         mk('meta', { keyPath: 'key' });
+        const it = mk('items', { keyPath: 'id' }); if (it) it.createIndex('kind', 'kind');   // şema 2: projeler, aile, finans, hedefler, iş, gelen kutusu
       };
       r.onsuccess = () => { r.result.onversionchange = () => r.result.close(); res(r.result); };
       r.onerror = () => rej(r.error); r.onblocked = () => rej(new Error('blocked'));
@@ -92,10 +94,16 @@ const CBN = (() => {
   async function init() {
     if (!('indexedDB' in window)) throw new Error('noidb');
     db = await openDb();
-    const [notes, folders, tasks, events, meta] = await Promise.all(['notes', 'folders', 'tasks', 'events', 'meta'].map(idb.all));
-    Object.assign(S, { notes, folders, tasks, events });
+    const [notes, folders, tasks, events, items, meta] = await Promise.all(['notes', 'folders', 'tasks', 'events', 'items', 'meta'].map(idb.all));
+    Object.assign(S, { notes, folders, tasks, events, items });
     const m = {}; meta.forEach(x => m[x.key] = x.value);
     S.settings = normSettings(m.settings);
+    if (!m.seeded2) {      // şema 2 başlangıç kayıtları: örnek projeler ve aile profilleri (düzenlenebilir), bir kez
+      const mkI = (kind, p, i) => put('items', Object.assign({ id: uid() + kind[0] + i, kind, createdAt: Date.now() + i, updatedAt: Date.now() }, p));
+      if (!items.some(x => x.kind === 'project')) { const P = ['Lale & Ela Adventure Game', 'Empires of the Valley', 'BABA. App', 'Scotland Relocation Plan', 'Photography Portfolio']; for (let i = 0; i < P.length; i++) await mkI('project', { name: P[i], desc: '', status: 'active', goals: '', links: '', phases: [], ideas: [], decisions: [], noteIds: [] }, i); }
+      if (!items.some(x => x.kind === 'member')) { const M = ['Oğuzhan', 'Nicole', 'Lale', 'Ela']; for (let i = 0; i < M.length; i++) await mkI('member', { name: M[i], role: '', birthday: '' }, i); }
+      await idb.put('meta', { key: 'seeded2', value: Date.now() }); await idb.put('meta', { key: 'schema', value: SCHEMA });
+    }
     if (!m.seeded) {       // başlangıç klasörleri yalnızca ilk açılışta, bir kez
       if (!folders.length) for (let i = 0; i < SEED_FOLDERS.length; i++) await put('folders', { id: uid() + i, name: SEED_FOLDERS[i], order: i, createdAt: Date.now() });
       await idb.put('meta', { key: 'seeded', value: Date.now() });
@@ -140,6 +148,16 @@ const CBN = (() => {
     notes: '<path d="M6 3h9l4 4v14H6z"/><path d="M9 10h6M9 14h6M9 18h3"/>',
     tasks: '<path d="m3.5 6 1.5 1.5L7.5 5M3.5 12 5 13.5 7.5 11M3.5 18 5 19.5 7.5 17M11 6h9.5M11 12h9.5M11 18h9.5"/>',
     calendar: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',
+    projects: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 8v8M12 8v5M16 8v3"/>',
+    family: '<circle cx="8" cy="8" r="3"/><circle cx="17" cy="10" r="2.5"/><path d="M2.5 20c.5-3.5 2.7-5.5 5.5-5.5s5 2 5.5 5.5M14.5 20c.3-2.5 1.3-4 3-4s3 1.500 3.500 4"/>',
+    finance: '<path d="M5 20V11M11 20V4M17 20v-7M21 20H3"/>',
+    goals: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/>',
+    work: '<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2M3 13h18"/>',
+    inbox: '<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>',
+    ai: '<path d="M11 3l1.900 5.100L18 10l-5.100 1.900L11 17l-1.900-5.100L4 10l5.100-1.900z"/><path d="M18.500 15l.8 2.200 2.200.8-2.200.8-.8 2.200-.8-2.200-2.200-.8 2.200-.8z"/>',
+    graph: '<circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="8" r="2.5"/><circle cx="12" cy="18" r="2.5"/><path d="M8.400 6.500l7.200 1.100M7.200 8.200l3.700 7.600M16.700 10.200l-3.500 5.700"/>',
+    search: '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.500-3.500"/>',
+    more: '<circle cx="5" cy="12" r="1.500"/><circle cx="12" cy="12" r="1.500"/><circle cx="19" cy="12" r="1.500"/>',
     settings: '<path d="M4 6h8M16 6h4M4 12h2M10 12h10M4 18h10M18 18h2"/><circle cx="14" cy="6" r="2"/><circle cx="8" cy="12" r="2"/><circle cx="16" cy="18" r="2"/>',
     sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
     moon: '<path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5z"/>'
@@ -203,22 +221,25 @@ const CBN = (() => {
   const onLeave = f => leaveFns.push(f);
   function drawShell() {
     const vis = S.settings.modules.filter(m => !m.hidden);
-    const a = (m, cls) => `<a class="${cls}${m.id === cur.mod ? ' on' : ''}" href="#cbn/${m.id}" ${m.id === cur.mod ? 'aria-current="page"' : ''}>${icon(m.id)}<span>${esc(modName(m.id))}</span></a>`;
+    const a = (m, cls) => `<a class="${cls}${m.id === cur.mod ? ' on' : ''}" href="#cbn/${m.id}" style="--mc:${COLORS[m.id]}" ${m.id === cur.mod ? 'aria-current="page"' : ''}><i class="cbn-chip">${icon(m.id)}</i><span>${esc(modName(m.id))}</span></a>`;
     el.innerHTML = `<div class="cbn" lang="${S.settings.lang}">
       <a class="cbn-skip" href="#cbnMain">${L('İçeriğe geç', 'Skip to content')}</a>
       <aside class="cbn-side" aria-label="CBN">
         <a class="cbn-brand" href="#cbn"><b>CBN</b><span>Personal OS</span></a>
+        <button type="button" class="cbn-find">${icon('search')}<span>${L('Ara ya da komut…', 'Search or command…')}</span><kbd>Ctrl K</kbd></button>
         <nav class="cbn-menu" aria-label="${L('CBN modülleri', 'CBN modules')}">${vis.map(m => a(m, 'cbn-link')).join('')}</nav>
         <div class="cbn-side-foot"><button type="button" class="cbn-link cbn-theme">${themeBtn()}</button><p>${L('Veriler yalnızca bu cihazda', 'Data stays on this device')}</p></div>
       </aside>
       <section class="cbn-main" id="cbnMain" tabindex="-1"></section>
-      <nav class="cbn-tabs" aria-label="${L('CBN modülleri', 'CBN modules')}">${vis.slice(0, 5).map(m => a(m, 'cbn-tab')).join('')}</nav>
+      <nav class="cbn-tabs" aria-label="${L('CBN modülleri', 'CBN modules')}">${vis.slice(0, 4).map(m => a(m, 'cbn-tab')).join('')}<button type="button" class="cbn-tab${vis.slice(0, 4).some(m => m.id === cur.mod) ? '' : ' on'}" data-more style="--mc:#64748B"><i class="cbn-chip">${icon('more')}</i><span>${L('Menü', 'Menu')}</span></button></nav>
     </div>`;
     el.querySelector('.cbn-theme').onclick = toggleTheme;
+    el.querySelector('.cbn-find').onclick = () => CBN.palette && CBN.palette();
+    el.querySelector('[data-more]').onclick = () => modal({ title: 'CBN', html: `<div class="cbn-more">${vis.map(m => a(m, 'cbn-mi')).join('')}<button type="button" class="cbn-mi" data-find style="--mc:#111827"><i class="cbn-chip">${icon('search')}</i><span>${L('Ara', 'Search')}</span></button></div>`, onOpen(box, close) { box.querySelector('[data-find]').onclick = () => { close(); CBN.palette && CBN.palette(); }; } });
   }
   function renderMod() {
     const main = el && el.querySelector('#cbnMain'); if (!main) return;
-    const m = mods[cur.mod];
+    const m = mods[cur.mod]; main.style.setProperty('--mc', COLORS[cur.mod] || '#6366F1'); main.dataset.mod = cur.mod;
     try { if (m) m.render(main, cur.sub); else main.innerHTML = empty('🧭', L('Sayfa bulunamadı', 'Page not found'), ''); }
     catch (e) { console.error(e); main.innerHTML = empty('⚠️', L('Bu bölüm açılırken hata oluştu', 'This section failed to open'), String(e && e.message || e)); }
   }
@@ -279,5 +300,5 @@ const CBN = (() => {
     ready().then(check).catch(() => {});
   }
 
-  return { SCHEMA, S, L, loc, low, esc, uid, pad, ymd, today, pd, addDays, nowHM, fmtDate, fmtTime, fmtStamp, fmtDay, idb, put, del, saveSettings, normSettings, defaults, reload, sanitize, toText, icon, toast, modal, confirmBox, promptBox, download, empty, applyTheme, isDark, go, refresh, redraw, open, leave, onLeave, register, start, modName, MODS, MOD_NAME, get cur() { return cur; } };
+  return { SCHEMA, S, L, loc, low, esc, uid, pad, ymd, today, pd, addDays, nowHM, fmtDate, fmtTime, fmtStamp, fmtDay, idb, put, del, saveSettings, normSettings, defaults, reload, sanitize, toText, icon, toast, modal, confirmBox, promptBox, download, empty, applyTheme, isDark, toggleTheme, COLORS, go, refresh, redraw, open, leave, onLeave, register, start, modName, MODS, MOD_NAME, get cur() { return cur; } };
 })();

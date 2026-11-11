@@ -198,6 +198,6 @@
     qf.onsubmit = async e => { e.preventDefault(); const title = qf.t.value.trim(); if (!title) return; await put('tasks', blank(v === 'today' ? { title, due: today(), status: 'planned' } : { title })); CBN.refresh(); const i = document.querySelector('.tk-quick input'); if (i) i.focus(); };
   }
 
-  CBN.tasks = { PRI, STATUS, isOpen, overdue, pri, byDue, blank, setDone, setStatus, form, row, bind, stName, priName };
+  CBN.tasks = { listEd, PRI, STATUS, isOpen, overdue, pri, byDue, blank, setDone, setStatus, form, row, bind, stName, priName };
   CBN.register('tasks', { render });
 })();

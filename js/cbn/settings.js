@@ -13,6 +13,7 @@
     notes: n => { const content = sanitize(str(n.content, 5e6)); return { id: n.id, title: str(n.title, 200), content, text: toText(content), folderId: ID.test(n.folderId) ? n.folderId : null, tags: tags(n.tags), attachments: (Array.isArray(n.attachments) ? n.attachments : []).filter(a => a && ID.test(a.id)).map(a => ({ id: a.id, name: str(a.name, 200), type: str(a.type, 100), size: num(a.size) || 0 })), links: ids(n.links), isPinned: !!n.isPinned, isFavorite: !!n.isFavorite, createdAt: num(n.createdAt) || Date.now(), updatedAt: num(n.updatedAt) || Date.now(), archivedAt: num(n.archivedAt), deletedAt: num(n.deletedAt) }; },
     tasks: t => { const r = t.rep || {}; return { id: t.id, title: str(t.title, 200) || '—', desc: str(t.desc, 4000), priority: Math.min(3, Math.max(0, parseInt(t.priority, 10) || 0)), status: CBN.tasks.STATUS.includes(t.status) ? t.status : 'inbox', start: dateS(t.start), due: dateS(t.due), dueTime: timeS(t.dueTime), remindAt: num(t.remindAt), remFired: num(t.remFired), rep: { type: ['none', 'daily', 'weekly', 'monthly', 'yearly', 'custom'].includes(r.type) ? r.type : 'none', n: Math.min(365, Math.max(1, parseInt(r.n, 10) || 1)), unit: ['day', 'week', 'month'].includes(r.unit) ? r.unit : 'day' }, tags: tags(t.tags), project: str(t.project, 60), subtasks: items(t.subtasks), checklist: items(t.checklist), notes: str(t.notes, 8000), createdAt: num(t.createdAt) || Date.now(), updatedAt: num(t.updatedAt) || Date.now(), completedAt: num(t.completedAt) }; },
     events: e => ({ id: e.id, title: str(e.title, 200) || '—', date: dateS(e.date) || today(), start: timeS(e.start), end: timeS(e.end), location: str(e.location, 200), desc: str(e.desc, 4000), cat: CBN.calendar.CATS[e.cat] ? e.cat : 'personal', remindMin: num(e.remindMin) == null ? '' : e.remindMin, remFired: num(e.remFired), noteIds: ids(e.noteIds), project: str(e.project, 60), createdAt: num(e.createdAt) || Date.now(), updatedAt: num(e.updatedAt) || Date.now() }),
+    items: x => (typeof x.kind === 'string' && /^[a-z]{2,12}$/.test(x.kind)) ? JSON.parse(JSON.stringify(x)) : null,
     versions: v => ID.test(v.noteId) ? { id: v.id, noteId: v.noteId, title: str(v.title, 200), content: sanitize(str(v.content, 5e6)), at: num(v.at) || Date.now() } : null
   };
   const b2d = b => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(b); });
@@ -22,7 +23,7 @@
     try {
       const [versions, files] = await Promise.all([idb.all('versions'), idb.all('files')]), f2 = [];
       for (const f of files) f2.push({ id: f.id, noteId: f.noteId, name: f.name, type: f.type, size: f.size, data: await b2d(f.blob) });
-      const out = { app: 'cbn', schema: CBN.SCHEMA, exportedAt: new Date().toISOString(), data: { notes: S.notes, folders: S.folders, tasks: S.tasks, events: S.events, versions, files: f2, settings: S.settings } };
+      const out = { app: 'cbn', schema: CBN.SCHEMA, exportedAt: new Date().toISOString(), data: { notes: S.notes, folders: S.folders, tasks: S.tasks, events: S.events, items: S.items, versions, files: f2, settings: S.settings } };
       download(`cbn-yedek-${today()}.json`, JSON.stringify(out), 'application/json');
       S.settings.lastBackup = Date.now(); await CBN.saveSettings(); toast(L('Yedek indirildi', 'Backup downloaded')); CBN.refresh();
     } catch (e) { console.error(e); toast(L('Yedek oluşturulamadı', 'Could not create the backup'), { type: 'err' }); }
@@ -37,7 +38,7 @@
     const row = (a, b) => `<tr><td>${a}</td><td><b>${b}</b></td></tr>`;
     modal({ title: L('Yedeği geri yükle', 'Restore backup'), html: `<form class="cbn-form">
       <p>${L('Yedek tarihi', 'Backup date')}: <b>${esc(j.exportedAt ? fmtStamp(new Date(j.exportedAt).getTime()) : '—')}</b></p>
-      <table class="st-tbl"><tbody>${row(L('Not', 'Notes'), d.notes.length)}${row(L('Klasör', 'Folders'), d.folders.length)}${row(L('Görev', 'Tasks'), d.tasks.length)}${row(L('Etkinlik', 'Events'), d.events.length)}${row(L('Ek dosya', 'Attachments'), files.length)}${skipped ? row(L('Atlanan bozuk kayıt', 'Skipped invalid records'), skipped) : ''}</tbody></table>
+      <table class="st-tbl"><tbody>${row(L('Not', 'Notes'), d.notes.length)}${row(L('Klasör', 'Folders'), d.folders.length)}${row(L('Görev', 'Tasks'), d.tasks.length)}${row(L('Etkinlik', 'Events'), d.events.length)}${row(L('Proje, aile, finans, hedef, iş kayıtları', 'Project, family, finance, goal, work records'), d.items.length)}${row(L('Ek dosya', 'Attachments'), files.length)}${skipped ? row(L('Atlanan bozuk kayıt', 'Skipped invalid records'), skipped) : ''}</tbody></table>
       <label class="st-radio"><input type="radio" name="mode" value="merge" checked> <span><b>${L('Birleştir', 'Merge')}</b> — ${L('mevcut kayıtlar kalır; aynı kimlikli kayıtlar yedektekiyle güncellenir.', 'existing records stay; records with the same ID are updated from the backup.')}</span></label>
       <label class="st-radio"><input type="radio" name="mode" value="replace"> <span><b>${L('Değiştir', 'Replace')}</b> — ${L('bu cihazdaki tüm CBN verisi silinir, yerine yedek yüklenir.', 'all CBN data on this device is deleted and replaced by the backup.')}</span></label>
       <div class="cbn-actions"><button type="button" class="cbn-btn ghost" data-a="no">${L('Vazgeç', 'Cancel')}</button><button class="cbn-btn">${L('Geri yükle', 'Restore')}</button></div></form>`,
@@ -48,7 +49,7 @@
           if (replace && !await confirmBox(L('Bu cihazdaki TÜM CBN notları, görevleri ve etkinlikleri silinip yedekle değiştirilecek. Emin misin?', 'ALL CBN notes, tasks and events on this device will be deleted and replaced by the backup. Are you sure?'), L('Sil ve geri yükle', 'Delete and restore'), true)) return;
           close();
           try {
-            const stores = ['notes', 'folders', 'tasks', 'events', 'versions'];
+            const stores = ['notes', 'folders', 'tasks', 'events', 'items', 'versions'];
             if (replace) for (const s of [...stores, 'files']) await idb.clear(s);
             for (const s of stores) for (const o of d[s]) await idb.put(s, o);
             let bad = 0; for (const f of files) { try { await idb.put('files', { id: f.id, noteId: f.noteId, name: str(f.name, 200), type: str(f.type, 100), size: num(f.size) || 0, blob: await d2b(f.data) }); } catch (er) { bad++; } }
@@ -71,7 +72,8 @@
         <label>${L('Tema', 'Theme')}${sel('theme', [['system', L('Sistem', 'System')], ['light', L('Açık', 'Light')], ['dark', L('Koyu', 'Dark')]], s.theme)}</label>
         <label>${L('Dil', 'Language')}${sel('lang', [['tr', 'Türkçe'], ['en', 'English']], s.lang)}</label>
         <label>${L('Tarih biçimi', 'Date format')}${sel('dateFmt', [['dmy', '31.12.2026'], ['mdy', '12/31/2026'], ['ymd', '2026-12-31']], s.dateFmt)}</label>
-        <label>${L('Başlangıç sayfası', 'Start page')}${sel('startPage', CBN.MODS.filter(m => m !== 'settings').map(m => [m, CBN.modName(m)]), s.startPage)}</label></div></section>
+        <label>${L('Başlangıç sayfası', 'Start page')}${sel('startPage', CBN.MODS.filter(m => m !== 'settings').map(m => [m, CBN.modName(m)]), s.startPage)}</label>
+        <label>${L('Varsayılan para birimi', 'Default currency')}${sel('cur', ['TRY', 'GBP', 'EUR', 'USD'].map(c => [c, c]), s.cur || 'TRY')}</label></div></section>
 
       <section class="cbn-card"><h2>${L('Modüller', 'Modules')}</h2><p class="cbn-hint">${L('Sırala, yeniden adlandır ya da menüden gizle. Gizlenen modülün verisi silinmez.', 'Reorder, rename or hide from the menu. Hiding a module never deletes its data.')}</p>
         <ul class="st-mods">${s.modules.map((m, i) => `<li data-id="${m.id}">${icon(m.id)}<input value="${esc(m.name)}" placeholder="${esc(L(CBN.MOD_NAME[m.id][0], CBN.MOD_NAME[m.id][1]))}" maxlength="30" aria-label="${L('Modül adı', 'Module name')}: ${esc(CBN.modName(m.id))}"><button type="button" class="cbn-ib" data-mv="-1" ${i ? '' : 'disabled'} aria-label="${L('Yukarı taşı', 'Move up')}">↑</button><button type="button" class="cbn-ib" data-mv="1" ${i < s.modules.length - 1 ? '' : 'disabled'} aria-label="${L('Aşağı taşı', 'Move down')}">↓</button>${m.id === 'settings' ? `<span class="st-fixed">${L('sabit', 'fixed')}</span>` : `<label class="st-sw"><input type="checkbox" ${m.hidden ? '' : 'checked'}> ${L('Göster', 'Show')}</label>`}</li>`).join('')}</ul></section>
@@ -82,23 +84,23 @@
         <p class="cbn-hint">${L('Hatırlatmalar yalnızca BABA. açıkken (ya da arka planda çalışırken) gelir. Uygulama kapalıyken bildirim göndermek sunucu tarafı zamanlayıcı ve push altyapısı gerektirir; bu henüz yok. Kesin çalması gereken etkinlikleri .ics ile telefon takvimine ekle.', 'Reminders only arrive while BABA. is open (or running in the background). Sending notifications while the app is closed needs a server-side scheduler and push infrastructure, which does not exist yet. For must-not-miss events, add them to your phone calendar via .ics.')}</p></section>
 
       <section class="cbn-card"><h2>${L('Yedekleme ve geri yükleme', 'Backup & restore')}</h2>
-        <p>${S.notes.length} ${L('not', 'notes')} · ${S.tasks.length} ${L('görev', 'tasks')} · ${S.events.length} ${L('etkinlik', 'events')} · ${S.folders.length} ${L('klasör', 'folders')}<span class="st-usage"></span></p>
+        <p>${S.notes.length} ${L('not', 'notes')} · ${S.tasks.length} ${L('görev', 'tasks')} · ${S.events.length} ${L('etkinlik', 'events')} · ${S.folders.length} ${L('klasör', 'folders')} · ${S.items.length} ${L('diğer kayıt', 'other records')}<span class="st-usage"></span></p>
         <p>${L('Son yedek', 'Last backup')}: <b>${s.lastBackup ? esc(fmtStamp(s.lastBackup)) : L('hiç alınmadı', 'never')}</b></p>
         <div class="cbn-actions left"><button type="button" class="cbn-btn" data-a="export">${L('Yedeği indir (JSON)', 'Download backup (JSON)')}</button><button type="button" class="cbn-btn ghost" data-a="import">${L('Yedekten geri yükle…', 'Restore from backup…')}</button><button type="button" class="cbn-btn ghost" data-a="persist">${L('Kalıcı depolama iste', 'Request persistent storage')}</button><input type="file" accept="application/json,.json" hidden></div>
         <p class="cbn-hint">${L('Veriler tarayıcının IndexedDB deposunda durur: tarayıcı verisini temizlersen ya da cihaz değiştirirsen kaybolur, cihazlar arasında eşitlenmez. Düzenli yedek al. Yedek dosyası şifresizdir; notların ve eklerin tamamını içerir.', 'Data lives in the browser’s IndexedDB: clearing browser data or switching devices loses it, and nothing syncs across devices. Back up regularly. The backup file is unencrypted and contains all your notes and attachments.')}</p></section>
 
       <section class="cbn-card"><h2>${L('Entegrasyonlar', 'Integrations')}</h2><ul class="st-int">
-        ${[['CBN AI', L('Güvenli sunucu (AI proxy) gerekir — Sürüm 2', 'Needs a secure server (AI proxy) — Version 2')], ['Google Calendar', L('Entegrasyon katmanı hazır, bağlantı yok', 'Integration layer ready, no connection')], [L('Bulut senkronizasyonu', 'Cloud sync'), L('Kimlik doğrulamalı backend gerekir — Sürüm 3', 'Needs an authenticated backend — Version 3')], [L('Arka plan bildirimleri', 'Background push'), L('Sunucu tarafı zamanlayıcı gerekir', 'Needs a server-side scheduler')]].map(x => `<li><b>${esc(x[0])}</b><span>${esc(x[1])}</span><span class="cbn-badge">${L('Bağlı değil', 'Not connected')}</span></li>`).join('')}</ul></section>
+        ${[['CBN AI', /^https:\/\//i.test(s.aiUrl || '') ? L('Senin bağladığın AI proxy üzerinden çalışıyor', 'Runs through the AI proxy you connected') : L('Güvenli sunucu (AI proxy) gerekir — CBN AI sayfasından bağla', 'Needs a secure server (AI proxy) — connect it on the CBN AI page'), /^https:\/\//i.test(s.aiUrl || '')], ['Google Calendar', L('Entegrasyon katmanı hazır, bağlantı yok', 'Integration layer ready, no connection')], [L('Bulut senkronizasyonu', 'Cloud sync'), L('Kimlik doğrulamalı backend (ör. Supabase) kurulmadan açılamaz', 'Cannot be enabled without an authenticated backend (e.g. Supabase)')], [L('Kur dönüşümü', 'Currency conversion'), L('Güvenilir kur servisi bağlı değil', 'No trusted rate service connected')], [L('Arka plan bildirimleri', 'Background push'), L('Sunucu tarafı zamanlayıcı gerekir', 'Needs a server-side scheduler')]].map(x => `<li><b>${esc(x[0])}</b><span>${esc(x[1])}</span><span class="cbn-badge${x[2] ? ' ok' : ''}">${x[2] ? L('Bağlı', 'Connected') : L('Bağlı değil', 'Not connected')}</span></li>`).join('')}</ul></section>
 
       <section class="cbn-card"><h2>${L('Yol haritası', 'Roadmap')}</h2><ul class="st-road">
-        ${soon(L('Sürüm 1 — bu sürüm', 'Version 1 — this release'), ['Dashboard', 'Notes', 'Tasks', 'Calendar', 'Quick Capture', L('Yedekleme', 'Backup')])}
-        ${soon(L('Sürüm 2', 'Version 2'), ['CBN AI', 'Projects & Idea Lab', 'Family Hub', 'Global Search', 'Voice Inbox'])}
-        ${soon(L('Sürüm 3', 'Version 3'), ['Finance', 'Goals & Habits', 'Work Space', 'Knowledge Graph', L('Bulut senkronizasyonu', 'Cloud sync')])}
-        ${soon(L('Sonrası', 'Later'), ['CBN Memory', 'Smart Routines', 'Universal Capture', 'Vault'])}</ul>
+        ${soon(L('Sürüm 1', 'Version 1'), ['Dashboard', 'Notes', 'Tasks', 'Calendar', 'Quick Capture', L('Yedekleme', 'Backup')])}
+        ${soon(L('Sürüm 2', 'Version 2'), ['Projects & Idea Lab', 'Family Hub', 'Global Search', 'Voice Inbox', L('CBN AI (proxy ile)', 'CBN AI (via proxy)')])}
+        ${soon(L('Sürüm 3 — bu sürüm', 'Version 3 — this release'), ['Finance', 'Goals & Habits', 'Work Space', 'Knowledge Graph'])}
+        ${soon(L('Altyapı bekleyenler', 'Waiting on infrastructure'), [L('Bulut senkronizasyonu', 'Cloud sync'), 'Vault', 'CBN Memory', 'Smart Routines', L('Arka plan bildirimleri', 'Background push')])}</ul>
         <p class="cbn-hint">CBN ${L('veri şeması', 'data schema')} v${CBN.SCHEMA}</p></section></div>`;
 
     const $ = q => main.querySelector(q);
-    ['theme', 'lang', 'dateFmt', 'startPage'].forEach(k => $(`[name=${k}]`).onchange = e => { s[k] = e.target.value; CBN.saveSettings(); CBN.redraw(); });
+    ['theme', 'lang', 'dateFmt', 'startPage', 'cur'].forEach(k => $(`[name=${k}]`).onchange = e => { s[k] = e.target.value; CBN.saveSettings(); CBN.redraw(); });
     main.querySelectorAll('.st-mods li').forEach(li => {
       const m = s.modules.find(x => x.id === li.dataset.id), i = s.modules.indexOf(m);
       li.querySelector('input:not([type])').onchange = e => { m.name = e.target.value.trim().slice(0, 30); CBN.saveSettings(); CBN.redraw(); };

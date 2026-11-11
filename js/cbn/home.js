@@ -9,18 +9,18 @@
   const T = () => CBN.tasks;
   const stats = () => {
     const td = today(), open = S.tasks.filter(T().isOpen), wk = addDays(td, 6);
-    return { today: open.filter(t => t.due === td).length, done: S.tasks.filter(t => t.status === 'completed' && t.completedAt && ymd(new Date(t.completedAt)) === td).length, late: open.filter(T().overdue).length, events: S.events.filter(e => e.date >= td && e.date <= wk).length, evToday: S.events.filter(e => e.date === td).length, pri: open.filter(t => T().pri(t) >= 2).length, projects: new Set(open.map(t => t.project).filter(Boolean)).size };
+    return { today: open.filter(t => t.due === td).length, done: S.tasks.filter(t => t.status === 'completed' && t.completedAt && ymd(new Date(t.completedAt)) === td).length, late: open.filter(T().overdue).length, events: S.events.filter(e => e.date >= td && e.date <= wk).length, evToday: S.events.filter(e => e.date === td).length, pri: open.filter(t => T().pri(t) >= 2).length, projects: CBN.items('project').filter(p => p.status === 'active').length };
   };
 
   const W = {
     overview() {
       const s = stats(), tile = (n, label, href, cls) => `<a class="hm-tile ${cls || ''}" href="${href}"><b>${n}</b><span>${esc(label)}</span></a>`;
-      return tile(s.today, L('Bugünkü görev', 'Tasks today'), '#cbn/tasks/today') + tile(s.done, L('Bugün tamamlanan', 'Completed today'), '#cbn/tasks/completed', 'ok') + tile(s.late, L('Gecikmiş görev', 'Overdue'), '#cbn/tasks/today', s.late ? 'bad' : '') + tile(s.events, L('Etkinlik (7 gün)', 'Events (7 days)'), '#cbn/calendar') + tile(s.pri, L('Öncelikli iş', 'High priority'), '#cbn/tasks/all', s.pri ? 'warn' : '') + tile(s.projects, L('Aktif proje', 'Active projects'), '#cbn/tasks/all');
+      return tile(s.today, L('Bugünkü görev', 'Tasks today'), '#cbn/tasks/today') + tile(s.done, L('Bugün tamamlanan', 'Completed today'), '#cbn/tasks/completed', 'ok') + tile(s.late, L('Gecikmiş görev', 'Overdue'), '#cbn/tasks/today', s.late ? 'bad' : '') + tile(s.events, L('Etkinlik (7 gün)', 'Events (7 days)'), '#cbn/calendar') + tile(s.pri, L('Öncelikli iş', 'High priority'), '#cbn/tasks/all', s.pri ? 'warn' : '') + tile(s.projects, L('Aktif proje', 'Active projects'), '#cbn/projects');
     },
     capture() {
       return `<form class="qc"><textarea name="t" rows="2" maxlength="8000" placeholder="${L('Aklındakini yaz ya da yapıştır…', 'Type or paste what’s on your mind…')}" aria-label="${L('Hızlı kayıt metni', 'Quick capture text')}"></textarea>
-        <div class="qc-types" role="radiogroup" aria-label="${L('Kayıt türü', 'Record type')}">${TYPES.map(t => t[0] === 'expense' ? `<button type="button" class="qc-t" role="radio" aria-checked="false" disabled title="${L('Finance modülü Sürüm 3’te gelecek', 'Finance module arrives in Version 3')}">${L(t[1], t[2])} <small>S3</small></button>` : `<button type="button" class="qc-t${capType === t[0] ? ' on' : ''}" role="radio" aria-checked="${capType === t[0]}" data-t="${t[0]}">${L(t[1], t[2])}</button>`).join('')}</div>
-        <div class="qc-when" ${['task', 'event', 'reminder'].includes(capType) ? '' : 'hidden'}><label>${L('Tarih', 'Date')}<input type="date" name="d"></label><label>${L('Saat', 'Time')}<input type="time" name="h"></label></div>
+        <div class="qc-types" role="radiogroup" aria-label="${L('Kayıt türü', 'Record type')}">${TYPES.map(t => `<button type="button" class="qc-t${capType === t[0] ? ' on' : ''}" role="radio" aria-checked="${capType === t[0]}" data-t="${t[0]}">${L(t[1], t[2])}</button>`).join('')}</div>
+        <div class="qc-when" ${['task', 'event', 'reminder', 'expense'].includes(capType) ? '' : 'hidden'}><label>${L('Tarih', 'Date')}<input type="date" name="d"></label><label>${L('Saat', 'Time')}<input type="time" name="h"></label></div>
         <div class="qc-foot"><span class="cbn-hint">${L('Ctrl/⌘ + Enter ile kaydet', 'Ctrl/⌘ + Enter to save')}</span><button class="cbn-btn">${L('Kaydet', 'Save')}</button></div></form>`;
     },
     focus() {
@@ -39,7 +39,7 @@
       const a = S.notes.filter(n => !n.deletedAt && !n.archivedAt).sort((x, y) => y.updatedAt - x.updatedAt).slice(0, 5);
       return a.length ? a.map(n => `<a class="rc-it" href="#cbn/notes/${encodeURIComponent(n.id)}"><b>${esc(CBN.notes.title(n))}</b><p>${esc(n.text.slice(0, 90))}</p><time>${esc(fmtDate(n.updatedAt))}${CBN.notes.folderName(n.folderId) ? ' · ' + esc(CBN.notes.folderName(n.folderId)) : ''}</time></a>`).join('') : empty('📝', L('Henüz not yok', 'No notes yet'), '', `<a class="cbn-btn ghost sm" href="#cbn/notes">${L('Notlara git', 'Go to notes')}</a>`);
     },
-    ai() { return `<div class="ai-off"><span class="cbn-badge">${L('Bağlı değil', 'Not connected')}</span><p>${L('CBN AI henüz yapılandırılmadı. Günlük özet ve öneriler, güvenli sunucu bağlantısı kurulduğunda (Sürüm 2) burada görünecek. Şu an hiçbir yapay zekâ yanıtı üretilmiyor.', 'CBN AI is not configured yet. Daily briefings and suggestions will appear here once a secure server connection exists (Version 2). No AI output is generated right now.')}</p></div>`; }
+    ai() { return /^https:\/\//i.test(S.settings.aiUrl || '') ? `<div class="ai-off"><span class="cbn-badge ok">${L('Bağlı', 'Connected')}</span><p>${L('Günlük plan ve özet için asistana sor.', 'Ask the assistant for a daily plan and briefing.')}</p><a class="cbn-btn ghost sm" href="#cbn/ai">${L('Asistanı aç', 'Open assistant')}</a></div>` : `<div class="ai-off"><span class="cbn-badge">${L('Bağlı değil', 'Not connected')}</span><p>${L('CBN AI için güvenli bir sunucu bağlantısı gerekiyor. Bağlanana kadar hiçbir yapay zekâ yanıtı üretilmez.', 'CBN AI needs a secure server connection. No AI output is generated until one is connected.')}</p><a class="cbn-btn ghost sm" href="#cbn/ai">${L('Bağlantıyı kur', 'Set up connection')}</a></div>`; }
   };
 
   function render(main) {
@@ -74,7 +74,7 @@
     /* hızlı kayıt */
     const f = $('.qc');
     if (f) {
-      f.querySelectorAll('[data-t]').forEach(b => b.onclick = () => { capType = b.dataset.t; f.querySelectorAll('[data-t]').forEach(x => { x.classList.toggle('on', x === b); x.setAttribute('aria-checked', x === b); }); f.querySelector('.qc-when').hidden = !['task', 'event', 'reminder'].includes(capType); });
+      f.querySelectorAll('[data-t]').forEach(b => b.onclick = () => { capType = b.dataset.t; f.querySelectorAll('[data-t]').forEach(x => { x.classList.toggle('on', x === b); x.setAttribute('aria-checked', x === b); }); f.querySelector('.qc-when').hidden = !['task', 'event', 'reminder', 'expense'].includes(capType); });
       f.t.onkeydown = e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); f.requestSubmit(); } };
       f.onsubmit = async e => {
         e.preventDefault();
@@ -82,7 +82,12 @@
         const lines = raw.split('\n'), head = lines[0].trim().slice(0, 200), rest = lines.slice(1).join('\n').trim(), dv = f.d.value, hv = f.h.value;
         const para = s => s.split('\n').map(l => `<p>${esc(l) || '<br>'}</p>`).join('');
         let msg, href;
-        if (capType === 'note' || capType === 'idea') {
+        if (capType === 'expense') {
+          const m = raw.replace(/\s/g, ' ').match(/(\d+(?:[.,]\d{1,2})?)/); if (!m) return toast(L('Harcama için metne tutar yaz (örn. “Market 450”)', 'Type an amount for the expense (e.g. “Groceries 45”)'), { type: 'err' });
+          const amt = parseFloat(m[1].replace(',', '.')), cu = (raw.toUpperCase().match(/\b(TRY|GBP|EUR|USD)\b/) || [])[1] || CBN.finance.cur();
+          await CBN.saveItem(CBN.newItem('txn', { type: 'expense', amount: amt, cur: cu, date: dv || today(), cat: '', rep: 'none', desc: head.replace(m[1], '').replace(/\b(TRY|GBP|EUR|USD|TL)\b/i, '').trim() || head }));
+          msg = L('Harcama kaydedildi', 'Expense saved') + ' · ' + CBN.money(amt, cu); href = 'finance/expense';
+        } else if (capType === 'note' || capType === 'idea') {
           const idea = capType === 'idea', fo = idea ? S.folders.find(x => x.name.toLowerCase() === 'ideas') : null;
           const n = await CBN.notes.create({ title: head, content: rest ? para(rest) : '', folderId: fo ? fo.id : null, tags: idea ? ['idea'] : [] });
           msg = idea ? L('Fikir kaydedildi', 'Idea saved') : L('Not kaydedildi', 'Note saved'); href = 'notes/' + n.id;

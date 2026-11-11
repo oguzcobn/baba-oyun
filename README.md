@@ -28,3 +28,10 @@ Oyuncu puanları oyun içi tahmini değerlerdir. Şifre yalnızca çocukların y
 - **Veri:** IndexedDB (`cbn` veritabanı, şema v1), yalnızca cihazda; eşitleme yok. Hatırlatmalar yalnızca uygulama açıkken çalışır.
 - **Dosyalar:** `css/cbn.css`, `js/cbn/{core,tasks,notes,calendar,home,settings}.js`; `index.html`, `js/games.js` (yönlendirme + ana sayfa kartı), `sw.js` (önbellek v13).
 - Henüz yok: CBN AI, Projects, Family, Global Search, Voice Inbox (Sürüm 2); Finance, Goals, Work Space, Knowledge Graph, bulut senkronizasyonu (Sürüm 3).
+
+### CBN sürüm 2–3 (BABA. sürüm 14)
+- **Yeni modüller:** Projeler & Idea Lab (kart/liste/Kanban/zaman çizelgesi, proje detay sayfası), Aile (profiller, özel günler, geziler, alışveriş, pano), Finans (gelir/gider/fatura/birikim, bütçe, raporlar; TRY·GBP·EUR·USD, kur dönüşümü yok), Hedefler & Alışkanlıklar, İş Alanı (şablonlar, kayıtlar, kısayollar), Sesli Kutu (konuşmadan metne, tarayıcı destekliyorsa), Bilgi Haritası, Ctrl/⌘+K genel arama.
+- **CBN AI:** yalnızca kullanıcının bağladığı https AI proxy ile çalışır (`POST {messages, context, lang}` → `{reply}`); bağlantı yoksa yanıt üretmez. Anahtar depoda/sayfada tutulmaz.
+- **Veri:** IndexedDB şema v2 (`items` deposu eklendi; mevcut kayıtlar korunur). Yedekler v1 ve v2 biçimini içe alır.
+- **Henüz yok (altyapı gerekir):** bulut senkronizasyonu, Vault, arka plan bildirimleri, Google Calendar, kur dönüşümü.
+- **Dosyalar:** `js/cbn/{kit,life,money,work}.js` eklendi.
