@@ -69,6 +69,7 @@ const App = (() => {
   /* ---------------- menü ---------------- */
   const GAMES = [
     { id: 'draft', name: 'Süper Lig Draft', tags: ['Futbol', '18 kulüp', 'İstatistik'], best: () => ls.get('draft_best', 0) + ' p' },
+    { id: 'vadi', name: 'Empires of the Valley', tags: ['Strateji', 'Şehir kurma'], best: () => '1. Bölüm' },
     { id: '2048', name: '2048', tags: ['Bulmaca', 'Kaydır'], best: () => ls.get('bb_best_2048', 0) },
     { id: 'sudoku', name: 'Sudoku', tags: ['Mantık', '3 seviye'], best: () => { const b = ls.get('bb_best_sudoku', null); return b ? fmtT(b) : '—'; } },
     { id: 'mines', name: 'Mayın Tarlası', tags: ['Klasik', 'Dikkat'], best: () => { const b = ls.get('bb_best_mines', null); return b ? fmtT(b) : '—'; } },
@@ -85,7 +86,7 @@ const App = (() => {
     const CATS = [
       ...(isOwner() ? [{ id: 'is', n: '01', t: 'İş', d: 'DSAn kısayolları, hatırlatmalar, notlar, LinkedIn', cls: 'c-is' }] : []),
       { id: 'dost', n: '02', t: 'Dost', d: 'Seni dinleyen sohbet arkadaşı', cls: 'c-dost' },
-      { id: 'oyunlar', n: '03', t: 'Oyunlar', d: 'Süper Lig Draft · 2048 · Sudoku · Mayın · Blok', cls: 'c-oyun' },
+      { id: 'oyunlar', n: '03', t: 'Oyunlar', d: 'Süper Lig Draft · Empires of the Valley · 2048 · Sudoku · Mayın · Blok', cls: 'c-oyun' },
       { id: 'seyahat', n: '04', t: 'Seyahat', d: 'Booking · Airbnb · Skyscanner · Gezilerim 3D dünya', cls: 'c-sey' },
       { id: 'foto', n: '05', t: 'Fotoğraf', d: 'Pexels · günün fotoğrafçısı · 3D sokak galerisi', cls: 'c-foto' }
     ];
@@ -94,7 +95,7 @@ const App = (() => {
         <h1 class="display xl">BABA<em>.</em></h1>
         <p class="lead">İş, dinlenme, oyun ve yolculuk — hepsi tek yerde, sadece davetlilere açık.</p></section>
       <section class="hub">${CATS.map(c => `<a class="hub-card ${c.cls}" href="#${c.id}"><span class="hub-n">${c.n}</span><h2>${c.t}</h2><p>${c.d}</p><span class="arrow">↗</span></a>`).join('')}</section>
-      <footer class="foot"><div class="foot-word">BABA<span>.</span></div><div class="foot-row">${isOwner() ? '<button class="link" data-a="pin">Şifreyi değiştir</button><a class="link" href="#erisim">Davetler &amp; erişim</a><button class="link" data-a="lock">Kilitle</button>' : '<button class="link" data-a="gout">Bu cihazdan çık</button>'}<span class="muted">Yalnızca davetliler için · sürüm 11</span></div></footer>`;
+      <footer class="foot"><div class="foot-word">BABA<span>.</span></div><div class="foot-row">${isOwner() ? '<button class="link" data-a="pin">Şifreyi değiştir</button><a class="link" href="#erisim">Davetler &amp; erişim</a><button class="link" data-a="lock">Kilitle</button>' : '<button class="link" data-a="gout">Bu cihazdan çık</button>'}<span class="muted">Yalnızca davetliler için · sürüm 12</span></div></footer>`;
     const q = s => root().querySelector(s);
     if (q('[data-a=pin]')) q('[data-a=pin]').onclick = () => { click(); changePin(); };
     if (q('[data-a=lock]')) q('[data-a=lock]').onclick = () => { click(); lock(); };
@@ -126,7 +127,7 @@ const App = (() => {
     root().innerHTML = `
       <section class="hero"><a class="back" href="#">← Ana sayfa</a><p class="eyebrow">Oyunlar · ${new Date().toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' })}</p>
         <h1 class="display xl">Kafa<br>dinle.<br><em>Kadro kur.</em></h1>
-        <div class="hero-row"><p class="lead">Beş oyun, sıfır reklam. Futbol draftından Sudoku’ya, kısa molalar için seçilmiş bir koleksiyon.</p>
+        <div class="hero-row"><p class="lead">Altı oyun, sıfır reklam. Futbol draftından vadide medeniyet kurmaya, kısa molalar için seçilmiş bir koleksiyon.</p>
           <a class="pill big" href="#draft">Draft’a başla ↗</a></div></section>
       <section class="feature"><a href="#draft" class="feat-card"><div class="feat-art">${ART.draft}</div><div class="feat-txt"><span class="badge">Günün oyunu</span><h2>Süper Lig<br>Draft</h2><p>Çark 18 Süper Lig kulübü arasında eşit şansla döner; gelen takımın son 10 yıllık kadrosundan seç, 11+2 kur. Teknik direktörünü ve taktiğini belirle, 34 maçlık sezonu canlı izle. Hedef: 102 puan.</p><div class="card-tags"><span class="chip">Futbol</span><span class="chip">Strateji</span><span class="chip dark">🏆 ${ls.get('draft_best', 0)} puan</span></div></div></a></section>
       <section class="list"><div class="list-head"><h2 class="display sm">Koleksiyon</h2><span class="muted">${GAMES.length} oyun</span></div>
@@ -135,12 +136,27 @@ const App = (() => {
     window.scrollTo(0, 0);
   }
   const ART = {
+    vadi: `<svg viewBox="0 0 200 130"><rect width="200" height="130" fill="#bfe3f2"/><path d="M100 30 190 75 100 120 10 75Z" fill="#7cc04f"/><path d="M10 75 100 120v10L10 85Z" fill="#8a5a36"/><path d="M190 75 100 120v10l90-45Z" fill="#6f4628"/><path d="M40 60 70 75 55 82.500 25 67.500Z" fill="#4aa3df"/><path d="M118 62 140 73 118 84 96 73Z" fill="#8b5a2b" fill-opacity=".55"/><g><path d="M92 62v-14l12-7 12 7v14l-12 6Z" fill="#f3e3c3"/><path d="M90 48l14-9 14 9-14 7Z" fill="#b5523a"/><rect x="101" y="57" width="6" height="9" fill="#7a4a2a"/></g><g fill="#2f7d46"><path d="M150 78l7-16 7 16Z"/><path d="M160 86l7-16 7 16Z"/><path d="M140 88l7-16 7 16Z"/><path d="M62 96l7-16 7 16Z"/><path d="M76 102l7-16 7 16Z"/></g><g fill="#9aa3ad"><path d="M120 98l8-6 8 6-8 4Z"/><path d="M130 104l7-5 7 5-7 4Z"/></g></svg>`,
     draft: `<svg viewBox="0 0 200 130"><rect width="200" height="130" fill="#1f8a4c"/><g stroke="#fff" stroke-opacity=".5" fill="none" stroke-width="1.5"><rect x="8" y="8" width="184" height="114"/><line x1="100" y1="8" x2="100" y2="122"/><circle cx="100" cy="65" r="18"/><rect x="8" y="40" width="22" height="50"/><rect x="170" y="40" width="22" height="50"/></g><g fill="#fff">${[[40, 30], [40, 100], [60, 65], [85, 40], [85, 90], [125, 65], [150, 35], [150, 95], [175, 65]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="6"/>`).join('')}</g><circle cx="20" cy="65" r="6" fill="#ffd54a"/></svg>`,
     '2048': `<div class="mini2048">${[2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4, 2, 8, 16, 2].map(v => `<i class="v${v}">${v}</i>`).join('')}</div>`,
     sudoku: `<div class="minisd">${'531974862'.split('').map((d, i) => `<i>${i % 2 ? '' : d}</i>`).join('')}</div>`,
     mines: `<div class="minimn">${[1, 1, 2, '🚩', 1, 0, 1, 2, 3, '🚩', 0, 1, '💣', 2, 1, 0].map(v => `<i class="${v === 0 ? 'o' : ''}">${v || ''}</i>`).join('')}</div>`,
     blocks: `<div class="minibk">${[0, 0, 0, 'T', 0, 0, 0, 'T', 'T', 0, 'L', 0, 0, 'T', 'I', 'L', 'L', 'L', 'O', 'O', 'I', 'S', 'S', 'O', 'O', 'I', 'S', 'S', 'Z', 'Z'].map(v => `<i class="${v || ''}"></i>`).join('')}</div>`
   };
+
+  /* ==================== EMPIRES OF THE VALLEY ==================== */
+  // Oyun kendi deposunda (oguzcobn/empires-of-the-valley) durur ve aynı adres kökünden yayınlanır;
+  // burada çerçeve içinde açılır, böylece oyunun her güncellemesi buraya kendiliğinden yansır.
+  const VADI_URL = 'https://oguzcobn.github.io/empires-of-the-valley/';
+  function vadi() {
+    const b = shell('Empires of<br>the Valley', `<div class="vd-bar"><p class="bb-tip">Vadide küçük bir köyden medeniyete. Kayıtlar bu cihazda tutulur.</p><div class="vd-acts"><button class="bb-btn" data-a="full">⛶ Tam ekran</button><a class="bb-btn" href="${VADI_URL}" target="_blank" rel="noopener">Yeni sekmede aç ↗</a></div></div>
+      <div class="vd-frame"><iframe src="${VADI_URL}" title="Empires of the Valley" allow="fullscreen; autoplay" allowfullscreen loading="eager"></iframe></div>
+      <p class="bb-tip">Kısayollar: Boşluk duraklat · 1/2/3 hız · B inşa · R yol · Esc iptal. Telefonda dar geliyorsa “Yeni sekmede aç”ı kullan.</p>`, 'Strateji · şehir kurma');
+    const fr = b.querySelector('.vd-frame'), fb = b.querySelector('[data-a=full]');
+    const req = fr.requestFullscreen || fr.webkitRequestFullscreen;
+    if (!req) fb.hidden = true;
+    else fb.onclick = () => { click(); try { const p = req.call(fr); if (p && p.catch) p.catch(() => {}); } catch (e) {} };
+  }
 
   /* ==================== 2048 ==================== */
   function g2048() {
@@ -427,6 +443,7 @@ const App = (() => {
     if (r === 'draft') { root().innerHTML = '<section class="game-page"><div class="gp-head"><a class="back" href="#oyunlar">← Oyunlar</a></div><div id="draftRoot"></div></section>'; window.scrollTo(0, 0); Draft.open(root().querySelector('#draftRoot')); }
     else if (r === 'is' && typeof Is !== 'undefined') { root().innerHTML = '<div id="isRoot"></div>'; window.scrollTo(0, 0); Is.open(root().querySelector('#isRoot')); }
     else if (r === 'dost' && typeof Dost !== 'undefined') { root().innerHTML = '<section class="game-page"><div class="gp-head"><a class="back" href="#">← Ana sayfa</a></div><div id="dostRoot"></div></section>'; window.scrollTo(0, 0); Dost.open(root().querySelector('#dostRoot')); }
+    else if (r === 'vadi') vadi();
     else if (r === '2048') g2048();
     else if (r === 'sudoku') sudoku();
     else if (r === 'mines') mines();

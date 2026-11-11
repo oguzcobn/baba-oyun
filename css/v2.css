@@ -228,3 +228,14 @@ body.dark-mode main{max-width:1440px}
 .bl .w-nlist .w-empty{grid-column:1/-1}
 .ft-fr.bad{display:none}
 body.locked .nav-links,body.locked #lockBtn{display:none}
+
+/* Empires of the Valley — çerçeve içinde oyun */
+.art-vadi{background:#bfe3f2}
+.vd-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.vd-bar .bb-tip{margin:0;text-align:left}
+.vd-acts{display:flex;gap:8px;flex-wrap:wrap}
+.vd-acts a.bb-btn{text-decoration:none;display:inline-flex;align-items:center}
+.vd-frame{position:relative;width:100%;height:max(520px,calc(100dvh - 150px));border-radius:var(--r);overflow:hidden;border:1px solid var(--line);background:#dff1d6}
+.vd-frame iframe{position:absolute;inset:0;width:100%;height:100%;border:0;display:block}
+.vd-frame:fullscreen,.vd-frame:-webkit-full-screen{border-radius:0;border:0;height:100%}
+@media(max-width:700px){.vd-frame{height:max(480px,calc(100dvh - 120px))}}
