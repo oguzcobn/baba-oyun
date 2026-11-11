@@ -66,7 +66,7 @@ const Foto = (() => {
   const strip = h => { const d = document.createElement('div'); d.innerHTML = h || ''; return d.textContent.trim(); };
 
   async function loadPhotos() {
-    const cache = ls.get('foto_cache', null);
+    const cache = ls.get('foto_cache2', null);
     if (cache && Date.now() - cache.at < 86400000 && cache.list.length > 8) return cache.list;
     const out = [];
     await Promise.all(CATS.map(async cat => {
@@ -77,13 +77,13 @@ const Foto = (() => {
           const ii = p.imageinfo && p.imageinfo[0]; if (!ii || ii.mime !== 'image/jpeg') return;
           const m = ii.extmetadata || {}, lic = (m.LicenseShortName && m.LicenseShortName.value) || '';
           if (!/public domain|^pd|cc0|no restrictions/i.test(lic)) return;
-          out.push({ src: ii.thumburl, page: ii.descriptionurl, artist: strip(m.Artist && m.Artist.value).replace(/\s+/g, ' ').slice(0, 60) || cat.replace(/.*by |Category:| in the.*/g, ''), year: strip(m.DateTimeOriginal && m.DateTimeOriginal.value).slice(0, 24), title: strip(m.ObjectName && m.ObjectName.value).slice(0, 90) || p.title.replace(/^File:|\.jpe?g$/gi, ''), lic: 'Kamu malı' });
+          out.push({ src: ii.thumburl, page: ii.descriptionurl, artist: strip(m.Artist && m.Artist.value).replace(/\s+/g, ' ').slice(0, 60) || cat.replace(/.*by |Category:| in the.*/g, ''), year: ((strip(m.DateTimeOriginal && m.DateTimeOriginal.value).match(/1[89]\d\d/) || [''])[0]), title: strip(m.ObjectName && m.ObjectName.value).slice(0, 90) || p.title.replace(/^File:|\.jpe?g$/gi, ''), lic: 'Kamu malı' });
         });
       } catch (e) { /* çevrimdışı ya da kategori yok */ }
     }));
     for (let i = out.length - 1; i > 0; i--) { const k = Math.floor(Math.random() * (i + 1)); [out[i], out[k]] = [out[k], out[i]]; }
     const list = out.slice(0, 42);
-    if (list.length > 8) ls.set('foto_cache', { at: Date.now(), list });
+    if (list.length > 8) ls.set('foto_cache2', { at: Date.now(), list });
     return list.length ? list : FALLBACK;
   }
 
@@ -104,9 +104,9 @@ const Foto = (() => {
         <article class="ft-quote"><span class="ft-eye">SÖZLER</span><blockquote></blockquote><cite></cite><small class="ft-orig"></small>
           <div class="ft-qnav"><button data-q="-1">←</button><span class="ft-qi"></span><button data-q="1">→</button></div></article>
       </section>
-      <section class="ft-gal"><div class="ft-gal-head"><div><span class="ft-eye">3D SOKAK GALERİSİ</span><h2>Sokakların ustaları</h2></div><p>Kaydır, sürükle ya da oklarla ilerle. Fotoğraflar Wikimedia Commons’taki kamu malı arşivlerden canlı gelir.</p></div>
+      <section class="ft-gal"><div class="ft-gal-head"><div><span class="ft-eye">3D SOKAK GALERİSİ</span><h2>Sokakların ustaları</h2></div><p>Parmağınla sağa-sola kaydır ya da oklarla ilerle; ortadakine dokununca büyür. Fotoğraflar Wikimedia Commons’taki kamu malı arşivlerden canlı gelir.</p></div>
         <div class="ft-tunnel" tabindex="0"><div class="ft-world"></div><div class="ft-load">Galeri yükleniyor…</div>
-          <div class="ft-ctrl"><button data-z="-1">↑</button><span class="ft-pos"></span><button data-z="1">↓</button></div></div>
+          <div class="ft-ctrl"><button data-z="-1">←</button><span class="ft-pos"></span><button data-z="1">→</button></div></div>
         <div class="ft-masters"><span class="ft-eye">ÇAĞDAŞ USTALAR (fotoğrafları telifli — kendi sayfalarında bak)</span><div>${PH.filter(x => !/Atget|Lange/.test(x[0])).map(x => `<a href="https://www.google.com/search?tbm=isch&q=${encodeURIComponent(x[0] + ' street photography')}" target="_blank" rel="noopener">${esc(x[0])}</a>`).join('')}</div></div>
       </section>
       <div class="ft-lb" hidden></div>
@@ -115,41 +115,36 @@ const Foto = (() => {
     showQ(); el.querySelectorAll('[data-q]').forEach(b => b.onclick = () => { qi += +b.dataset.q; showQ(); });
     loadPhotos().then(build);
   }
+  // basit kapak akışı: yatay kaydırma (scroll-snap); ortadaki kare düz, yanlardakiler hafif döner
   function build(list) {
     if (!el || !el.isConnected) return;
-    const world = el.querySelector('.ft-world'), tun = el.querySelector('.ft-tunnel'), lb = el.querySelector('.ft-lb');
-    el.querySelector('.ft-load').remove();
-    const GAP = 560, N = list.length;
-    world.innerHTML = list.map((p, i) => `<figure class="ft-fr" data-i="${i}"><img src="${p.src}" alt="${esc(p.title)}" loading="lazy" referrerpolicy="no-referrer" onerror="this.closest('figure').classList.add('bad')"><figcaption><b>${esc(p.artist)}</b>${p.year ? ' · ' + esc(p.year) : ''}</figcaption></figure>`).join('');
-    const frames = [...world.children];
-    let z = 0, tz = 0, auto = true;
-    const max = (N - 1) * GAP;
-    const go = d => { auto = false; tz = Math.max(0, Math.min(max, tz + d)); };
-    tun.addEventListener('wheel', e => { e.preventDefault(); go(e.deltaY * 1.4); }, { passive: false });
-    let ty = null; tun.addEventListener('touchstart', e => { ty = e.touches[0].clientY; }, { passive: true });
-    tun.addEventListener('touchmove', e => { if (ty == null) return; const y = e.touches[0].clientY; go((ty - y) * 3); ty = y; e.preventDefault(); }, { passive: false });
-    tun.addEventListener('keydown', e => { if (e.key === 'ArrowDown' || e.key === 'ArrowRight') go(GAP); if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') go(-GAP); });
-    el.querySelectorAll('[data-z]').forEach(b => b.onclick = () => go(+b.dataset.z * GAP));
-    frames.forEach(f => f.onclick = () => { const p = list[+f.dataset.i]; lb.hidden = false; lb.innerHTML = `<div class="ft-lb-in"><img src="${p.src}" alt=""><div><span class="ft-eye">${esc(p.lic)}</span><h3>${esc(p.title)}</h3><p>${esc(p.artist)}${p.year ? ' · ' + esc(p.year) : ''}</p><a href="${p.page}" target="_blank" rel="noopener">Wikimedia Commons’ta gör ↗</a></div><button>✕</button></div>`; lb.onclick = e => { if (e.target === lb || e.target.tagName === 'BUTTON') lb.hidden = true; }; });
-    const pos = el.querySelector('.ft-pos');
-    const loop = () => {
-      raf = requestAnimationFrame(loop);
-      if (auto) tz = Math.min(max, tz + 0.6);
-      z += (tz - z) * .08;
-      // yakındaki kare ortaya kayar, uzaktakiler iki yana açılır
-      const W = tun.clientWidth, spread = Math.min(W * .44, 320);
+    const tun = el.querySelector('.ft-tunnel'), lb = el.querySelector('.ft-lb');
+    const ld = el.querySelector('.ft-load'); if (ld) ld.remove();
+    const flow = el.querySelector('.ft-world');
+    flow.className = 'ft-flow';
+    flow.innerHTML = list.map((p, i) => `<figure class="ft-fr" data-i="${i}"><img src="${p.src}" alt="${esc(p.title)}" loading="lazy" referrerpolicy="no-referrer" onerror="this.closest('figure').classList.add('bad')"><figcaption><b>${esc(p.artist)}</b>${p.year ? ' · ' + esc(p.year) : ''}</figcaption></figure>`).join('');
+    const frames = [...flow.children], pos = el.querySelector('.ft-pos'), N = frames.length;
+    let ticking = false, cur = 0;
+    function paint() {
+      ticking = false;
+      const c = flow.scrollLeft + flow.clientWidth / 2;
+      let best = 0, bd = 1e9;
       frames.forEach((f, i) => {
-        const d = -i * GAP + z - 320, o = d > 160 ? 0 : d < -4200 ? 0 : d < -3000 ? (4200 + d) / 1200 : d > 0 ? 1 - d / 160 : 1;
-        f.style.opacity = o.toFixed(3); f.style.visibility = o < .02 ? 'hidden' : 'visible'; if (o < .02) return;
-        const k = Math.max(0, Math.min(1, (-d - 330) / 900)), side = i % 2 ? 1 : -1;
-        const x = side * spread * k, y = (((i * 53) % 120) - 60) * k, ry = -side * 22 * k;
-        f.style.transform = `translate(-50%,-50%) translate3d(${x.toFixed(1)}px,${y.toFixed(1)}px,${d.toFixed(1)}px) rotateY(${ry.toFixed(1)}deg)`;
-        f.style.zIndex = String(Math.round(5000 + d));
+        const fc = f.offsetLeft + f.offsetWidth / 2, off = (fc - c) / f.offsetWidth, a = Math.max(-1.4, Math.min(1.4, off));
+        f.style.transform = `perspective(900px) rotateY(${(-a * 28).toFixed(1)}deg) scale(${(1 - Math.min(1, Math.abs(a)) * .16).toFixed(3)})`;
+        f.style.opacity = (1 - Math.min(1, Math.abs(a)) * .45).toFixed(2);
+        if (Math.abs(off) < bd) { bd = Math.abs(off); best = i; }
       });
-      pos.textContent = Math.min(N, Math.round(z / GAP) + 1) + ' / ' + N;
-    };
-    cancelAnimationFrame(raf); loop();
+      cur = best; pos.textContent = (best + 1) + ' / ' + N;
+    }
+    flow.addEventListener('scroll', () => { if (!ticking) { ticking = true; requestAnimationFrame(paint); } }, { passive: true });
+    addEventListener('resize', paint);
+    const goTo = i => { i = Math.max(0, Math.min(N - 1, i)); const f = frames[i]; flow.scrollTo({ left: f.offsetLeft + f.offsetWidth / 2 - flow.clientWidth / 2, behavior: 'smooth' }); };
+    el.querySelectorAll('[data-z]').forEach(b => b.onclick = () => goTo(cur + +b.dataset.z));
+    tun.addEventListener('keydown', e => { if (e.key === 'ArrowRight') goTo(cur + 1); if (e.key === 'ArrowLeft') goTo(cur - 1); });
+    frames.forEach(f => f.onclick = () => { const i = +f.dataset.i; if (i !== cur) return goTo(i); const p = list[i]; lb.hidden = false; lb.innerHTML = `<div class="ft-lb-in"><img src="${p.src}" alt=""><div><span class="ft-eye">${esc(p.lic)}</span><h3>${esc(p.title)}</h3><p>${esc(p.artist)}${p.year ? ' · ' + esc(p.year) : ''}</p><a href="${p.page}" target="_blank" rel="noopener">Wikimedia Commons’ta gör ↗</a></div><button>✕</button></div>`; lb.onclick = e => { if (e.target === lb || e.target.tagName === 'BUTTON') lb.hidden = true; }; });
+    paint(); setTimeout(paint, 300);
   }
-  function leave() { cancelAnimationFrame(raf); raf = 0; }
+  function leave() { }
   return { open, leave, _load: loadPhotos };
 })();
