@@ -284,3 +284,12 @@ body:has(.ms-dock.open) .ms-toasts{right:auto;left:16px}
 .ms-inv{display:grid;gap:12px}.ms-inv p{margin:0;line-height:1.5}
 .ms-link.danger{color:#c62839}
 .ms-invite-note{background:#fff8d6;border-radius:16px;padding:12px 14px;font-weight:700}
+
+/* koyu temada da (CBN koyu tema, Seyahat/Fotoğraf koyu sayfaları) Messenger açık zeminli kalır: yazılar koyu */
+.ms,.ms-ov,.ms-dock .ms-panel,.ms-toasts{color-scheme:light}
+.ms-panel,.ms-modal{color:var(--ink)}
+.ms-in,.ms-search,.ms-form input,.ms-form select,.ms-dd select,.ms-link-box input{color:var(--ink)!important;-webkit-text-fill-color:var(--ink);caret-color:var(--claret)}
+.ms-in::placeholder,.ms-search::placeholder,.ms-form input::placeholder{color:#8a7f76!important;-webkit-text-fill-color:#8a7f76;opacity:1}
+.ms-list,.ms-chat,.ms-card,.ms-tile,.ms-dd{color:var(--ink)}
+.ms-b.me{color:#fff}
+.ms-psm{color:#fff!important;-webkit-text-fill-color:#fff}
