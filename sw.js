@@ -1,4 +1,4 @@
-const CACHE='baba-v36';
+const CACHE='baba-v37';
 const FILES=['./','index.html','manifest.webmanifest','css/app.css','js/core.js','js/draft-data.js','js/draft-nat.js','js/draft.js','js/scores.js','js/dost-en.js','js/dost.js','js/is.js','js/flights.js','js/travel.js','js/foto.js','js/globe.js','js/vendor/three.module.min.js','js/vendor/OrbitControls.js','js/vendor/topojson-client.min.js','data/countries-50m.json','css/v2.css','css/cbn.css','css/ts.css','css/dost.css','css/msn.css','js/msn.js','js/ts.js','js/cbn/core.js','js/cbn/tasks.js','js/cbn/notes.js','js/cbn/calendar.js','js/cbn/kit.js','js/cbn/life.js','js/cbn/money.js','js/cbn/work.js','js/cbn/sync.js','js/cbn/profile.js','js/cbn/home.js','js/cbn/settings.js','js/games.js','img/icon-180.png','img/icon-192.png','img/icon-512.png'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>Promise.all(FILES.map(f=>c.add(f).catch(()=>{})))));self.skipWaiting()});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x!==CACHE).map(x=>caches.delete(x)))));self.clients.claim()});
