@@ -143,6 +143,8 @@
       } });
   }
 
+  const addToday = async title => { await put('tasks', blank({ title: title.slice(0, 200), due: today(), status: 'planned' })); toast(L('Bugüne eklendi', 'Added to today'), S.settings.tasksView === 'today' ? {} : { action: L('Bugünü aç', 'Open today'), onAction: () => CBN.go('tasks/today') }); };
+
   /* ---------- görünümler ---------- */
   const match = t => { if (!q) return true; const hay = low([t.title, t.desc, t.project, t.notes, (t.tags || []).join(' ')].join(' ')); return low(q).split(/\s+/).every(w => hay.includes(w)); };
   const group = (title, list, cls) => list.length ? `<section class="tk-group ${cls || ''}"><h2>${esc(title)} <span>${list.length}</span></h2>${list.map(row).join('')}</section>` : '';
@@ -171,9 +173,9 @@
     let v = sub[0] || S.settings.tasksView; if (!views.some(x => x[0] === v) || v === 'calendar') v = 'today';
     if (v !== S.settings.tasksView) { S.settings.tasksView = v; CBN.saveSettings(); }
     const open = S.tasks.filter(isOpen), late = open.filter(overdue).length;
-    main.innerHTML = `<header class="cbn-head"><div><h1>${esc(CBN.modName('tasks'))}</h1><p class="cbn-sub">${open.length} ${L('açık görev', 'open tasks')}${late ? ` · <b class="late">${late} ${L('gecikmiş', 'overdue')}</b>` : ''}</p></div><button type="button" class="cbn-btn" data-a="new">＋ ${L('Yeni görev', 'New task')}</button></header>
+    main.innerHTML = `<header class="cbn-head"><div><h1>${esc(CBN.modName('tasks'))}</h1><p class="cbn-sub">${open.length} ${L('açık görev', 'open tasks')}${late ? ` · <b class="late">${late} ${L('gecikmiş', 'overdue')}</b>` : ''}</p></div><div class="cbn-actions"><button type="button" class="cbn-btn ghost" data-a="new">${L('Detaylı görev', 'Detailed task')}</button><button type="button" class="cbn-btn" data-a="today">＋ ${L('Bugüne ekle', 'Add to today')}</button></div></header>
       <nav class="cbn-seg" aria-label="${L('Görev görünümleri', 'Task views')}">${views.map(x => `<a href="#cbn/${x[0] === 'calendar' ? 'calendar' : 'tasks/' + x[0]}" class="${x[0] === v ? 'on' : ''}" ${x[0] === v ? 'aria-current="page"' : ''}>${esc(x[1])}</a>`).join('')}</nav>
-      <div class="tk-bar"><form class="tk-quick"><input name="t" maxlength="200" placeholder="${L('Hızlı görev ekle ve Enter’a bas…', 'Quick add a task and press Enter…')}" aria-label="${L('Hızlı görev ekle', 'Quick add task')}"><button class="cbn-btn sm">${L('Ekle', 'Add')}</button></form><input type="search" class="cbn-search" value="${esc(q)}" placeholder="${L('Görevlerde ara…', 'Search tasks…')}" aria-label="${L('Görevlerde ara', 'Search tasks')}"></div>
+      <div class="tk-bar"><form class="tk-quick"><input name="t" maxlength="200" placeholder="${L('Bugüne görev yaz ve Enter’a bas…', 'Type a task for today and press Enter…')}" aria-label="${L('Bugüne görev ekle', 'Add a task to today')}"><button class="cbn-btn sm">${L('Bugüne ekle', 'Add to today')}</button></form><input type="search" class="cbn-search" value="${esc(q)}" placeholder="${L('Görevlerde ara…', 'Search tasks…')}" aria-label="${L('Görevlerde ara', 'Search tasks')}"></div>
       <div class="tk-body"></div>`;
     const bd = main.querySelector('.tk-body');
     const draw = () => {
@@ -192,12 +194,13 @@
       });
     };
     draw();
+    main.querySelector('[data-a=today]').onclick = async () => { const title = await CBN.promptBox(L('Bugüne görev ekle', 'Add a task to today'), L('Görev', 'Task'), ''); if (!title) return; await addToday(title); CBN.refresh(); };
     main.querySelector('[data-a=new]').onclick = () => form(v === 'today' ? { due: today(), status: 'planned' } : null);
     main.querySelector('.cbn-search').oninput = e => { q = e.target.value.trim(); draw(); };
     const qf = main.querySelector('.tk-quick');
-    qf.onsubmit = async e => { e.preventDefault(); const title = qf.t.value.trim(); if (!title) return; await put('tasks', blank(v === 'today' ? { title, due: today(), status: 'planned' } : { title })); CBN.refresh(); const i = document.querySelector('.tk-quick input'); if (i) i.focus(); };
+    qf.onsubmit = async e => { e.preventDefault(); const title = qf.t.value.trim(); if (!title) return; await addToday(title); CBN.refresh(); const i = document.querySelector('.tk-quick input'); if (i) i.focus(); };
   }
 
-  CBN.tasks = { listEd, PRI, STATUS, isOpen, overdue, pri, byDue, blank, setDone, setStatus, form, row, bind, stName, priName };
+  CBN.tasks = { addToday, listEd, PRI, STATUS, isOpen, overdue, pri, byDue, blank, setDone, setStatus, form, row, bind, stName, priName };
   CBN.register('tasks', { render });
 })();

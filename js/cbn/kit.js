@@ -54,7 +54,8 @@
     if (!S.settings || document.querySelector('.cbn-pal')) return;
     const cmds = [
       [L('Yeni not', 'New Note'), async () => { const n = await CBN.notes.create({}); CBN.go('notes/' + n.id); }],
-      [L('Yeni görev', 'New Task'), () => CBN.tasks.form(null)],
+      [L('Bugüne görev ekle', 'Add task to today'), async () => { const t = await CBN.promptBox(L('Bugüne görev ekle', 'Add a task to today'), L('Görev', 'Task'), ''); if (t) { await CBN.tasks.addToday(t); CBN.refresh(); } }],
+      [L('Detaylı görev', 'Detailed task'), () => CBN.tasks.form(null)],
       [L('Yeni etkinlik', 'New Event'), () => CBN.calendar.form(null)],
       [L('Proje oluştur', 'Create Project'), () => CBN.projects.form(null)],
       [L('Takvimi aç', 'Open Calendar'), () => CBN.go('calendar')],
