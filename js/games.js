@@ -501,6 +501,7 @@ const App = (() => {
     else if ((r === 'seyahat' || r === 'gezilerim') && typeof Travel !== 'undefined') { root().innerHTML = '<div id="tvRoot"></div>'; window.scrollTo(0, 0); Travel.open(root().querySelector('#tvRoot'), r); onLeave(() => Travel.leave()); }
     else if (r === 'foto' && typeof Foto !== 'undefined') { root().innerHTML = '<div id="ftRoot"></div>'; window.scrollTo(0, 0); Foto.open(root().querySelector('#ftRoot')); onLeave(() => Foto.leave()); }
     else hub();
+    if(typeof BABAEnhance!=='undefined') BABAEnhance.enhance();
   }
   addEventListener('hashchange', render);
   return { render, leave, askOpen, lock: () => { if (isOwner()) lock(); else if (confirm(T('Davetli erişimi bu cihazdan kaldırılsın mı?', 'Remove guest access from this device?'))) guestOut(); }, isOwner, user: () => isOwner() ? { name: 'Oğuzhan', key: '' } : guest ? { name: guest.name, key: 'g-' + String(guest.code).toLowerCase().replace(/[^a-z0-9-]/g, '') } : null, get unlocked() { return unlocked; } };
