@@ -1,0 +1,27 @@
+/* Page opening animations, micro-interactions, sharing and installation.
+   Motion respects accessibility settings and only affects four new pages. */
+.bb-feature.bb-gundem,.bb-feature.bb-lab,.bb-feature.bb-play,.bb-feature.bb-akis{overflow:clip}
+.baba-actions{display:flex;flex-wrap:wrap;gap:9px;margin:20px 0 0;position:relative;z-index:2}
+.baba-action{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:10px 17px;border:1px solid currentColor;border-radius:99px;background:transparent;color:inherit;font:700 13px/1.25 Arial,sans-serif;cursor:pointer;transition:transform .18s ease,background .18s ease,color .18s ease}
+.baba-action:hover{transform:translateY(-2px)}.baba-action:active{transform:scale(.97)}
+.bb-gundem .baba-action{border-radius:0;font-family:Georgia,serif}.bb-gundem .baba-action:hover{background:#17232a;color:#fff}
+.bb-lab .baba-action{border-color:#c9ff69;color:#c9ff69;border-radius:9px}.bb-lab .baba-action:hover{background:#c9ff69;color:#101429}
+.bb-play .baba-action{border-color:#ff785f;color:#ffb6a7}.bb-play .baba-action:hover{background:#ff785f;color:#1b101b}
+.bb-akis .baba-action{border:2px solid #242022;border-radius:12px;box-shadow:3px 3px 0 #242022;background:#fffdf4}.bb-akis .baba-action:hover{background:#2747bd;color:white}
+#baba-toast{position:fixed;z-index:100000;bottom:calc(24px + env(safe-area-inset-bottom));left:50%;transform:translate(-50%,20px);opacity:0;pointer-events:none;background:#161616;color:white;padding:13px 20px;border-radius:14px;box-shadow:0 14px 40px #0003;font:600 13px/1.4 system-ui,sans-serif;transition:opacity .2s ease,transform .2s ease;max-width:calc(100vw - 40px);text-align:center}
+#baba-toast.visible{opacity:1;transform:translate(-50%,0)}
+@keyframes baba-page-in{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:translateY(0)}}
+@keyframes baba-title-in{from{opacity:0;transform:translateY(26px) skewY(2deg)}to{opacity:1;transform:translateY(0) skewY(0)}}
+@keyframes baba-card-in{from{opacity:0;transform:translateY(22px) scale(.985)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes baba-disc-in{from{transform:rotate(-35deg) scale(.75);opacity:0}to{transform:rotate(0deg) scale(1);opacity:.7}}
+@media(prefers-reduced-motion:no-preference){
+ .bb-feature.baba-enter{animation:baba-page-in .46s cubic-bezier(.2,.75,.25,1) both}
+ .bb-feature.baba-enter .bb-feature-top .display{animation:baba-title-in .62s cubic-bezier(.2,.8,.25,1) both}
+ .bb-feature.baba-enter .bb-feature-card{animation:baba-card-in .52s cubic-bezier(.2,.8,.25,1) both}
+ .bb-feature.baba-enter .bb-feature-card:nth-child(2){animation-delay:.08s}
+ .bb-feature.baba-enter .bb-feature-card:nth-child(3){animation-delay:.14s}
+ .bb-feature.baba-enter .bb-feature-card:nth-child(4){animation-delay:.2s}
+ .bb-play.baba-enter .bb-feature-top:after{animation:baba-disc-in .75s ease-out both}
+}
+@media(prefers-reduced-motion:reduce){.bb-feature,.bb-feature *,#baba-toast{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+@media(max-width:600px){.baba-action{padding:11px 13px;font-size:12px}.baba-actions{gap:8px}}
