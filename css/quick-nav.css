@@ -1,0 +1,17 @@
+/* Keyboard command palette and fixed universal page motion target */
+@keyframes bb-route-reveal{from{opacity:0;transform:translate3d(0,16px,0)}to{opacity:1;transform:translate3d(0,0,0)}}
+@media(prefers-reduced-motion:no-preference){
+ #view.bb-route-enter{animation:bb-route-reveal .38s cubic-bezier(.2,.7,.2,1) both}
+ #view.bb-route-enter .hero .display,#view.bb-route-enter .gp-head h1{animation:bb-route-head .5s cubic-bezier(.18,.8,.2,1) both}
+ #view.bb-route-enter .hub-grid>*{animation:bb-route-card .42s cubic-bezier(.2,.7,.2,1) both}
+ #view.bb-route-enter .hub-grid>:nth-child(2){animation-delay:45ms}
+ #view.bb-route-enter .hub-grid>:nth-child(3){animation-delay:90ms}
+ #view.bb-route-enter .hub-grid>:nth-child(4){animation-delay:135ms}
+}
+.bb-quick-overlay{position:fixed;inset:0;z-index:999999;background:#0d1224b9;display:flex;align-items:flex-start;justify-content:center;padding:clamp(40px,12vh,130px) 16px 20px;box-sizing:border-box;backdrop-filter:blur(5px)}
+.bb-quick-dialog{width:min(100%,560px);max-height:80vh;overflow:auto;background:#fff;color:#171717;border:1px solid #d7d7d7;border-radius:20px;box-shadow:0 30px 100px #0005;padding:18px;font:500 15px/1.5 system-ui,sans-serif}
+.bb-quick-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}.bb-quick-head strong{font-size:21px;letter-spacing:-.04em}.bb-quick-close{font-size:28px;border:0;background:transparent;color:inherit;cursor:pointer}
+.bb-quick-dialog input{width:100%;padding:15px;border-radius:12px;border:1px solid #c9c9c9;background:#f8f8f8;color:#171717;font:inherit;box-sizing:border-box}
+.bb-quick-results{display:grid;gap:5px;margin:12px 0}.bb-quick-results a{display:flex;justify-content:space-between;padding:12px;border-radius:10px;text-decoration:none;color:#171717;font-weight:650}.bb-quick-results a:hover,.bb-quick-results a:focus-visible{background:#e9efff;outline:2px solid #2747bd}
+.bb-quick-dialog small{color:#777}
+@media(prefers-reduced-motion:reduce){#view.bb-route-enter,#view.bb-route-enter *{animation:none!important;transition:none!important}}
