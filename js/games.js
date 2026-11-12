@@ -480,7 +480,9 @@ const App = (() => {
     document.body.classList.toggle('msn-mode', r === 'msn');
     document.body.classList.toggle('dark-mode', ['seyahat', 'gezilerim', 'foto'].includes(r));
     document.querySelectorAll('.nav a[data-r]').forEach(a => a.classList.toggle('on', a.dataset.r === r || (a.dataset.r === 'cbn' && cbnOn) || (a.dataset.r === 'dost' && r.startsWith('dost/')) || (a.dataset.r === 'oyunlar' && GAMES.some(g => g.id === r))));
-    if (r === 'ts' && typeof TS !== 'undefined') { root().innerHTML = '<div id="tsRoot"></div>'; window.scrollTo(0, 0); TS.open(root().querySelector('#tsRoot')); }
+    if (r === 'today' && typeof BABADaily !== 'undefined') { root().innerHTML='<div id="dailyRoot"></div>'; BABADaily.openToday(root().querySelector('#dailyRoot')); }
+    else if (r === 'backup' && typeof BABADaily !== 'undefined') { root().innerHTML='<div id="backupRoot"></div>'; BABADaily.openBackup(root().querySelector('#backupRoot')); }
+    else if (r === 'ts' && typeof TS !== 'undefined') { root().innerHTML = '<div id="tsRoot"></div>'; window.scrollTo(0, 0); TS.open(root().querySelector('#tsRoot')); }
     else if (cbnOn) { root().innerHTML = '<div id="cbnRoot"></div>'; window.scrollTo(0, 0); CBN.open(root().querySelector('#cbnRoot'), r); }
     else if (r === 'gundem' && typeof Gundem !== 'undefined') { root().innerHTML = '<div id="gundemRoot"></div>'; window.scrollTo(0,0); Gundem.open(root().querySelector('#gundemRoot')); }
     else if (r === 'lab' && typeof Lab !== 'undefined') { root().innerHTML = '<div id="labRoot"></div>'; window.scrollTo(0,0); Lab.open(root().querySelector('#labRoot')); }
@@ -502,6 +504,7 @@ const App = (() => {
     else if (r === 'foto' && typeof Foto !== 'undefined') { root().innerHTML = '<div id="ftRoot"></div>'; window.scrollTo(0, 0); Foto.open(root().querySelector('#ftRoot')); onLeave(() => Foto.leave()); }
     else hub();
     if(typeof BABAEnhance!=='undefined') BABAEnhance.enhance();
+    if(typeof BABADaily!=='undefined') BABADaily.refresh();
     // Animate each route once on entry; don't interrupt inputs or long-running widgets.
     const appRoot=root();
     appRoot.classList.remove('bb-route-enter');
