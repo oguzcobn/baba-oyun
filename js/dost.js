@@ -8,7 +8,10 @@
 const Dost = (() => {
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const store = { get(k, d) { try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch (e) { return d; } }, set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} } };
-  const CATS = { kaygi: 'Stres ve kaygı', zihin: 'Zihin alışkanlıkları', duygular: 'Duygular', beden: 'Uyku ve beden', ben: 'Kendinle ilişki', aile: 'İlişkiler ve aile', destek: 'Destek almak' };
+  const CATS_TR = { kaygi: 'Stres ve kaygı', zihin: 'Zihin alışkanlıkları', duygular: 'Duygular', beden: 'Uyku ve beden', ben: 'Kendinle ilişki', aile: 'İlişkiler ve aile', destek: 'Destek almak' };
+  const CATS_EN = { kaygi: 'Stress and anxiety', zihin: 'Habits of mind', duygular: 'Feelings', beden: 'Sleep and body', ben: 'Your relationship with yourself', aile: 'Relationships and family', destek: 'Getting support' };
+  const CATS = new Proxy(CATS_TR, { get: (o, k) => (I18N.lang === 'en' ? CATS_EN : o)[k] });
+  const X = a => (I18N.lang === 'en' && typeof DOST_EN !== 'undefined' && DOST_EN[a.s]) ? Object.assign({}, a, DOST_EN[a.s]) : a;   // dile göre yazı
 
   /* Yazı biçimi: boş satır = paragraf · "## " ara başlık · "- " madde · "! " bilgi kutusu · **kalın** */
   const A = [
@@ -235,8 +238,12 @@ Kendine ya da bir başkasına zarar verme düşüncen varsa ya da kendini güven
 
 ! Birleşik Krallık’taysan Samaritans’a günün her saati ücretsiz olarak 116 123’ten ulaşabilirsin.` }
   ];
-  const MOODS = [['Kaygılı', ['kaygi', 'zihin-tuzaklari']], ['Yorgun', ['tukenmislik', 'uyku']], ['Uykusuz', ['uyku']], ['Öfkeli', ['ofke', 'ben-dili']], ['Yalnız', ['yalnizlik']], ['Kendime kızgın', ['oz-sefkat', 'erteleme']], ['Ebeveynlik zor', ['ebeveynlik', 'duygulara-isim']], ['Karışık', ['duygulara-isim', 'destek']]];
+  const MOODS_RAW = [[['Kaygılı', 'Anxious'], ['kaygi', 'zihin-tuzaklari']], [['Yorgun', 'Tired'], ['tukenmislik', 'uyku']], [['Uykusuz', 'Sleepless'], ['uyku']], [['Öfkeli', 'Angry'], ['ofke', 'ben-dili']], [['Yalnız', 'Lonely'], ['yalnizlik']], [['Kendime kızgın', 'Cross with myself'], ['oz-sefkat', 'erteleme']], [['Ebeveynlik zor', 'Parenting is hard'], ['ebeveynlik', 'duygulara-isim']], [['Karışık', 'Mixed up'], ['duygulara-isim', 'destek']]];
+  const MOODS = { get length() { return MOODS_RAW.length; } };
+  MOODS_RAW.forEach((m, i) => Object.defineProperty(MOODS, i, { get: () => [T(m[0][0], m[0][1]), m[1]] }));
+  MOODS.map = f => MOODS_RAW.map((m, i) => f(MOODS[i], i));
   const find = s => A.find(a => a.s === s);
+  const AX = () => A.map(X);
   let el = null, filter = '', mood = -1, showAll = false, breath = null;
 
   const inl = s => esc(s).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
@@ -249,7 +256,7 @@ Kendine ya da bir başkasına zarar verme düşüncen varsa ya da kendini güven
       if (ln.startsWith('- ')) { (list = list || []).push(ln.slice(2)); return; }
       flush();
       if (ln.startsWith('## ')) { if (++hi === 2 && !done) { out.push(pull); done = true; } out.push(`<h2>${inl(ln.slice(3))}</h2>`); }
-      else if (ln.startsWith('! ')) { if (!done) { out.push(pull); done = true; } out.push(`<aside class="ds-tip"><b>Bilmekte fayda var</b><p>${inl(ln.slice(2))}</p></aside>`); }
+      else if (ln.startsWith('! ')) { if (!done) { out.push(pull); done = true; } out.push(`<aside class="ds-tip"><b>${T('Bilmekte fayda var', 'Worth knowing')}</b><p>${inl(ln.slice(2))}</p></aside>`); }
       else out.push(`<p>${inl(ln)}</p>`);
     });
     flush(); if (!done) out.push(pull);
@@ -257,38 +264,38 @@ Kendine ya da bir başkasına zarar verme düşüncen varsa ya da kendini güven
   }
   const read = () => store.get('dost_read', []);
   const markRead = s => { const r = read(); if (!r.includes(s)) { r.push(s); store.set('dost_read', r); } };
-  const crisis = `<p class="ds-crisis"><b>Acil bir durumdaysan</b> ya da kendine zarar verme düşüncen varsa hemen <a href="tel:112">112</a>’yi ara. Buradaki yazılar genel bilgi içindir; tanı koymaz, bir uzmanın yerini tutmaz.</p>`;
+  const crisis_ = () => T(`<p class="ds-crisis"><b>Acil bir durumdaysan</b> ya da kendine zarar verme düşüncen varsa hemen <a href="tel:112">112</a>’yi ara. Buradaki yazılar genel bilgi içindir; tanı koymaz, bir uzmanın yerini tutmaz.</p>`, `<p class="ds-crisis"><b>If you are in an emergency</b> or having thoughts of harming yourself, call <a href="tel:112">112</a> (or <a href="tel:999">999</a> in the UK) straight away. The articles here are general information; they do not diagnose and are no substitute for a professional.</p>`);
 
   /* ---------------- ana sayfa ---------------- */
   function home() {
     const r = read(), picks = mood >= 0 ? MOODS[mood][1] : null;
-    let list = A.filter(a => (!filter || a.c === filter) && (!picks || picks.includes(a.s)));
+    const AA = AX(); let list = AA.filter(a => (!filter || a.c === filter) && (!picks || picks.includes(a.s)));
     const more = !picks && !filter && !showAll && list.length > 6; if (more) list = list.slice(0, 6);
-    const words = ['Oku.', 'Dinlen.', 'Nefes', 'al.', 'Kendine', 'iyi', 'bak.'];
+    const words = T('Oku.|Dinlen.|Nefes|al.|Kendine|iyi|bak.', 'Read.|Rest.|Take|a|breath.|Be|kind.').split('|');
     el.innerHTML = `<div class="ds">
-      <header class="ds-hero"><p class="ds-eye">Dost · okuma alanı</p>
+      <header class="ds-hero"><p class="ds-eye">Dost · ${T('okuma alanı', 'reading room')}</p>
         <h1 class="ds-title">Dost<i>.</i></h1>
         <p class="ds-stack" aria-label="${esc(words.join(' '))}">${words.map((w, i) => `<span style="--d:${i * 90}ms" aria-hidden="true">${esc(w)}</span>`).join('')}</p>
-        <p class="ds-lede">Kaygı, uyku, duygular, ilişkiler ve kendinle kurduğun bağ üzerine kısa, sade yazılar. Bir de sakinleşmek istediğinde nefes molası.</p></header>
+        <p class="ds-lede">${T('Kaygı, uyku, duygular, ilişkiler ve kendinle kurduğun bağ üzerine kısa, sade yazılar. Bir de sakinleşmek istediğinde nefes molası.', 'Short, plain articles on anxiety, sleep, feelings, relationships and the bond you have with yourself. Plus a breathing break for when you need to calm down.')}</p></header>
 
-      <section class="ds-sec"><h2 class="ds-h"><span>Tanış</span><span>alım</span></h2>
+      <section class="ds-sec"><h2 class="ds-h">${T('<span>Tanış</span><span>alım</span>', '<span>Start</span><span>here</span>')}</h2>
         <div class="ds-trio">
-          <a class="ds-card c1" href="#dost-list"><em>01</em><b>Yazılar</b><p>${A.length} kısa yazı, ${Object.keys(CATS).length} başlık. Her biri 4–6 dakikada okunur.</p><span>Okumaya başla +</span></a>
-          <a class="ds-card c2" href="#dost-nefes"><em>02</em><b>Nefes molası</b><p>Bir, üç ya da beş dakikalık rehberli nefes. Kaygı yükseldiğinde ya da uyumadan önce.</p><span>Nefes al +</span></a>
-          <a class="ds-card c3" href="#dost/destek"><em>03</em><b>Destek almak</b><p>Ne zaman bir uzmana başvurmalı, kime gidilir, acil durumda ne yapılır.</p><span>Oku +</span></a>
+          <a class="ds-card c1" href="#dost-list"><em>01</em><b>${T('Yazılar', 'Articles')}</b><p>${T(`${A.length} kısa yazı, ${Object.keys(CATS_TR).length} başlık. Her biri 4–6 dakikada okunur.`, `${A.length} short articles, ${Object.keys(CATS_TR).length} topics. Each takes 4–6 minutes to read.`)}</p><span>${T('Okumaya başla', 'Start reading')} +</span></a>
+          <a class="ds-card c2" href="#dost-nefes"><em>02</em><b>${T('Nefes molası', 'Breathing break')}</b><p>${T('Bir, üç ya da beş dakikalık rehberli nefes. Kaygı yükseldiğinde ya da uyumadan önce.', 'One, three or five minutes of guided breathing. When anxiety rises, or before you sleep.')}</p><span>${T('Nefes al', 'Breathe')} +</span></a>
+          <a class="ds-card c3" href="#dost/destek"><em>03</em><b>${T('Destek almak', 'Getting support')}</b><p>${T('Ne zaman bir uzmana başvurmalı, kime gidilir, acil durumda ne yapılır.', 'When to see a professional, who to turn to, and what to do in an emergency.')}</p><span>${T('Oku', 'Read')} +</span></a>
         </div></section>
 
-      <section class="ds-sec ds-mood"><h2 class="ds-h sm"><span>Bugün</span><span>nasılsın?</span></h2>
-        <div class="ds-chips" role="group" aria-label="Bugün nasılsın">${MOODS.map((m, i) => `<button type="button" class="ds-chip${mood === i ? ' on' : ''}" data-m="${i}" aria-pressed="${mood === i}">${esc(m[0])}</button>`).join('')}</div>
-        ${picks ? `<p class="ds-hint">“${esc(MOODS[mood][0])}” için seçilen yazılar aşağıda. <button type="button" class="ds-link" data-m="-1">Tümünü göster</button></p>` : ''}</section>
+      <section class="ds-sec ds-mood"><h2 class="ds-h sm">${T('<span>Bugün</span><span>nasılsın?</span>', '<span>How are</span><span>you today?</span>')}</h2>
+        <div class="ds-chips" role="group" aria-label="${T('Bugün nasılsın', 'How are you today')}">${MOODS.map((m, i) => `<button type="button" class="ds-chip${mood === i ? ' on' : ''}" data-m="${i}" aria-pressed="${mood === i}">${esc(m[0])}</button>`).join('')}</div>
+        ${picks ? `<p class="ds-hint">${T(`“${esc(MOODS[mood][0])}” için seçilen yazılar aşağıda.`, `Articles chosen for “${esc(MOODS[mood][0])}” are below.`)} <button type="button" class="ds-link" data-m="-1">${T('Tümünü göster', 'Show all')}</button></p>` : ''}</section>
 
-      <section class="ds-sec" id="dost-list"><h2 class="ds-h"><span>Okumaya</span><span>değer</span></h2>
-        <div class="ds-filter" role="group" aria-label="Başlıklar"><button type="button" class="ds-f${filter ? '' : ' on'}" data-f="" aria-pressed="${!filter}">Tümü</button>${Object.keys(CATS).map(k => `<button type="button" class="ds-f${filter === k ? ' on' : ''}" data-f="${k}" aria-pressed="${filter === k}">${esc(CATS[k])}</button>`).join('')}</div>
-        <div class="ds-list">${list.map(a => `<a class="ds-item" href="#dost/${a.s}"><div class="ds-meta"><em>${String(A.indexOf(a) + 1).padStart(2, '0')}</em><span>${esc(CATS[a.c])}</span><span>${a.m} dk okuma</span>${r.includes(a.s) ? '<span class="ds-done">Okundu ✓</span>' : ''}</div><div class="ds-main"><b>${esc(a.t)}</b><q>${esc(a.q)}</q><p>${esc(a.l)}</p></div><span class="ds-go">Oku +</span></a>`).join('')}</div>
-        ${more ? `<button type="button" class="ds-more" data-a="more">Daha fazla göster (${A.length - 6}) +</button>` : ''}</section>
+      <section class="ds-sec" id="dost-list"><h2 class="ds-h">${T('<span>Okumaya</span><span>değer</span>', '<span>Worth</span><span>reading</span>')}</h2>
+        <div class="ds-filter" role="group" aria-label="${T('Başlıklar', 'Topics')}"><button type="button" class="ds-f${filter ? '' : ' on'}" data-f="" aria-pressed="${!filter}">${T('Tümü', 'All')}</button>${Object.keys(CATS_TR).map(k => `<button type="button" class="ds-f${filter === k ? ' on' : ''}" data-f="${k}" aria-pressed="${filter === k}">${esc(CATS[k])}</button>`).join('')}</div>
+        <div class="ds-list">${list.map(a => `<a class="ds-item" href="#dost/${a.s}"><div class="ds-meta"><em>${String(AA.indexOf(a) + 1).padStart(2, '0')}</em><span>${esc(CATS[a.c])}</span><span>${T(a.m + ' dk okuma', a.m + ' min read')}</span>${r.includes(a.s) ? `<span class="ds-done">${T('Okundu', 'Read')} ✓</span>` : ''}</div><div class="ds-main"><b>${esc(a.t)}</b><q>${esc(a.q)}</q><p>${esc(a.l)}</p></div><span class="ds-go">${T('Oku', 'Read')} +</span></a>`).join('')}</div>
+        ${more ? `<button type="button" class="ds-more" data-a="more">${T('Daha fazla göster', 'Show more')} (${A.length - 6}) +</button>` : ''}</section>
 
-      <section class="ds-sec ds-breath" id="dost-nefes"><h2 class="ds-h light"><span>Nefes</span><span>molası</span></h2><div class="ds-bw"></div></section>
-      <footer class="ds-foot">${crisis}</footer></div>`;
+      <section class="ds-sec ds-breath" id="dost-nefes"><h2 class="ds-h light">${T('<span>Nefes</span><span>molası</span>', '<span>Breathing</span><span>break</span>')}</h2><div class="ds-bw"></div></section>
+      <footer class="ds-foot">${crisis_()}</footer></div>`;
     breathUI(el.querySelector('.ds-bw'));
     el.querySelectorAll('[data-m]').forEach(b => b.onclick = () => { mood = +b.dataset.m === mood ? -1 : +b.dataset.m; filter = ''; home(); if (mood >= 0) el.querySelector('#dost-list').scrollIntoView({ behavior: 'smooth', block: 'start' }); });
     el.querySelectorAll('[data-f]').forEach(b => b.onclick = () => { filter = b.dataset.f; mood = -1; home(); const f = el.querySelector(`[data-f="${filter}"]`); if (f) f.focus(); });
@@ -297,27 +304,28 @@ Kendine ya da bir başkasına zarar verme düşüncen varsa ya da kendini güven
   }
 
   /* ---------------- nefes ---------------- */
-  const PAT = { calm: { n: '4 · 6 sakinleşme', p: [['Nefes al', 4, 1], ['Nefes ver', 6, 0]] }, box: { n: 'Kutu nefesi 4 · 4 · 4 · 4', p: [['Nefes al', 4, 1], ['Tut', 4, 1], ['Nefes ver', 4, 0], ['Tut', 4, 0]] } };
+  const PATF = () => { const IN = T('Nefes al', 'Breathe in'), OUT = T('Nefes ver', 'Breathe out'), H = T('Tut', 'Hold'); return { calm: { n: T('4 · 6 sakinleşme', '4 · 6 calming'), p: [[IN, 4, 1], [OUT, 6, 0]] }, box: { n: T('Kutu nefesi 4 · 4 · 4 · 4', 'Box breathing 4 · 4 · 4 · 4'), p: [[IN, 4, 1], [H, 4, 1], [OUT, 4, 0], [H, 4, 0]] } }; };
   function stopBreath() { if (breath) { clearTimeout(breath.t); clearInterval(breath.c); breath = null; } }
   function breathUI(box) {
+    const PAT = PATF(), READY = T('Hazır olduğunda başla', 'Begin when you are ready'), START = T('Başla', 'Start');
     let pat = store.get('dost_bp', 'calm'), min = store.get('dost_bm', 3); if (!PAT[pat]) pat = 'calm'; if (![1, 3, 5].includes(min)) min = 3;
-    box.innerHTML = `<div class="ds-orb-w"><div class="ds-orb" aria-hidden="true"><i></i></div><p class="ds-phase" role="status" aria-live="polite">Hazır olduğunda başla</p><p class="ds-left"></p></div>
-      <div class="ds-bctl"><p>Rahat bir pozisyonda otur, omuzlarını bırak. Daireyle birlikte nefes al ve ver.</p>
-        <div class="ds-opts" role="group" aria-label="Nefes türü">${Object.keys(PAT).map(k => `<button type="button" class="ds-o${pat === k ? ' on' : ''}" data-p="${k}" aria-pressed="${pat === k}">${PAT[k].n}</button>`).join('')}</div>
-        <div class="ds-opts" role="group" aria-label="Süre">${[1, 3, 5].map(m => `<button type="button" class="ds-o${min === m ? ' on' : ''}" data-t="${m}" aria-pressed="${min === m}">${m} dk</button>`).join('')}</div>
-        <button type="button" class="ds-start">Başla</button><p class="ds-small">Başın dönerse normal nefese dön. Bu bir tedavi değil, kısa bir sakinleşme alıştırmasıdır.</p></div>`;
+    box.innerHTML = `<div class="ds-orb-w"><div class="ds-orb" aria-hidden="true"><i></i></div><p class="ds-phase" role="status" aria-live="polite">${READY}</p><p class="ds-left"></p></div>
+      <div class="ds-bctl"><p>${T('Rahat bir pozisyonda otur, omuzlarını bırak. Daireyle birlikte nefes al ve ver.', 'Sit comfortably and let your shoulders drop. Breathe in and out with the circle.')}</p>
+        <div class="ds-opts" role="group" aria-label="${T('Nefes türü', 'Breathing pattern')}">${Object.keys(PAT).map(k => `<button type="button" class="ds-o${pat === k ? ' on' : ''}" data-p="${k}" aria-pressed="${pat === k}">${PAT[k].n}</button>`).join('')}</div>
+        <div class="ds-opts" role="group" aria-label="${T('Süre', 'Duration')}">${[1, 3, 5].map(m => `<button type="button" class="ds-o${min === m ? ' on' : ''}" data-t="${m}" aria-pressed="${min === m}">${m} ${T('dk', 'min')}</button>`).join('')}</div>
+        <button type="button" class="ds-start">${START}</button><p class="ds-small">${T('Başın dönerse normal nefese dön. Bu bir tedavi değil, kısa bir sakinleşme alıştırmasıdır.', 'If you feel dizzy, return to normal breathing. This is not a treatment, just a short calming exercise.')}</p></div>`;
     const orb = box.querySelector('.ds-orb'), ph = box.querySelector('.ds-phase'), left = box.querySelector('.ds-left'), btn = box.querySelector('.ds-start');
-    const reset = msg => { stopBreath(); orb.style.transitionDuration = '1.2s'; orb.classList.remove('big'); ph.textContent = msg || 'Hazır olduğunda başla'; left.textContent = ''; btn.textContent = 'Başla'; };
+    const reset = msg => { stopBreath(); orb.style.transitionDuration = '1.2s'; orb.classList.remove('big'); ph.textContent = msg || READY; left.textContent = ''; btn.textContent = START; };
     box.querySelectorAll('[data-p]').forEach(b => b.onclick = () => { pat = b.dataset.p; store.set('dost_bp', pat); box.querySelectorAll('[data-p]').forEach(x => { x.classList.toggle('on', x === b); x.setAttribute('aria-pressed', x === b); }); reset(); });
     box.querySelectorAll('[data-t]').forEach(b => b.onclick = () => { min = +b.dataset.t; store.set('dost_bm', min); box.querySelectorAll('[data-t]').forEach(x => { x.classList.toggle('on', x === b); x.setAttribute('aria-pressed', x === b); }); reset(); });
     btn.onclick = () => {
       if (breath) return reset();
       const end = Date.now() + min * 60000, steps = PAT[pat].p; let i = 0;
-      btn.textContent = 'Durdur';
+      btn.textContent = T('Durdur', 'Stop');
       const tick = () => { if (!box.isConnected) return stopBreath(); const s = Math.max(0, Math.ceil((end - Date.now()) / 1000)); left.textContent = Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
       const step = () => {
         if (!box.isConnected) return stopBreath();
-        if (Date.now() >= end && i % steps.length === 0) return reset('Tamamlandı. Kendine bu molayı verdiğin için teşekkürler.');
+        if (Date.now() >= end && i % steps.length === 0) return reset(T('Tamamlandı. Kendine bu molayı verdiğin için teşekkürler.', 'All done. Thank you for giving yourself this break.'));
         const [txt, sec, big] = steps[i % steps.length]; i++;
         ph.textContent = txt; orb.style.transitionDuration = sec + 's'; orb.classList.toggle('big', !!big);
         breath.t = setTimeout(step, sec * 1000);
@@ -328,13 +336,14 @@ Kendine ya da bir başkasına zarar verme düşüncen varsa ya da kendini güven
 
   /* ---------------- yazı ---------------- */
   function article(a) {
-    const i = A.indexOf(a), next = [A[(i + 1) % A.length], A[(i + 2) % A.length]], fs = Math.min(23, Math.max(16, +store.get('dost_fs', 19) || 19));
+    const AA = AX(); a = X(a);
+    const i = A.findIndex(x => x.s === a.s), next = [AA[(i + 1) % A.length], AA[(i + 2) % A.length]], fs = Math.min(23, Math.max(16, +store.get('dost_fs', 19) || 19));
     el.innerHTML = `<div class="ds ds-art"><div class="ds-prog" aria-hidden="true"><i></i></div>
-      <nav class="ds-top"><a class="ds-back" href="#dost">← Dost</a><div class="ds-fs" role="group" aria-label="Yazı boyutu"><button type="button" data-z="-1" aria-label="Yazıyı küçült">A−</button><button type="button" data-z="1" aria-label="Yazıyı büyüt">A+</button></div></nav>
-      <header class="ds-ahead"><p class="ds-eye">${esc(CATS[a.c])} · ${a.m} dk okuma</p><h1>${esc(a.t)}</h1><p class="ds-alede">${esc(a.l)}</p></header>
+      <nav class="ds-top"><a class="ds-back" href="#dost">← Dost</a><div class="ds-fs" role="group" aria-label="${T('Yazı boyutu', 'Text size')}"><button type="button" data-z="-1" aria-label="${T('Yazıyı küçült', 'Smaller text')}">A−</button><button type="button" data-z="1" aria-label="${T('Yazıyı büyüt', 'Larger text')}">A+</button></div></nav>
+      <header class="ds-ahead"><p class="ds-eye">${esc(CATS[a.c])} · ${T(a.m + ' dk okuma', a.m + ' min read')}</p><h1>${esc(a.t)}</h1><p class="ds-alede">${esc(a.l)}</p></header>
       <article class="ds-body" style="--fs:${fs}px">${body(a)}</article>
-      ${a.s !== 'destek' ? `<div class="ds-body ds-endnote">${crisis}</div>` : ''}
-      <section class="ds-next"><h2 class="ds-h sm"><span>Sıradaki</span><span>yazılar</span></h2><div class="ds-trio two">${next.map((n, k) => `<a class="ds-card c${k + 1}" href="#dost/${n.s}"><em>${esc(CATS[n.c])}</em><b>${esc(n.t)}</b><p>${esc(n.l)}</p><span>Oku +</span></a>`).join('')}</div></section></div>`;
+      ${a.s !== 'destek' ? `<div class="ds-body ds-endnote">${crisis_()}</div>` : ''}
+      <section class="ds-next"><h2 class="ds-h sm">${T('<span>Sıradaki</span><span>yazılar</span>', '<span>Read</span><span>next</span>')}</h2><div class="ds-trio two">${next.map((n, k) => `<a class="ds-card c${k + 1}" href="#dost/${n.s}"><em>${esc(CATS[n.c])}</em><b>${esc(n.t)}</b><p>${esc(n.l)}</p><span>${T('Oku', 'Read')} +</span></a>`).join('')}</div></section></div>`;
     const bodyEl = el.querySelector('.ds-body'), bar = el.querySelector('.ds-prog i');
     el.querySelectorAll('[data-z]').forEach(b => b.onclick = () => { const v = Math.min(23, Math.max(16, (parseInt(getComputedStyle(bodyEl).getPropertyValue('--fs'), 10) || 19) + (+b.dataset.z))); bodyEl.style.setProperty('--fs', v + 'px'); store.set('dost_fs', v); });
     const onScroll = () => {

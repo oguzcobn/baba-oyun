@@ -36,6 +36,9 @@ const Foto = (() => {
     ['Matt Stuart', '1974', 'Birleşik Krallık', 'Londra sokaklarında tesadüflerden doğan zekice, esprili kareleriyle tanınır; Magnum üyesi.', 'Bir köşede 20 dakika bekle; iki şeyin “kafiyeli” göründüğü anı yakala.', 'https://en.wikipedia.org/wiki/Matt_Stuart'],
     ['Diane Arbus', '1923–1971', 'ABD', 'Toplumun kenarında kalan insanları doğrudan, kare formatlı portrelerle fotoğrafladı.', 'Tanımadığın biriyle konuşup onu kendi ortamında, doğrudan kameraya bakarken çek.', 'https://tr.wikipedia.org/wiki/Diane_Arbus']
   ];
+  // İngilizce: [ülke, tanıtım, bu hafta dene] — PH ile aynı sırada
+  const PH_EN = [["Turkey", "For half a century he documented Istanbul’s people, streets and boats in black and white; he is remembered as “the eye of Istanbul”.", "A morning in Eminönü or Karaköy: frame people together with their surroundings, using a wide angle."], ["France", "A co-founder of Magnum. He put the idea of capturing the instant when geometry and movement meet — the “decisive moment” — at the heart of photography.", "Find an interesting background and wait; don’t press the shutter until the right person steps into the frame."], ["USA", "She worked as a nanny all her life; when more than 100,000 negatives were found after her death, she was recognised as one of the great street photographers.", "Look for your own reflection in shop windows, mirrors and your shadow — shoot a self-portrait series."], ["USA", "A pioneer of colour street photography: New York seen with a painter’s eye through steamed-up windows, rain and umbrellas.", "On a rainy day, shoot through a window or past an umbrella; leave the foreground blurred."], ["USA", "He photographed the streets of New York with tremendous energy, tilted frames and crowded scenes.", "Wide angle, close distance: step into the crowd and tilt the frame slightly."], ["France", "An icon of humanist photography who told the story of everyday Parisian life with humour and warmth.", "In a café or a square, look for small, funny interactions between people."], ["USA", "A Magnum photographer famous for pictures full of irony and humour, especially his photographs of dogs.", "Today, walk while looking only for a “funny” moment; dogs and their owners are a good place to start."], ["USA", "She poetically recorded children playing in New York’s working-class neighbourhoods and their chalk drawings on the pavement.", "Look out for children at play (with their parents’ permission) or for graffiti."], ["Hong Kong", "In the Hong Kong of the 1950s and 60s he built almost cinematic compositions from shafts of light, smoke and shadow.", "Find a street where hard light falls, expose for the shadows and wait for someone to step into the light."], ["Japan", "The master of the “rough, blurred, out of focus” aesthetic, portraying Tokyo in grainy, blurry, high-contrast frames.", "Switch to black and white, push the contrast all the way and shoot from the hip without looking through the viewfinder."], ["USA", "One of the first generation to take colour seriously in street photography; after 9/11 he also created the only official archive of Ground Zero.", "Make colour the subject: look for a frame where three things of the same colour come together."], ["USA", "A Magnum photographer known for harsh, bold street portraits taken very close up with flash.", "A courage exercise: ask someone for permission and take a frame-filling portrait from very close."], ["Switzerland / USA", "With his book “The Americans” he brought an outsider’s questioning eye to 1950s America and changed the idea of the photobook.", "Take 20 frames on a journey, then arrange them into the order of a story."], ["USA", "He builds layered, playful compositions from reflections, signs and frames within frames.", "Balance both the inside of a shop window and its reflection in the same frame."], ["USA", "A Magnum photographer whose frames are complex yet balanced, packed with saturated colour and events happening on several planes.", "Try to build a frame with three separate stories in the foreground, middle ground and background."], ["Hungary / France", "He photographed 1930s Paris by night — misty street lamps, cafés and nightlife — more strikingly than anyone before him.", "Go out at night: a street lamp, wet ground and a single human silhouette."], ["France", "He documented the disappearing streets, shop windows and tradespeople of old Paris in thousands of frames; many of the photographs in the gallery are his.", "Document something in your neighbourhood that will soon change — an old shop, a sign."], ["USA", "Known for her documentary photographs of people during the Great Depression, especially “Migrant Mother”.", "Chat with a shopkeeper, then take a single portrait that tells their story."], ["Czechia", "A Magnum photographer who documented the 1968 invasion of Prague and Roma communities across Europe in powerful black-and-white frames.", "Try a panorama in black and white, with a wide angle and a strong horizon line."], ["Brazil", "A documentary photographer known for epic black-and-white projects about workers, migration and nature.", "Think of a long project: follow the same subject (e.g. shipyard workers) for weeks."], ["USA", "Known for strong colour and portraits; “Afghan Girl” became one of the best-known magazine covers in the world.", "Take a portrait in a market against a backdrop of saturated colours."], ["Australia", "A Magnum photographer who turned Australia’s harsh sun and deep shadows into a dramatic street language.", "Close to sunset, use the lengthening shadows to photograph people as graphic shapes."], ["United Kingdom", "Known for clever, witty frames born of coincidences on the streets of London; a Magnum member.", "Wait on a corner for 20 minutes; catch the moment when two things seem to “rhyme”."], ["USA", "She photographed people on the margins of society in direct, square-format portraits.", "Talk to a stranger, then photograph them in their own surroundings, looking straight into the camera."]];
+  const ph = (p, i) => I18N.lang === 'en' ? [p[0], p[1], PH_EN[i][0], PH_EN[i][1], PH_EN[i][2], p[5].replace('//tr.wikipedia', '//en.wikipedia')] : p;
   // kısa, kaynağı bilinen sözler (Türkçe çeviri + özgün)
   const Q = [
     ['İlk 10.000 fotoğrafın, en kötüleridir.', 'Your first 10,000 photographs are your worst.', 'Henri Cartier-Bresson'],
@@ -59,10 +62,10 @@ const Foto = (() => {
     'Category:Photographs by Lewis Hine'
   ];
   const FALLBACK = [
-    ['Eugène Atget, Street Musicians, 1898–99.jpg', 'Eugène Atget', '1898–99', 'Sokak müzisyenleri, Paris'],
-    ['Sleeping, homeless children - Jacob Riis.jpg', 'Jacob Riis', 'c. 1890', 'Sokakta uyuyan çocuklar, New York'],
+    ['Eugène Atget, Street Musicians, 1898–99.jpg', 'Eugène Atget', '1898–99', ['Sokak müzisyenleri, Paris', 'Street musicians, Paris']],
+    ['Sleeping, homeless children - Jacob Riis.jpg', 'Jacob Riis', 'c. 1890', ['Sokakta uyuyan çocuklar, New York', 'Children sleeping on the street, New York']],
     ['Mulberry Bend, New York.jpg', 'Jacob Riis', 'c. 1890', 'Mulberry Bend, New York']
-  ].map(([f, a, y, t]) => ({ src: 'https://commons.wikimedia.org/wiki/Special:FilePath/' + encodeURIComponent(f) + '?width=900', page: 'https://commons.wikimedia.org/wiki/File:' + encodeURIComponent(f.replace(/ /g, '_')), artist: a, year: y, title: t, lic: 'Kamu malı' }));
+  ].map(([f, a, y, t]) => ({ src: 'https://commons.wikimedia.org/wiki/Special:FilePath/' + encodeURIComponent(f) + '?width=900', page: 'https://commons.wikimedia.org/wiki/File:' + encodeURIComponent(f.replace(/ /g, '_')), artist: a, year: y, title: t, lic: 'pd' }));
   const strip = h => { const d = document.createElement('div'); d.innerHTML = h || ''; return d.textContent.trim(); };
 
   async function loadPhotos() {
@@ -77,7 +80,7 @@ const Foto = (() => {
           const ii = p.imageinfo && p.imageinfo[0]; if (!ii || ii.mime !== 'image/jpeg') return;
           const m = ii.extmetadata || {}, lic = (m.LicenseShortName && m.LicenseShortName.value) || '';
           if (!/public domain|^pd|cc0|no restrictions/i.test(lic)) return;
-          out.push({ src: ii.thumburl, page: ii.descriptionurl, artist: strip(m.Artist && m.Artist.value).replace(/\s+/g, ' ').slice(0, 60) || cat.replace(/.*by |Category:| in the.*/g, ''), year: ((strip(m.DateTimeOriginal && m.DateTimeOriginal.value).match(/1[89]\d\d/) || [''])[0]), title: strip(m.ObjectName && m.ObjectName.value).slice(0, 90) || p.title.replace(/^File:|\.jpe?g$/gi, ''), lic: 'Kamu malı' });
+          out.push({ src: ii.thumburl, page: ii.descriptionurl, artist: strip(m.Artist && m.Artist.value).replace(/\s+/g, ' ').slice(0, 60) || cat.replace(/.*by |Category:| in the.*/g, ''), year: ((strip(m.DateTimeOriginal && m.DateTimeOriginal.value).match(/1[89]\d\d/) || [''])[0]), title: strip(m.ObjectName && m.ObjectName.value).slice(0, 90) || p.title.replace(/^File:|\.jpe?g$/gi, ''), lic: 'pd' });
         });
       } catch (e) { /* çevrimdışı ya da kategori yok */ }
     }));
@@ -91,27 +94,27 @@ const Foto = (() => {
   const day = () => Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0)) / 86400000);
   function open(root) {
     el = root;
-    const d = day(), p = PH[d % PH.length], q0 = d % Q.length;
+    const d = day(), p = ph(PH[d % PH.length], d % PH.length), q0 = d % Q.length;
     el.innerHTML = `<div class="ft">
-      <header class="ft-head"><p class="ft-eye">BABA. / FOTOĞRAF</p><h1>Işığı <em>yakala.</em></h1>
-        <a class="ft-pexels" href="${PEXELS}" target="_blank" rel="noopener"><span>Pexels</span><b>@oguzcobn</b><i>Sayfama git ↗</i></a></header>
+      <header class="ft-head"><p class="ft-eye">BABA. / ${T('FOTOĞRAF', 'PHOTOGRAPHY')}</p><h1>${T('Işığı <em>yakala.</em>', 'Catch the <em>light.</em>')}</h1>
+        <a class="ft-pexels" href="${PEXELS}" target="_blank" rel="noopener"><span>Pexels</span><b>@oguzcobn</b><i>${T('Sayfama git', 'Visit my page')} ↗</i></a></header>
       <section class="ft-grid">
-        <article class="ft-day"><span class="ft-eye">GÜNÜN FOTOĞRAFÇISI · ${new Date().toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' })}</span>
+        <article class="ft-day"><span class="ft-eye">${T('GÜNÜN FOTOĞRAFÇISI', 'PHOTOGRAPHER OF THE DAY')} · ${new Date().toLocaleDateString(I18N.locale, { day: 'numeric', month: 'long' })}</span>
           <h2>${esc(p[0])}</h2><p class="ft-meta">${esc(p[1])} · ${esc(p[2])}</p><p>${esc(p[3])}</p>
-          <div class="ft-try"><span class="ft-eye">BU HAFTA DENE</span><p>${esc(p[4])}</p></div>
-          <div class="ft-links"><a href="${p[5]}" target="_blank" rel="noopener">Hayatı ↗</a><a href="https://www.google.com/search?tbm=isch&q=${encodeURIComponent(p[0] + ' photography')}" target="_blank" rel="noopener">Fotoğraflarına bak ↗</a></div>
-          <div class="ft-next"><span class="ft-eye">YARIN</span> ${esc(PH[(d + 1) % PH.length][0])}</div></article>
-        <article class="ft-quote"><span class="ft-eye">SÖZLER</span><blockquote></blockquote><cite></cite><small class="ft-orig"></small>
+          <div class="ft-try"><span class="ft-eye">${T('BU HAFTA DENE', 'TRY THIS WEEK')}</span><p>${esc(p[4])}</p></div>
+          <div class="ft-links"><a href="${p[5]}" target="_blank" rel="noopener">${T('Hayatı', 'Biography')} ↗</a><a href="https://www.google.com/search?tbm=isch&q=${encodeURIComponent(p[0] + ' photography')}" target="_blank" rel="noopener">${T('Fotoğraflarına bak', 'See their photographs')} ↗</a></div>
+          <div class="ft-next"><span class="ft-eye">${T('YARIN', 'TOMORROW')}</span> ${esc(PH[(d + 1) % PH.length][0])}</div></article>
+        <article class="ft-quote"><span class="ft-eye">${T('SÖZLER', 'QUOTES')}</span><blockquote></blockquote><cite></cite><small class="ft-orig"></small>
           <div class="ft-qnav"><button data-q="-1">←</button><span class="ft-qi"></span><button data-q="1">→</button></div></article>
       </section>
-      <section class="ft-gal"><div class="ft-gal-head"><div><span class="ft-eye">3D SOKAK GALERİSİ</span><h2>Sokakların ustaları</h2></div><p>Parmağınla sağa-sola kaydır ya da oklarla ilerle; ortadakine dokununca büyür. Fotoğraflar Wikimedia Commons’taki kamu malı arşivlerden canlı gelir.</p></div>
-        <div class="ft-tunnel" tabindex="0"><div class="ft-world"></div><div class="ft-load">Galeri yükleniyor…</div>
+      <section class="ft-gal"><div class="ft-gal-head"><div><span class="ft-eye">${T('3D SOKAK GALERİSİ', '3D STREET GALLERY')}</span><h2>${T('Sokakların ustaları', 'Masters of the street')}</h2></div><p>${T('Parmağınla sağa-sola kaydır ya da oklarla ilerle; ortadakine dokununca büyür. Fotoğraflar Wikimedia Commons’taki kamu malı arşivlerden canlı gelir.', 'Swipe left and right or use the arrows; tap the centre frame to enlarge it. The photographs load live from public-domain archives on Wikimedia Commons.')}</p></div>
+        <div class="ft-tunnel" tabindex="0"><div class="ft-world"></div><div class="ft-load">${T('Galeri yükleniyor…', 'Loading the gallery…')}</div>
           <div class="ft-ctrl"><button data-z="-1">←</button><span class="ft-pos"></span><button data-z="1">→</button></div></div>
-        <div class="ft-masters"><span class="ft-eye">ÇAĞDAŞ USTALAR (fotoğrafları telifli — kendi sayfalarında bak)</span><div>${PH.filter(x => !/Atget|Lange/.test(x[0])).map(x => `<a href="https://www.google.com/search?tbm=isch&q=${encodeURIComponent(x[0] + ' street photography')}" target="_blank" rel="noopener">${esc(x[0])}</a>`).join('')}</div></div>
+        <div class="ft-masters"><span class="ft-eye">${T('ÇAĞDAŞ USTALAR (fotoğrafları telifli — kendi sayfalarında bak)', 'CONTEMPORARY MASTERS (their photographs are copyrighted — see them on their own pages)')}</span><div>${PH.filter(x => !/Atget|Lange/.test(x[0])).map(x => `<a href="https://www.google.com/search?tbm=isch&q=${encodeURIComponent(x[0] + ' street photography')}" target="_blank" rel="noopener">${esc(x[0])}</a>`).join('')}</div></div>
       </section>
       <div class="ft-lb" hidden></div>
     </div>`;
-    let qi = q0; const showQ = () => { const q = Q[(qi % Q.length + Q.length) % Q.length]; el.querySelector('blockquote').textContent = '“' + q[0] + '”'; el.querySelector('cite').textContent = '— ' + q[2]; el.querySelector('.ft-orig').textContent = q[1]; el.querySelector('.ft-qi').textContent = ((qi % Q.length + Q.length) % Q.length + 1) + '/' + Q.length; };
+    let qi = q0; const showQ = () => { const q = Q[(qi % Q.length + Q.length) % Q.length], en = I18N.lang === 'en'; el.querySelector('blockquote').textContent = '“' + (en ? q[1] : q[0]) + '”'; el.querySelector('cite').textContent = '— ' + q[2]; el.querySelector('.ft-orig').textContent = en ? '' : q[1]; el.querySelector('.ft-qi').textContent = ((qi % Q.length + Q.length) % Q.length + 1) + '/' + Q.length; };
     showQ(); el.querySelectorAll('[data-q]').forEach(b => b.onclick = () => { qi += +b.dataset.q; showQ(); });
     loadPhotos().then(build);
   }
@@ -122,7 +125,7 @@ const Foto = (() => {
     const ld = el.querySelector('.ft-load'); if (ld) ld.remove();
     const flow = el.querySelector('.ft-world');
     flow.className = 'ft-flow';
-    flow.innerHTML = list.map((p, i) => `<figure class="ft-fr" data-i="${i}"><img src="${p.src}" alt="${esc(p.title)}" loading="lazy" referrerpolicy="no-referrer" onerror="this.closest('figure').classList.add('bad')"><figcaption><b>${esc(p.artist)}</b>${p.year ? ' · ' + esc(p.year) : ''}</figcaption></figure>`).join('');
+    flow.innerHTML = list.map((p, i) => `<figure class="ft-fr" data-i="${i}"><img src="${p.src}" alt="${esc(Array.isArray(p.title) ? T(p.title[0], p.title[1]) : p.title)}" loading="lazy" referrerpolicy="no-referrer" onerror="this.closest('figure').classList.add('bad')"><figcaption><b>${esc(p.artist)}</b>${p.year ? ' · ' + esc(p.year) : ''}</figcaption></figure>`).join('');
     const frames = [...flow.children], pos = el.querySelector('.ft-pos'), N = frames.length;
     let ticking = false, cur = 0;
     function paint() {
@@ -142,7 +145,7 @@ const Foto = (() => {
     const goTo = i => { i = Math.max(0, Math.min(N - 1, i)); const f = frames[i]; flow.scrollTo({ left: f.offsetLeft + f.offsetWidth / 2 - flow.clientWidth / 2, behavior: 'smooth' }); };
     el.querySelectorAll('[data-z]').forEach(b => b.onclick = () => goTo(cur + +b.dataset.z));
     tun.addEventListener('keydown', e => { if (e.key === 'ArrowRight') goTo(cur + 1); if (e.key === 'ArrowLeft') goTo(cur - 1); });
-    frames.forEach(f => f.onclick = () => { const i = +f.dataset.i; if (i !== cur) return goTo(i); const p = list[i]; lb.hidden = false; lb.innerHTML = `<div class="ft-lb-in"><img src="${p.src}" alt=""><div><span class="ft-eye">${esc(p.lic)}</span><h3>${esc(p.title)}</h3><p>${esc(p.artist)}${p.year ? ' · ' + esc(p.year) : ''}</p><a href="${p.page}" target="_blank" rel="noopener">Wikimedia Commons’ta gör ↗</a></div><button>✕</button></div>`; lb.onclick = e => { if (e.target === lb || e.target.tagName === 'BUTTON') lb.hidden = true; }; });
+    frames.forEach(f => f.onclick = () => { const i = +f.dataset.i; if (i !== cur) return goTo(i); const p = list[i]; lb.hidden = false; lb.innerHTML = `<div class="ft-lb-in"><img src="${p.src}" alt=""><div><span class="ft-eye">${T('Kamu malı', 'Public domain')}</span><h3>${esc(Array.isArray(p.title) ? T(p.title[0], p.title[1]) : p.title)}</h3><p>${esc(p.artist)}${p.year ? ' · ' + esc(p.year) : ''}</p><a href="${p.page}" target="_blank" rel="noopener">${T('Wikimedia Commons’ta gör', 'View on Wikimedia Commons')} ↗</a></div><button>✕</button></div>`; lb.onclick = e => { if (e.target === lb || e.target.tagName === 'BUTTON') lb.hidden = true; }; });
     paint(); setTimeout(paint, 300);
   }
   function leave() { }

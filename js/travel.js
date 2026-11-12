@@ -8,10 +8,13 @@ const Travel = (() => {
   const ls = { get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } }, set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} } };
   const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  const mapOf = s => Object.fromEntries(s.split('|').map(x => x.split(':')));
+  const C_EN = mapOf('Hollanda:Netherlands|Almanya:Germany|İsviçre:Switzerland|Fransa:France|Türkiye:Turkey|İskoçya:Scotland|Birleşik Krallık:United Kingdom|Belçika:Belgium|Lüksemburg:Luxembourg|Avusturya:Austria|Çekya:Czechia|Macaristan:Hungary|Polonya:Poland|İtalya:Italy|İspanya:Spain|Portekiz:Portugal|Yunanistan:Greece|Danimarka:Denmark|İsveç:Sweden|Norveç:Norway|Finlandiya:Finland|İzlanda:Iceland|İrlanda:Ireland|Hırvatistan:Croatia|Bosna-Hersek:Bosnia and Herzegovina|Romanya:Romania|Bulgaristan:Bulgaria|Gürcistan:Georgia|BAE:UAE|Katar:Qatar|Mısır:Egypt|Fas:Morocco|ABD:USA|Kanada:Canada|Japonya:Japan|Güney Kore:South Korea|Singapur:Singapore|Tayland:Thailand|Endonezya:Indonesia|Avustralya:Australia|Brezilya:Brazil|Arjantin:Argentina|Güney Afrika:South Africa|Diğer:Other'), N_EN = mapOf('Zürih:Zurich|Strazburg:Strasbourg|İstanbul:Istanbul|İzmir:Izmir|Kapadokya:Cappadocia|Londra:London|Marsilya:Marseille|Münih:Munich|Köln:Cologne|Lahey:The Hague|Brüksel:Brussels|Brugge:Bruges|Anvers:Antwerp|Lüksemburg:Luxembourg|Cenevre:Geneva|Lozan:Lausanne|Viyana:Vienna|Prag:Prague|Budapeşte:Budapest|Varşova:Warsaw|Krakov:Kraków|Roma:Rome|Milano:Milan|Venedik:Venice|Floransa:Florence|Napoli:Naples|Barselona:Barcelona|Sevilla:Seville|Valensiya:Valencia|Lizbon:Lisbon|Atina:Athens|Selanik:Thessaloniki|Kopenhag:Copenhagen|Saraybosna:Sarajevo|Bükreş:Bucharest|Sofya:Sofia|Tiflis:Tbilisi|Batum:Batumi|Kahire:Cairo|Marakeş:Marrakesh|Seul:Seoul|Singapur:Singapore|Sidney:Sydney');
+  const cn = c => I18N.lang === 'en' ? (C_EN[c] || c) : c, tn = n => I18N.lang === 'en' ? (N_EN[n] || n) : n;   // kayıtlar Türkçe saklanır, İngilizcede adları çevrilir
   const SITES = [
-    { t: 'Booking.com', d: 'Otel, apart ve konaklama', u: 'https://www.booking.com/index.tr.html', c: 'tv-bk', e: '🏨' },
-    { t: 'Airbnb', d: 'Ev, oda ve deneyimler', u: 'https://www.airbnb.com.tr/', c: 'tv-ab', e: '🏡' },
-    { t: 'Skyscanner', d: 'Uçuş, araç ve otel karşılaştırma', u: 'https://www.skyscanner.com.tr/', c: 'tv-ss', e: '✈️' }
+    { t: 'Booking.com', d: ['Otel, apart ve konaklama', 'Hotels, apartments and stays'], u: 'https://www.booking.com/index.tr.html', c: 'tv-bk', e: '🏨' },
+    { t: 'Airbnb', d: ['Ev, oda ve deneyimler', 'Homes, rooms and experiences'], u: 'https://www.airbnb.com.tr/', c: 'tv-ab', e: '🏡' },
+    { t: 'Skyscanner', d: ['Uçuş, araç ve otel karşılaştırma', 'Compare flights, car hire and hotels'], u: 'https://www.skyscanner.com.tr/', c: 'tv-ss', e: '✈️' }
   ];
   // yerleşik şehir listesi: [ad, enlem, boylam, ülke, eş adlar]
   const GAZ = [
@@ -39,7 +42,7 @@ const Travel = (() => {
   function findLocal(q) { const f = fold(q); return GAZ.find(g => fold(g[0]) === f || (g[4] || '').split(',').some(a => fold(a) === f)); }
   async function geocode(q) {
     const g = findLocal(q); if (g) return { name: g[0], lat: g[1], lon: g[2], country: g[3] };
-    const r = await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&accept-language=tr&addressdetails=1&q=' + encodeURIComponent(q), { headers: { 'Accept': 'application/json' } });
+    const r = await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&accept-language=' + I18N.lang + '&addressdetails=1&q=' + encodeURIComponent(q), { headers: { 'Accept': 'application/json' } });
     const j = await r.json(); if (!j.length) return null;
     const a = j[0].address || {};
     return { name: a.city || a.town || a.village || j[0].name || q, lat: +j[0].lat, lon: +j[0].lon, country: a.country || '' };
@@ -52,24 +55,24 @@ const Travel = (() => {
   function draw() {
     leave();
     el.innerHTML = `<div class="tv">
-      <header class="tv-head"><p class="tv-eye">BABA. / SEYAHAT</p><h1>Bir sonraki<br><em>rota</em> nereye?</h1>
-        <nav class="tv-tabs"><a href="#seyahat" class="${tab === 'seyahat' ? 'on' : ''}">Rezervasyon</a><a href="#gezilerim" class="${tab === 'gezilerim' ? 'on' : ''}">🌍 Gezilerim</a></nav></header>
+      <header class="tv-head"><p class="tv-eye">BABA. / ${T('SEYAHAT', 'TRAVEL')}</p><h1>${T('Bir sonraki<br><em>rota</em> nereye?', 'Where’s the<br>next <em>route</em>?')}</h1>
+        <nav class="tv-tabs"><a href="#seyahat" class="${tab === 'seyahat' ? 'on' : ''}">${T('Rezervasyon', 'Bookings')}</a><a href="#gezilerim" class="${tab === 'gezilerim' ? 'on' : ''}">🌍 ${T('Gezilerim', 'My Travels')}</a></nav></header>
       ${tab === 'seyahat' ? bookingHtml() : globeHtml()}
     </div>`;
     if (tab === 'gezilerim') mountGlobe();
   }
   function bookingHtml() {
     const t = trips(), c = new Set(t.map(x => x.country).filter(Boolean));
-    return `<section class="tv-sites">${SITES.map(s => `<a class="tv-site ${s.c}" href="${s.u}" target="_blank" rel="noopener"><span class="tv-e">${s.e}</span><h2>${s.t}</h2><p>${s.d}</p><span class="tv-go">Siteye git ↗</span></a>`).join('')}</section>
-      <a class="tv-promo" href="#gezilerim"><div><span class="tv-eye">GEZİLERİM</span><h2>${t.length} şehir · ${c.size} ülke</h2><p>Gezdiğin şehirleri 3D dünyada pinle, 360° döndür.</p></div><span class="tv-orb">🌍</span></a>`;
+    return `<section class="tv-sites">${SITES.map(s => `<a class="tv-site ${s.c}" href="${s.u}" target="_blank" rel="noopener"><span class="tv-e">${s.e}</span><h2>${s.t}</h2><p>${T(s.d[0], s.d[1])}</p><span class="tv-go">${T('Siteye git', 'Visit site')} ↗</span></a>`).join('')}</section>
+      <a class="tv-promo" href="#gezilerim"><div><span class="tv-eye">${T('GEZİLERİM', 'MY TRAVELS')}</span><h2>${t.length} ${T('şehir', 'cities')} · ${c.size} ${T('ülke', 'countries')}</h2><p>${T('Gezdiğin şehirleri 3D dünyada pinle, 360° döndür.', 'Pin the cities you have visited on a 3D globe and spin it 360°.')}</p></div><span class="tv-orb">🌍</span></a>`;
   }
   function globeHtml() {
     return `<section class="gz">
-      <div class="gz-stage"><div class="gz-globe"><div class="gz-loading">Dünya yükleniyor…</div></div>
-        <div class="gz-hud"><span class="gz-stat"></span><button class="gz-btn" data-a="spin">⟳ Döndür</button><button class="gz-btn" data-a="home">⌂</button></div>
+      <div class="gz-stage"><div class="gz-globe"><div class="gz-loading">${T('Dünya yükleniyor…', 'Loading the globe…')}</div></div>
+        <div class="gz-hud"><span class="gz-stat"></span><button class="gz-btn" data-a="spin">⟳ ${T('Döndür', 'Spin')}</button><button class="gz-btn" data-a="home">⌂</button></div>
         <div class="gz-card" hidden></div></div>
       <aside class="gz-side">
-        <form class="gz-add"><input name="q" placeholder="Şehir ekle (ör. Lizbon, Kyoto…)" required maxlength="80"><div class="gz-row"><input name="d" type="month" title="Ne zaman?"><button class="gz-btn gz-pri">📍 Pinle</button></div><input name="n" placeholder="Kısa not (isteğe bağlı)" maxlength="140"><p class="gz-msg"></p></form>
+        <form class="gz-add"><input name="q" placeholder="${T('Şehir ekle (ör. Lizbon, Kyoto…)', 'Add a city (e.g. Lisbon, Kyoto…)')}" required maxlength="80"><div class="gz-row"><input name="d" type="month" title="${T('Ne zaman?', 'When?')}"><button class="gz-btn gz-pri">📍 ${T('Pinle', 'Pin')}</button></div><input name="n" placeholder="${T('Kısa not (isteğe bağlı)', 'Short note (optional)')}" maxlength="140"><p class="gz-msg"></p></form>
         <div class="gz-list"></div>
       </aside></section>`;
   }
@@ -83,37 +86,37 @@ const Travel = (() => {
       host.querySelector('.gz-loading') && host.querySelector('.gz-loading').remove();
       refresh();
       const t = trips(); if (t.length) setTimeout(() => globe && globe.flyTo(t[0].lat, t[0].lon, 2.6), 300);
-    } catch (e) { host.innerHTML = '<div class="gz-loading">3D dünya bu cihazda açılamadı (WebGL gerekli).</div>'; console.warn(e); }
+    } catch (e) { host.innerHTML = `<div class="gz-loading">${T('3D dünya bu cihazda açılamadı (WebGL gerekli).', 'The 3D globe could not open on this device (WebGL is required).')}</div>`; console.warn(e); }
     const f = el.querySelector('.gz-add'), msg = f.querySelector('.gz-msg');
     f.onsubmit = async e => {
-      e.preventDefault(); const q = f.q.value.trim(); if (!q) return; msg.textContent = 'Aranıyor…';
+      e.preventDefault(); const q = f.q.value.trim(); if (!q) return; msg.textContent = T('Aranıyor…', 'Searching…');
       try {
-        const g = await geocode(q); if (!g) { msg.textContent = 'Şehir bulunamadı. Yazımı kontrol et.'; return; }
-        const t = trips(); if (t.some(x => Math.abs(x.lat - g.lat) < .01 && Math.abs(x.lon - g.lon) < .01)) { msg.textContent = g.name + ' zaten pinli.'; return; }
+        const g = await geocode(q); if (!g) { msg.textContent = T('Şehir bulunamadı. Yazımı kontrol et.', 'City not found. Check the spelling.'); return; }
+        const t = trips(); if (t.some(x => Math.abs(x.lat - g.lat) < .01 && Math.abs(x.lon - g.lon) < .01)) { msg.textContent = T(g.name + ' zaten pinli.', tn(g.name) + ' is already pinned.'); return; }
         t.push({ id: uid(), name: g.name, lat: g.lat, lon: g.lon, country: g.country, date: f.d.value, note: f.n.value.trim() }); saveT(t);
-        f.reset(); msg.textContent = '📍 ' + g.name + ' eklendi'; refresh(); globe && globe.flyTo(g.lat, g.lon); showCard(t.length - 1);
-      } catch (err) { msg.textContent = 'Bağlantı yok: yerleşik listede olmayan şehirler için internet gerekir.'; }
+        f.reset(); msg.textContent = '📍 ' + T(g.name + ' eklendi', tn(g.name) + ' added'); refresh(); globe && globe.flyTo(g.lat, g.lon); showCard(t.length - 1);
+      } catch (err) { msg.textContent = T('Bağlantı yok: yerleşik listede olmayan şehirler için internet gerekir.', 'No connection: cities outside the built-in list need the internet.'); }
     };
     el.querySelector('[data-a=spin]').onclick = () => globe && globe.spin(true);
     el.querySelector('[data-a=home]').onclick = () => { const t = trips(); globe && t.length && globe.flyTo(t[0].lat, t[0].lon, 2.8); };
   }
-  const fmtM = m => { if (!m) return ''; const [y, mo] = m.split('-'); return new Date(+y, +mo - 1, 1).toLocaleDateString('tr-TR', { month: 'long', year: 'numeric' }); };
+  const fmtM = m => { if (!m) return ''; const [y, mo] = m.split('-'); return new Date(+y, +mo - 1, 1).toLocaleDateString(I18N.locale, { month: 'long', year: 'numeric' }); };
   function refresh() {
     const t = trips(), countries = new Set(t.map(x => x.country).filter(Boolean));
-    if (globe) globe.setPins(t);
-    const st = el.querySelector('.gz-stat'); if (st) st.innerHTML = `<b>${t.length}</b> şehir · <b>${countries.size}</b> ülke`;
+    if (globe) globe.setPins(t.map(x => Object.assign({}, x, { name: tn(x.name) })));
+    const st = el.querySelector('.gz-stat'); if (st) st.innerHTML = `<b>${t.length}</b> ${T('şehir', 'cities')} · <b>${countries.size}</b> ${T('ülke', 'countries')}`;
     const byC = {}; t.forEach((x, i) => (byC[x.country || 'Diğer'] = byC[x.country || 'Diğer'] || []).push([x, i]));
-    el.querySelector('.gz-list').innerHTML = Object.entries(byC).map(([c, arr]) => `<div class="gz-grp"><span class="tv-eye">${esc(c)} · ${arr.length}</span>${arr.map(([x, i]) => `<div class="gz-item" data-i="${i}"><button class="gz-go">📍 <b>${esc(x.name)}</b>${x.date ? `<small>${fmtM(x.date)}</small>` : ''}</button><button class="gz-del" data-del="${x.id}" title="Sil">✕</button></div>`).join('')}</div>`).join('') || '<p class="tv-eye">Henüz şehir yok.</p>';
+    el.querySelector('.gz-list').innerHTML = Object.entries(byC).map(([c, arr]) => `<div class="gz-grp"><span class="tv-eye">${esc(cn(c))} · ${arr.length}</span>${arr.map(([x, i]) => `<div class="gz-item" data-i="${i}"><button class="gz-go">📍 <b>${esc(tn(x.name))}</b>${x.date ? `<small>${fmtM(x.date)}</small>` : ''}</button><button class="gz-del" data-del="${x.id}" title="${T('Sil', 'Delete')}">✕</button></div>`).join('')}</div>`).join('') || `<p class="tv-eye">${T('Henüz şehir yok.', 'No cities yet.')}</p>`;
     el.querySelectorAll('.gz-go').forEach(b => b.onclick = () => { const i = +b.parentNode.dataset.i, x = trips()[i]; globe && globe.flyTo(x.lat, x.lon); showCard(i); });
-    el.querySelectorAll('[data-del]').forEach(b => b.onclick = () => { const t2 = trips(), x = t2.find(y => y.id === b.dataset.del); if (!x || !confirm(x.name + ' pini silinsin mi?')) return; saveT(t2.filter(y => y !== x)); el.querySelector('.gz-card').hidden = true; refresh(); });
+    el.querySelectorAll('[data-del]').forEach(b => b.onclick = () => { const t2 = trips(), x = t2.find(y => y.id === b.dataset.del); if (!x || !confirm(T(x.name + ' pini silinsin mi?', 'Remove the pin for ' + tn(x.name) + '?'))) return; saveT(t2.filter(y => y !== x)); el.querySelector('.gz-card').hidden = true; refresh(); });
   }
   function showCard(i) {
     const x = trips()[i], c = el.querySelector('.gz-card'); if (!x || !c) return;
     c.hidden = false;
-    c.innerHTML = `<button class="gz-x">✕</button><span class="tv-eye">${esc(x.country || '')}</span><h3>${esc(x.name)}</h3>${x.date ? `<p>🗓 ${fmtM(x.date)}</p>` : ''}${x.note ? `<p>${esc(x.note)}</p>` : ''}<p class="gz-ll">${x.lat.toFixed(3)}°, ${x.lon.toFixed(3)}°</p>
-      <div class="gz-row"><a class="gz-btn" target="_blank" rel="noopener" href="https://www.booking.com/searchresults.tr.html?ss=${encodeURIComponent(x.name)}">Booking</a><a class="gz-btn" target="_blank" rel="noopener" href="https://www.airbnb.com.tr/s/${encodeURIComponent(x.name)}/homes">Airbnb</a><button class="gz-btn" data-edit>✎ Not</button></div>`;
+    c.innerHTML = `<button class="gz-x">✕</button><span class="tv-eye">${esc(cn(x.country || ''))}</span><h3>${esc(tn(x.name))}</h3>${x.date ? `<p>🗓 ${fmtM(x.date)}</p>` : ''}${x.note ? `<p>${esc(x.note)}</p>` : ''}<p class="gz-ll">${x.lat.toFixed(3)}°, ${x.lon.toFixed(3)}°</p>
+      <div class="gz-row"><a class="gz-btn" target="_blank" rel="noopener" href="https://www.booking.com/searchresults.tr.html?ss=${encodeURIComponent(x.name)}">Booking</a><a class="gz-btn" target="_blank" rel="noopener" href="https://www.airbnb.com.tr/s/${encodeURIComponent(x.name)}/homes">Airbnb</a><button class="gz-btn" data-edit>✎ ${T('Not', 'Note')}</button></div>`;
     c.querySelector('.gz-x').onclick = () => c.hidden = true;
-    c.querySelector('[data-edit]').onclick = () => { const t = trips(), y = t.find(z => z.id === x.id); const n = prompt('Not', y.note || ''); if (n === null) return; const d = prompt('Ne zaman? (YYYY-AA, ör. 2025-06)', y.date || ''); y.note = n.trim(); if (d !== null && (/^\d{4}-\d{2}$/.test(d.trim()) || !d.trim())) y.date = d.trim(); saveT(t); refresh(); showCard(t.indexOf(y)); };
+    c.querySelector('[data-edit]').onclick = () => { const t = trips(), y = t.find(z => z.id === x.id); const n = prompt(T('Not', 'Note'), y.note || ''); if (n === null) return; const d = prompt(T('Ne zaman? (YYYY-AA, ör. 2025-06)', 'When? (YYYY-MM, e.g. 2025-06)'), y.date || ''); y.note = n.trim(); if (d !== null && (/^\d{4}-\d{2}$/.test(d.trim()) || !d.trim())) y.date = d.trim(); saveT(t); refresh(); showCard(t.indexOf(y)); };
   }
   return { open, leave, _geocode: geocode };
 })();

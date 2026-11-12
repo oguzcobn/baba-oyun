@@ -42,7 +42,7 @@ button.chip{cursor:pointer}
 .icon{width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:var(--paper);font-size:16px}
 @media(max-width:640px){.nav{flex-wrap:wrap;gap:10px}.nav-links{order:3;flex-basis:100%}}
 
-main{padding:0 clamp(14px,4vw,40px) 40px;max-width:1360px;margin:0 auto}
+main{overflow-x:clip;padding:0 clamp(14px,4vw,40px) 40px;max-width:1360px;margin:0 auto}
 
 /* ---------- ana sayfa ---------- */
 .hero{padding:clamp(28px,7vw,90px) 0 clamp(24px,5vw,60px);border-bottom:1px solid var(--line)}
@@ -334,3 +334,10 @@ main{padding:0 clamp(14px,4vw,40px) 40px;max-width:1360px;margin:0 auto}
 .chem-help{flex-basis:100%;margin:0 0 6px}
 .dr-actions{flex-wrap:wrap}
 .fr.inj{color:#d33;font-size:12.5px;padding-left:34px}
+/* dil seçici */
+.lang-sw{display:inline-flex;border:1.5px solid currentColor;border-radius:999px;padding:2px;gap:2px}
+.lang-sw button{border:none;background:none;color:inherit;font:700 12px/1 var(--sans);letter-spacing:.04em;padding:6px 9px;border-radius:999px;cursor:pointer;opacity:.6}
+.lang-sw button.on{background:var(--ink,#111);color:var(--paper,#fff);opacity:1}
+.lang-sw button:focus-visible{outline:2px solid var(--acc,#ff4d00);outline-offset:2px}
+body.dark-mode .lang-sw button.on{background:#fff;color:#111}
+@media(max-width:600px){.lang-sw button{padding:6px 7px;font-size:11px}}

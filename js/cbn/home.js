@@ -43,7 +43,7 @@
 
   function render(main) {
     const d = new Date(), h = d.getHours(), s = stats();
-    const hello = h < 12 ? L('Günaydın', 'Good Morning') : h < 18 ? L('İyi günler', 'Good Afternoon') : L('İyi akşamlar', 'Good Evening');
+    const hello = h < 12 ? L('Günaydın', 'Good morning') : h < 18 ? L('İyi günler', 'Good afternoon') : L('İyi akşamlar', 'Good evening');
     const sum = [s.today ? L(`Bugün ${s.today} görevin var`, `${s.today} task${s.today > 1 ? 's' : ''} due today`) : L('Bugün için planlı görev yok', 'No tasks due today'), s.evToday ? L(`${s.evToday} etkinlik`, `${s.evToday} event${s.evToday > 1 ? 's' : ''}`) : '', s.late ? L(`${s.late} görev gecikmiş`, `${s.late} overdue`) : ''].filter(Boolean).join(' · ') + '.';
     const ws = S.settings.widgets, shown = ws.filter(w => !w.hidden), hidden = ws.filter(w => w.hidden), nm = id => L(NAMES[id][0], NAMES[id][1]);
     main.innerHTML = `<header class="hm-hero"><button type="button" class="hm-av" data-a="avatar" aria-label="${L('Profili ve avatarı düzenle', 'Edit profile and avatar')}">${CBN.profile.mine(104) || `<span>＋<small>${L('Avatar oluştur', 'Create avatar')}</small></span>`}</button><div class="hm-txt"><p class="cbn-eyebrow">${esc(d.toLocaleDateString(loc(), { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }))}</p><h1>${hello}, ${esc(CBN.profile.name())}</h1><p class="cbn-sub">${esc(sum)}</p></div>

@@ -57,7 +57,7 @@
     const stop = () => { if (rec) { try { rec.stop(); } catch (e) {} rec = null; } };
     main.querySelector('[data-a=mic]').onclick = () => {
       if (rec) { stop(); return CBN.refresh(); }
-      try { const r = new SR(); r.lang = S.settings.lang === 'en' ? 'en-GB' : 'tr-TR'; r.continuous = true; r.interimResults = true; const base = draft ? draft + ' ' : '';
+      try { const r = new SR(); r.lang = I18N.locale; r.continuous = true; r.interimResults = true; const base = draft ? draft + ' ' : '';
         r.onresult = e => { let t = ''; for (let i = 0; i < e.results.length; i++) t += e.results[i][0].transcript; draft = base + t; const el = document.querySelector('.vx textarea'); if (el) el.value = draft; };
         r.onerror = e => { toast(e.error === 'not-allowed' ? L('Mikrofon izni verilmedi', 'Microphone permission denied') : L('Konuşma tanıma hatası: ', 'Speech recognition error: ') + e.error, { type: 'err' }); };
         r.onend = () => { if (rec === r) { rec = null; if (CBN.cur.mod === 'inbox') CBN.refresh(); } };

@@ -53,7 +53,7 @@ const App = (() => {
   /* ---------------- PIN kilidi ---------------- */
   function pinPad(title, onOk, opts = {}) {
     const ov = document.createElement('div'); ov.className = 'bb-pin-ov';
-    ov.innerHTML = `<div class="bb-pin"><div class="bb-lock">🔒</div><h3>${title}</h3><div class="bb-dots">${'<i></i>'.repeat(PIN_LEN)}</div><p class="bb-msg">${opts.msg || '6 haneli şifreyi gir'}</p>
+    ov.innerHTML = `<div class="bb-pin"><div class="bb-lock">🔒</div><h3>${title}</h3><div class="bb-dots">${'<i></i>'.repeat(PIN_LEN)}</div><p class="bb-msg">${opts.msg || T('6 haneli şifreyi gir', 'Enter your 6-digit PIN')}</p>
       <div class="bb-keys">${[1, 2, 3, 4, 5, 6, 7, 8, 9, '✖', 0, '⌫'].map(k => `<button data-k="${k}">${k}</button>`).join('')}</div></div>`;
     document.body.appendChild(ov);
     let v = ''; const dots = ov.querySelectorAll('.bb-dots i'), msg = ov.querySelector('.bb-msg');
@@ -67,7 +67,7 @@ const App = (() => {
       if (v.length === PIN_LEN) setTimeout(() => {
         const r = onOk(v);
         if (r === true) { close(); }
-        else { ov.querySelector('.bb-pin').classList.add('bad'); msg.textContent = r || 'Şifre yanlış, tekrar dene'; setTimeout(() => ov.querySelector('.bb-pin').classList.remove('bad'), 450); v = ''; paint(); }
+        else { ov.querySelector('.bb-pin').classList.add('bad'); msg.textContent = r || T('Şifre yanlış, tekrar dene', 'Wrong PIN, please try again'); setTimeout(() => ov.querySelector('.bb-pin').classList.remove('bad'), 450); v = ''; paint(); }
       }, 120);
     });
     const kd = e => { if (/^[0-9]$/.test(e.key)) ov.querySelector(`[data-k="${e.key}"]`).click(); else if (e.key === 'Backspace') ov.querySelector('[data-k="⌫"]').click(); else if (e.key === 'Escape') ov.querySelector('[data-k="✖"]').click(); };
@@ -75,16 +75,16 @@ const App = (() => {
   }
   function askOpen() {
     pinPad('BABA.', pin => {
-      if (hash(pin) !== storedHash()) return 'Şifre yanlış, tekrar dene';
+      if (hash(pin) !== storedHash()) return T('Şifre yanlış, tekrar dene', 'Wrong PIN, please try again');
       unlocked = true; try { sessionStorage.setItem('baba_ok', '1'); } catch (e) {}
       render(); return true;
     });
   }
   function changePin() {
-    pinPad('Yeni şifre', p1 => {
-      setTimeout(() => pinPad('Yeni şifreyi tekrar gir', p2 => { if (p1 !== p2) return 'İki şifre aynı değil'; ls.set('baba_pin6_hash', hash(p1)); toast('🔐 Şifre değiştirildi'); return true; }), 50);
+    pinPad(T('Yeni şifre', 'New PIN'), p1 => {
+      setTimeout(() => pinPad(T('Yeni şifreyi tekrar gir', 'Enter the new PIN again'), p2 => { if (p1 !== p2) return T('İki şifre aynı değil', 'The two PINs don’t match'); ls.set('baba_pin6_hash', hash(p1)); toast(T('🔐 Şifre değiştirildi', '🔐 PIN changed')); return true; }), 50);
       return true;
-    }, { msg: 'Bu cihazda kullanılacak yeni 6 haneli şifre' });
+    }, { msg: T('Bu cihazda kullanılacak yeni 6 haneli şifre', 'New 6-digit PIN for this device') });
   }
   function lock() { unlocked = false; try { sessionStorage.removeItem('baba_ok'); } catch (e) {} if (location.hash) location.hash = ''; else render(); }
   function guestOut() { guest = null; try { localStorage.removeItem('baba_guest'); } catch (e) {} history.replaceState(null, '', location.pathname); manFor = 'x'; guestUrl(); render(); }
@@ -92,55 +92,55 @@ const App = (() => {
 
   /* ---------------- menü ---------------- */
   const GAMES = [
-    { id: 'draft', name: 'Süper Lig Draft', tags: ['Futbol', '18 kulüp', 'İstatistik'], best: () => ls.get('draft_best', 0) + ' p' },
-    { id: 'vadi', name: 'Empires of the Valley', tags: ['Strateji', 'Şehir kurma'], best: () => '1. Bölüm' },
-    { id: '2048', name: '2048', tags: ['Bulmaca', 'Kaydır'], best: () => ls.get('bb_best_2048', 0) },
-    { id: 'sudoku', name: 'Sudoku', tags: ['Mantık', '3 seviye'], best: () => { const b = ls.get('bb_best_sudoku', null); return b ? fmtT(b) : '—'; } },
-    { id: 'mines', name: 'Mayın Tarlası', tags: ['Klasik', 'Dikkat'], best: () => { const b = ls.get('bb_best_mines', null); return b ? fmtT(b) : '—'; } },
-    { id: 'blocks', name: 'Blok Yığ', tags: ['Arcade', 'Hız'], best: () => ls.get('bb_best_blocks', 0) }
+    { id: 'draft', name: 'Süper Lig Draft', tags: [['Futbol', 'Football'], ['18 kulüp', '18 clubs'], ['İstatistik', 'Stats']], best: () => ls.get('draft_best', 0) + T(' p', ' pts') },
+    { id: 'vadi', name: 'Empires of the Valley', tags: [['Strateji', 'Strategy'], ['Şehir kurma', 'City-building']], best: () => T('1. Bölüm', 'Chapter 1') },
+    { id: '2048', name: '2048', tags: [['Bulmaca', 'Puzzle'], ['Kaydır', 'Swipe']], best: () => ls.get('bb_best_2048', 0) },
+    { id: 'sudoku', name: 'Sudoku', tags: [['Mantık', 'Logic'], ['3 seviye', '3 levels']], best: () => { const b = ls.get('bb_best_sudoku', null); return b ? fmtT(b) : '—'; } },
+    { id: 'mines', name: ['Mayın Tarlası', 'Minesweeper'], tags: [['Klasik', 'Classic'], ['Dikkat', 'Focus']], best: () => { const b = ls.get('bb_best_mines', null); return b ? fmtT(b) : '—'; } },
+    { id: 'blocks', name: ['Blok Yığ', 'Block Stack'], tags: ['Arcade', ['Hız', 'Speed']], best: () => ls.get('bb_best_blocks', 0) }
   ];
+  const P = x => Array.isArray(x) ? T(x[0], x[1]) : x;
   const fmtT = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
   function shell(title, inner, tag) {
-    root().innerHTML = `<section class="game-page"><div class="gp-head"><a class="back" href="#oyunlar">← Oyunlar</a><p class="eyebrow">${tag || 'Zekâ oyunu'}</p><h1 class="display sm">${title}</h1></div><div class="bb-body">${inner}</div></section>`;
+    root().innerHTML = `<section class="game-page"><div class="gp-head"><a class="back" href="#oyunlar">← ${T('Oyunlar', 'Games')}</a><p class="eyebrow">${tag || T('Zekâ oyunu', 'Brain game')}</p><h1 class="display sm">${title}</h1></div><div class="bb-body">${inner}</div></section>`;
     window.scrollTo(0, 0);
     return root().querySelector('.bb-body');
   }
   function hub() {
     const d = new Date(), name = isOwner() ? 'Oğuzhan' : (guest && guest.name);
     const CATS = [
-      { id: 'cbn', n: '01', t: 'CBN<i>Personal OS</i>', d: 'Notlar · görevler · takvim · projeler · aile · finans · hedefler — kişisel asistanın, yalnızca sana özel', cls: 'c-cbn' },
-      ...(isOwner() ? [{ id: 'is', n: '02', t: 'İş', d: 'DSAn kısayolları, hatırlatmalar, notlar, LinkedIn', cls: 'c-is' }] : []),
-      { id: 'dost', n: '03', t: 'Dost', d: 'Psikoloji okuma alanı · nefes molası', cls: 'c-dost' },
-      { id: 'oyunlar', n: '04', t: 'Oyunlar', d: 'Süper Lig Draft · Empires of the Valley · 2048 · Sudoku · Mayın · Blok', cls: 'c-oyun' },
-      { id: 'seyahat', n: '05', t: 'Seyahat', d: 'Booking · Airbnb · Skyscanner · Gezilerim 3D dünya', cls: 'c-sey' },
-      { id: 'foto', n: '06', t: 'Fotoğraf', d: 'Pexels · günün fotoğrafçısı · 3D sokak galerisi', cls: 'c-foto' },
-      ...(isOwner() ? [{ id: 'ts', n: '07', t: 'Trabzonspor', d: 'Sıradaki maç · son 5 maç · kadro · TS Club', cls: 'c-ts' }] : [])
+      { id: 'cbn', n: '01', t: 'CBN<i>Personal OS</i>', d: T('Notlar · görevler · takvim · projeler · aile · finans · hedefler — kişisel asistanın, yalnızca sana özel', 'Notes · tasks · calendar · projects · family · finance · goals — your personal assistant, just for you'), cls: 'c-cbn' },
+      ...(isOwner() ? [{ id: 'is', n: '02', t: T('İş', 'Work'), d: T('DSAn kısayolları, hatırlatmalar, notlar, LinkedIn', 'DSAn shortcuts, reminders, notes, LinkedIn'), cls: 'c-is' }] : []),
+      { id: 'dost', n: '03', t: 'Dost', d: T('Psikoloji okuma alanı · nefes molası', 'Psychology reading room · breathing break'), cls: 'c-dost' },
+      { id: 'oyunlar', n: '04', t: T('Oyunlar', 'Games'), d: T('Süper Lig Draft · Empires of the Valley · 2048 · Sudoku · Mayın · Blok', 'Süper Lig Draft · Empires of the Valley · 2048 · Sudoku · Minesweeper · Blocks'), cls: 'c-oyun' },
+      { id: 'seyahat', n: '05', t: T('Seyahat', 'Travel'), d: T('Booking · Airbnb · Skyscanner · Gezilerim 3D dünya', 'Booking · Airbnb · Skyscanner · My Travels 3D globe'), cls: 'c-sey' },
+      { id: 'foto', n: '06', t: T('Fotoğraf', 'Photography'), d: T('Pexels · günün fotoğrafçısı · 3D sokak galerisi', 'Pexels · photographer of the day · 3D street gallery'), cls: 'c-foto' },
+      ...(isOwner() ? [{ id: 'ts', n: '07', t: 'Trabzonspor', d: T('Sıradaki maç · son 5 maç · kadro · TS Club', 'Next match · last 5 matches · squad · TS Club'), cls: 'c-ts' }] : [])
     ];
     root().innerHTML = `
-      <section class="hero hub-hero"><p class="eyebrow">${esc(name || '')} · ${d.toLocaleDateString('tr-TR', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
+      <section class="hero hub-hero"><p class="eyebrow">${esc(name || '')} · ${d.toLocaleDateString(I18N.locale, { weekday: 'long', day: 'numeric', month: 'long' })}</p>
         <h1 class="display xl">BABA<em>.</em></h1>
-        <p class="lead">İş, dinlenme, oyun ve yolculuk — hepsi tek yerde, sadece davetlilere açık.</p></section>
+        <p class="lead">${T('İş, dinlenme, oyun ve yolculuk — hepsi tek yerde, sadece davetlilere açık.', 'Work, rest, play and travel — all in one place, open by invitation only.')}</p></section>
       <section class="hub">${CATS.map((c, i) => `<a class="hub-card ${c.cls}" href="#${c.id}"><span class="hub-n">${String(i + 1).padStart(2, '0')}</span><h2>${c.t}</h2><p>${c.d}</p><span class="arrow">↗</span></a>`).join('')}</section>
-      <footer class="foot"><div class="foot-word">BABA<span>.</span></div><div class="foot-row">${isOwner() ? '<button class="link" data-a="pin">Şifreyi değiştir</button><a class="link" href="#erisim">Davetler &amp; erişim</a><button class="link" data-a="lock">Kilitle</button>' : '<button class="link" data-a="gout">Bu cihazdan çık</button>'}<span class="muted">Yalnızca davetliler için · sürüm 27</span></div></footer>`;
+      <footer class="foot"><div class="foot-word">BABA<span>.</span></div><div class="foot-row">${isOwner() ? `<button class="link" data-a="pin">${T('Şifreyi değiştir', 'Change PIN')}</button><a class="link" href="#erisim">${T('Davetler &amp; erişim', 'Invitations &amp; access')}</a><button class="link" data-a="lock">${T('Kilitle', 'Lock')}</button>` : `<button class="link" data-a="gout">${T('Bu cihazdan çık', 'Sign out on this device')}</button>`}<span class="muted">${T('Yalnızca davetliler için', 'Invitation only')} · ${T('sürüm', 'version')} 28</span></div></footer>`;
     const q = s => root().querySelector(s);
     if (q('[data-a=pin]')) q('[data-a=pin]').onclick = () => { click(); changePin(); };
     if (q('[data-a=lock]')) q('[data-a=lock]').onclick = () => { click(); lock(); };
-    if (q('[data-a=gout]')) q('[data-a=gout]').onclick = () => { if (confirm('Davetli erişimi bu cihazdan kaldırılsın mı?')) guestOut(); };
+    if (q('[data-a=gout]')) q('[data-a=gout]').onclick = () => { if (confirm(T('Davetli erişimi bu cihazdan kaldırılsın mı?', 'Remove guest access from this device?'))) guestOut(); };
     window.scrollTo(0, 0);
   }
   /* ---------------- davetler (yalnızca sahibi) ---------------- */
   function access() {
     const list = ls.get('baba_invites', []);
     const link = (n, c) => location.origin + location.pathname + '?davet=' + encodeURIComponent(c) + '&ad=' + encodeURIComponent(n);
-    root().innerHTML = `<section class="game-page"><div class="gp-head"><a class="back" href="#">← Ana sayfa</a><p class="eyebrow">Yalnızca sahibi görür</p><h1 class="display sm">Davetler &amp; erişim</h1></div>
+    root().innerHTML = `<section class="game-page"><div class="gp-head"><a class="back" href="#">← ${T('Ana sayfa', 'Home')}</a><p class="eyebrow">${T('Yalnızca sahibi görür', 'Visible to the owner only')}</p><h1 class="display sm">${T('Davetler &amp; erişim', 'Invitations &amp; access')}</h1></div>
       <div class="acc">
-        <form class="acc-form"><input name="n" placeholder="Davet edeceğin kişinin adı (ör. Nicole)" required maxlength="40"><button class="pill">Davet kodu oluştur</button></form>
-        <div class="acc-list">${list.length ? list.slice().reverse().map(x => `<div class="acc-item"><div><b>${esc(x.name)}</b><code>${x.code}</code><small class="muted">${new Date(x.at).toLocaleDateString('tr-TR')}</small></div><div class="acc-acts"><button class="pill ghost sm" data-share="${esc(x.name)}">Paylaş</button><button class="pill ghost sm" data-del="${esc(x.code)}">Listeden sil</button></div></div>`).join('') : '<p class="muted">Henüz davet yok.</p>'}</div>
-        <div class="acc-note"><h3>Nasıl çalışır?</h3><p><b>Ana ekrana eklemek için:</b> davetli, gönderdiğin bağlantıyı açıp giriş yaptıktan sonra “Ana Ekrana Ekle”yi kullanmalı. Uygulama simgesi daveti hatırlar ve PIN sormadan yalnızca davetlilere açık bölümlerle açılır.</p><p>Uygulamaya yalnızca senin şifrenle ya da senin verdiğin davet koduyla girilir. Katılmak isteyen biri giriş ekranından sana istek mesajı gönderir; uygun görürsen buradan ona özel bir kod oluşturup paylaşırsın. Davetliler İş sayfasını göremez; notları, hatırlatmaları ve gezileri yalnızca kendi cihazlarında tutulur.</p>
-        <p class="muted sm">Not: Site GitHub Pages'te durduğu için bu bir “kapı kilidi”dir, banka kasası değil — kişisel verilerin zaten hiçbir sunucuda değil, yalnızca senin cihazında. Gerçek sunucu tarafı onay istersen Cloudflare Access ile e-postayla giriş kurabiliriz.</p></div>
+        <form class="acc-form"><input name="n" placeholder="${T('Davet edeceğin kişinin adı (ör. Nicole)', 'Name of the person you are inviting (e.g. Nicole)')}" required maxlength="40"><button class="pill">${T('Davet kodu oluştur', 'Create invitation code')}</button></form>
+        <div class="acc-list">${list.length ? list.slice().reverse().map(x => `<div class="acc-item"><div><b>${esc(x.name)}</b><code>${x.code}</code><small class="muted">${new Date(x.at).toLocaleDateString(I18N.locale)}</small></div><div class="acc-acts"><button class="pill ghost sm" data-share="${esc(x.name)}">${T('Paylaş', 'Share')}</button><button class="pill ghost sm" data-del="${esc(x.code)}">${T('Listeden sil', 'Remove from list')}</button></div></div>`).join('') : `<p class="muted">${T('Henüz davet yok.', 'No invitations yet.')}</p>`}</div>
+        <div class="acc-note">${T(`<h3>Nasıl çalışır?</h3><p><b>Ana ekrana eklemek için:</b> davetli, gönderdiğin bağlantıyı açıp giriş yaptıktan sonra “Ana Ekrana Ekle”yi kullanmalı. Uygulama simgesi daveti hatırlar ve PIN sormadan yalnızca davetlilere açık bölümlerle açılır.</p><p>Uygulamaya yalnızca senin şifrenle ya da senin verdiğin davet koduyla girilir. Katılmak isteyen biri giriş ekranından sana istek mesajı gönderir; uygun görürsen buradan ona özel bir kod oluşturup paylaşırsın. Davetliler İş ve Trabzonspor sayfalarını göremez; kayıtları yalnızca kendi cihazlarında tutulur.</p><p class="muted sm">Not: Site GitHub Pages'te durduğu için bu bir “kapı kilidi”dir, banka kasası değil.</p>`, `<h3>How does it work?</h3><p><b>Adding to the Home Screen:</b> your guest should open the link you sent, sign in, and then use “Add to Home Screen”. The app icon remembers the invitation and opens straight into the guest sections, without asking for a PIN.</p><p>The app can only be opened with your PIN or with an invitation code you give out. Someone who wants to join can send you a request from the sign-in screen; if you are happy with it, create a personal code here and share it. Guests cannot see the Work or Trabzonspor pages, and their records are kept only on their own devices.</p><p class="muted sm">Note: because the site is hosted on GitHub Pages, this is a door latch, not a bank vault.</p>`)}</div>
       </div></section>`;
     const f = root().querySelector('.acc-form');
-    const share = n => { const c = inviteCode(n), u = link(n, c), t = `Merhaba ${n}, BABA. uygulamama davetlisin 🙂\nGiriş kodun: ${c}\n${u}`; if (navigator.share) navigator.share({ title: 'BABA. daveti', text: t }).catch(() => {}); else { navigator.clipboard && navigator.clipboard.writeText(t); toast('📋 Davet metni kopyalandı'); } };
+    const share = n => { const c = inviteCode(n), u = link(n, c), t = T(`Merhaba ${n}, BABA. uygulamama davetlisin 🙂\nGiriş kodun: ${c}\n${u}`, `Hi ${n}, you’re invited to my BABA. app 🙂\nYour sign-in code: ${c}\n${u}`); if (navigator.share) navigator.share({ title: T('BABA. daveti', 'BABA. invitation'), text: t }).catch(() => {}); else { navigator.clipboard && navigator.clipboard.writeText(t); toast(T('📋 Davet metni kopyalandı', '📋 Invitation copied')); } };
     f.onsubmit = e => { e.preventDefault(); const n = f.n.value.trim(); if (!n) return; const c = inviteCode(n); const l = ls.get('baba_invites', []).filter(x => x.code !== c); l.push({ name: n, code: c, at: Date.now() }); ls.set('baba_invites', l); access(); share(n); };
     root().querySelectorAll('[data-share]').forEach(b => b.onclick = () => share(b.dataset.share));
     root().querySelectorAll('[data-del]').forEach(b => b.onclick = () => { ls.set('baba_invites', ls.get('baba_invites', []).filter(x => x.code !== b.dataset.del)); access(); });
@@ -148,15 +148,15 @@ const App = (() => {
   }
   function menu() {
     const card = (g, i) => `<a class="card ${g.id}" href="#${g.id}"><div class="card-art art-${g.id}">${ART[g.id]}</div>
-      <div class="card-meta"><span class="num">0${i + 1}</span><h3>${g.name}</h3><span class="arrow">↗</span></div>
-      <div class="card-tags">${g.tags.map(t => `<span class="chip">${t}</span>`).join('')}<span class="chip dark">🏆 ${g.best()}</span></div></a>`;
+      <div class="card-meta"><span class="num">0${i + 1}</span><h3>${P(g.name)}</h3><span class="arrow">↗</span></div>
+      <div class="card-tags">${g.tags.map(t => `<span class="chip">${P(t)}</span>`).join('')}<span class="chip dark">🏆 ${g.best()}</span></div></a>`;
     root().innerHTML = `
-      <section class="hero"><a class="back" href="#">← Ana sayfa</a><p class="eyebrow">Oyunlar · ${new Date().toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' })}</p>
-        <h1 class="display xl">Kafa<br>dinle.<br><em>Kadro kur.</em></h1>
-        <div class="hero-row"><p class="lead">Altı oyun, sıfır reklam. Futbol draftından vadide medeniyet kurmaya, kısa molalar için seçilmiş bir koleksiyon.</p>
-          <a class="pill big" href="#draft">Draft’a başla ↗</a></div></section>
-      <section class="feature"><a href="#draft" class="feat-card"><div class="feat-art">${ART.draft}</div><div class="feat-txt"><span class="badge">Günün oyunu</span><h2>Süper Lig<br>Draft</h2><p>Çark 18 Süper Lig kulübü arasında eşit şansla döner; gelen takımın son 10 yıllık kadrosundan seç, 11+2 kur. Teknik direktörünü ve taktiğini belirle, 34 maçlık sezonu canlı izle. Hedef: 102 puan.</p><div class="card-tags"><span class="chip">Futbol</span><span class="chip">Strateji</span><span class="chip dark">🏆 ${ls.get('draft_best', 0)} puan</span></div></div></a></section>
-      <section class="list"><div class="list-head"><h2 class="display sm">Koleksiyon</h2><span class="muted">${GAMES.length} oyun</span></div>
+      <section class="hero"><a class="back" href="#">← ${T('Ana sayfa', 'Home')}</a><p class="eyebrow">${T('Oyunlar', 'Games')} · ${new Date().toLocaleDateString(I18N.locale, { day: 'numeric', month: 'long' })}</p>
+        <h1 class="display xl">${T('Kafa<br>dinle.<br><em>Kadro kur.</em>', 'Unwind.<br>Switch off.<br><em>Pick a squad.</em>')}</h1>
+        <div class="hero-row"><p class="lead">${T('Altı oyun, sıfır reklam. Futbol draftından vadide medeniyet kurmaya, kısa molalar için seçilmiş bir koleksiyon.', 'Six games, zero adverts. From a football draft to building a civilisation in the valley — a hand-picked collection for short breaks.')}</p>
+          <a class="pill big" href="#draft">${T('Draft’a başla', 'Start the draft')} ↗</a></div></section>
+      <section class="feature"><a href="#draft" class="feat-card"><div class="feat-art">${ART.draft}</div><div class="feat-txt"><span class="badge">${T('Günün oyunu', 'Game of the day')}</span><h2>Süper Lig<br>Draft</h2><p>${T('Çark 18 Süper Lig kulübü arasında eşit şansla döner; gelen takımın son 10 yıllık kadrosundan seç, 11+2 kur. Teknik direktörünü ve taktiğini belirle, 34 maçlık sezonu canlı izle. Hedef: 102 puan.', 'The wheel spins across 18 Süper Lig clubs with equal odds; pick from that club’s squads of the last 10 years and build an 11 plus 2. Choose your manager and tactics, then follow the 34-match season live. Target: 102 points.')}</p><div class="card-tags"><span class="chip">${T('Futbol', 'Football')}</span><span class="chip">${T('Strateji', 'Strategy')}</span><span class="chip dark">🏆 ${ls.get('draft_best', 0)} ${T('puan', 'pts')}</span></div></div></a></section>
+      <section class="list"><div class="list-head"><h2 class="display sm">${T('Koleksiyon', 'Collection')}</h2><span class="muted">${GAMES.length} ${T('oyun', 'games')}</span></div>
         <div class="cards">${GAMES.map(card).join('')}</div></section>
 `;
     window.scrollTo(0, 0);
@@ -175,9 +175,9 @@ const App = (() => {
   // burada çerçeve içinde açılır, böylece oyunun her güncellemesi buraya kendiliğinden yansır.
   const VADI_URL = 'https://oguzcobn.github.io/empires-of-the-valley/';
   function vadi() {
-    const b = shell('Empires of<br>the Valley', `<div class="vd-bar"><p class="bb-tip">Vadide küçük bir köyden medeniyete. Kayıtlar bu cihazda tutulur.</p><div class="vd-acts"><button class="bb-btn" data-a="full">⛶ Tam ekran</button><a class="bb-btn" href="${VADI_URL}" target="_blank" rel="noopener">Yeni sekmede aç ↗</a></div></div>
+    const b = shell('Empires of<br>the Valley', `<div class="vd-bar"><p class="bb-tip">${T('Vadide küçük bir köyden medeniyete. Kayıtlar bu cihazda tutulur.', 'From a small village in the valley to a civilisation. Saves are kept on this device.')}</p><div class="vd-acts"><button class="bb-btn" data-a="full">⛶ ${T('Tam ekran', 'Full screen')}</button><a class="bb-btn" href="${VADI_URL}" target="_blank" rel="noopener">${T('Yeni sekmede aç', 'Open in a new tab')} ↗</a></div></div>
       <div class="vd-frame"><iframe src="${VADI_URL}" title="Empires of the Valley" allow="fullscreen; autoplay" allowfullscreen loading="eager"></iframe></div>
-      <p class="bb-tip">Kısayollar: Boşluk duraklat · 1/2/3 hız · B inşa · R yol · Esc iptal. Telefonda dar geliyorsa “Yeni sekmede aç”ı kullan.</p>`, 'Strateji · şehir kurma');
+      <p class="bb-tip">${T('Kısayollar: Boşluk duraklat · 1/2/3 hız · B inşa · R yol · Esc iptal. Telefonda dar geliyorsa “Yeni sekmede aç”ı kullan.', 'Shortcuts: Space pause · 1/2/3 speed · B build · R road · Esc cancel. If it feels cramped on a phone, use “Open in a new tab”.')}</p>`, T('Strateji · şehir kurma', 'Strategy · city-building'));
     const fr = b.querySelector('.vd-frame'), fb = b.querySelector('[data-a=full]');
     const req = fr.requestFullscreen || fr.webkitRequestFullscreen;
     if (!req) fb.hidden = true;
@@ -186,8 +186,8 @@ const App = (() => {
 
   /* ==================== 2048 ==================== */
   function g2048() {
-    const b = shell('2048', `<div class="g2-head"><div class="g2-sc"><small>SKOR</small><b class="sc">0</b></div><div class="g2-sc"><small>EN İYİ</small><b class="bs">${ls.get('bb_best_2048', 0)}</b></div><button class="bb-btn" data-a="undo">↶ Geri</button><button class="bb-btn" data-a="new">Yeni</button></div>
-      <div class="g2-board"><div class="g2-cells">${'<i></i>'.repeat(16)}</div><div class="g2-tiles"></div><div class="g2-over" hidden></div></div><p class="bb-tip">Parmağınla kaydır ya da ok tuşlarını kullan</p>`);
+    const b = shell('2048', `<div class="g2-head"><div class="g2-sc"><small>${T('SKOR', 'SCORE')}</small><b class="sc">0</b></div><div class="g2-sc"><small>${T('EN İYİ', 'BEST')}</small><b class="bs">${ls.get('bb_best_2048', 0)}</b></div><button class="bb-btn" data-a="undo">↶ ${T('Geri', 'Undo')}</button><button class="bb-btn" data-a="new">${T('Yeni', 'New')}</button></div>
+      <div class="g2-board"><div class="g2-cells">${'<i></i>'.repeat(16)}</div><div class="g2-tiles"></div><div class="g2-over" hidden></div></div><p class="bb-tip">${T('Parmağınla kaydır ya da ok tuşlarını kullan', 'Swipe with your finger or use the arrow keys')}</p>`);
     const tilesEl = b.querySelector('.g2-tiles'), scEl = b.querySelector('.sc'), bsEl = b.querySelector('.bs'), over = b.querySelector('.g2-over');
     let grid, score, id, hist = [], won = false;
     const save = () => ls.set('bb_2048_state', { grid: grid.map(r => r.map(t => t && t.v)), score, won });
@@ -233,11 +233,11 @@ const App = (() => {
       if (!moved) return;
       hist.push(prev); if (hist.length > 20) hist.shift();
       grid = next; score += gain; if (gain) blip(300 + Math.log2(gain) * 60, .1); add(); render(false);
-      if (!won && grid.some(r => r.some(t => t && t.v >= 2048))) { won = true; showOver('🎉 2048! Harikasın!', true); if (true) confetti(); }
-      else if (!canMove()) showOver('Hamle kalmadı');
+      if (!won && grid.some(r => r.some(t => t && t.v >= 2048))) { won = true; showOver(T('🎉 2048! Harikasın!', '🎉 2048! Brilliant!'), true); if (true) confetti(); }
+      else if (!canMove()) showOver(T('Hamle kalmadı', 'No moves left'));
     }
     function canMove() { for (let r = 0; r < 4; r++) for (let c = 0; c < 4; c++) { const t = grid[r][c]; if (!t) return true; if (c < 3 && grid[r][c + 1] && grid[r][c + 1].v === t.v) return true; if (r < 3 && grid[r + 1][c] && grid[r + 1][c].v === t.v) return true; } return false; }
-    function showOver(t, canGo) { over.hidden = false; over.innerHTML = `<b>${t}</b><span>Skor: ${score}</span><div>${canGo ? '<button class="bb-btn" data-a="go">Devam et</button>' : ''}<button class="bb-btn" data-a="again">Yeni oyun</button></div>`; over.querySelector('[data-a=again]').onclick = () => { ls.set('bb_2048_state', null); tilesEl.innerHTML = ''; fresh(); }; const g = over.querySelector('[data-a=go]'); if (g) g.onclick = () => { over.hidden = true; }; }
+    function showOver(t, canGo) { over.hidden = false; over.innerHTML = `<b>${t}</b><span>${T('Skor', 'Score')}: ${score}</span><div>${canGo ? `<button class="bb-btn" data-a="go">${T('Devam et', 'Keep going')}</button>` : ''}<button class="bb-btn" data-a="again">${T('Yeni oyun', 'New game')}</button></div>`; over.querySelector('[data-a=again]').onclick = () => { ls.set('bb_2048_state', null); tilesEl.innerHTML = ''; fresh(); }; const g = over.querySelector('[data-a=go]'); if (g) g.onclick = () => { over.hidden = true; }; }
     b.querySelector('[data-a=new]').onclick = () => { click(); ls.set('bb_2048_state', null); tilesEl.innerHTML = ''; fresh(); };
     b.querySelector('[data-a=undo]').onclick = () => { const h = hist.pop(); if (!h) return; click(); grid = h.g; score = h.s; over.hidden = true; tilesEl.innerHTML = ''; render(true); };
     const kd = e => { const d = { ArrowLeft: 'l', ArrowRight: 'r', ArrowUp: 'u', ArrowDown: 'd', a: 'l', d: 'r', w: 'u', s: 'd' }[e.key]; if (d) { e.preventDefault(); move(d); } };
@@ -261,17 +261,18 @@ const App = (() => {
     for (const i of order) { if (removed >= holes) break; const keep = puz[i]; puz[i] = 0; if (count(puz.slice(), 2) !== 1) puz[i] = keep; else removed++; }
     return { puz, sol };
   }
+  const LVL = () => ({ kolay: T('Kolay', 'Easy'), orta: T('Orta', 'Medium'), zor: T('Zor', 'Hard') });
   function sudoku() {
     const lv = ls.get('bb_sudoku_level', 'orta');
-    const b = shell('Sudoku', `<div class="sd-head"><div class="seg">${['kolay', 'orta', 'zor'].map(l => `<button data-l="${l}" class="${l === lv ? 'on' : ''}">${l[0].toUpperCase() + l.slice(1)}</button>`).join('')}</div><span class="sd-time">0:00</span><span class="sd-err">❌ 0</span></div>
-      <div class="sd-grid"></div><div class="sd-tools"><button class="bb-btn" data-a="note">✏️ Not: Kapalı</button><button class="bb-btn" data-a="erase">⌫ Sil</button><button class="bb-btn" data-a="hint">💡 İpucu</button></div>
+    const b = shell('Sudoku', `<div class="sd-head"><div class="seg">${['kolay', 'orta', 'zor'].map(l => `<button data-l="${l}" class="${l === lv ? 'on' : ''}">${LVL()[l]}</button>`).join('')}</div><span class="sd-time">0:00</span><span class="sd-err">❌ 0</span></div>
+      <div class="sd-grid"></div><div class="sd-tools"><button class="bb-btn" data-a="note">✏️ ${T('Not: Kapalı', 'Notes: Off')}</button><button class="bb-btn" data-a="erase">⌫ ${T('Sil', 'Erase')}</button><button class="bb-btn" data-a="hint">💡 ${T('İpucu', 'Hint')}</button></div>
       <div class="sd-pad">${[1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => `<button data-n="${n}">${n}</button>`).join('')}</div>`);
     const gridEl = b.querySelector('.sd-grid'), tEl = b.querySelector('.sd-time'), eEl = b.querySelector('.sd-err');
     let P, S, cur, notes, sel = -1, noteMode = false, errs = 0, t0, timer, done = false;
     function start(level) {
       ls.set('bb_sudoku_level', level);
       b.querySelectorAll('.seg button').forEach(x => x.classList.toggle('on', x.dataset.l === level));
-      gridEl.innerHTML = '<p class="bb-tip">Bulmaca hazırlanıyor…</p>';
+      gridEl.innerHTML = `<p class="bb-tip">${T('Bulmaca hazırlanıyor…', 'Preparing the puzzle…')}</p>`;
       setTimeout(() => {
         const { puz, sol } = sudokuGen({ kolay: 38, orta: 47, zor: 54 }[level]); P = puz; S = sol; cur = puz.slice(); notes = Array.from({ length: 81 }, () => new Set());
         sel = -1; errs = 0; eEl.textContent = '❌ 0'; done = false; t0 = Date.now(); clearInterval(timer); timer = setInterval(() => { if (!done) tEl.textContent = fmtT((Date.now() - t0) / 1000); }, 500);
@@ -299,11 +300,11 @@ const App = (() => {
       if (n !== S[sel]) { errs++; eEl.textContent = '❌ ' + errs; blip(160, .15); }
       else { blip(660, .07); const r = Math.floor(sel / 9), c = sel % 9; for (let k = 0; k < 9; k++) { notes[r * 9 + k].delete(n); notes[k * 9 + c].delete(n); notes[(r - r % 3 + Math.floor(k / 3)) * 9 + (c - c % 3 + k % 3)].delete(n); } }
       draw();
-      if (cur.every((v, i) => v === S[i])) { done = true; clearInterval(timer); const t = (Date.now() - t0) / 1000; const best = ls.get('bb_best_sudoku', null); if (!best || t < best) ls.set('bb_best_sudoku', Math.round(t)); if (true) confetti(); if (true) Snd.win(); toast(`🧩 Bitti! ${fmtT(t)} · ${errs} hata`); }
+      if (cur.every((v, i) => v === S[i])) { done = true; clearInterval(timer); const t = (Date.now() - t0) / 1000; const best = ls.get('bb_best_sudoku', null); if (!best || t < best) ls.set('bb_best_sudoku', Math.round(t)); if (true) confetti(); if (true) Snd.win(); toast(T(`🧩 Bitti! ${fmtT(t)} · ${errs} hata`, `🧩 Solved! ${fmtT(t)} · ${errs} mistakes`)); }
     }
     b.querySelectorAll('.sd-pad button').forEach(x => x.onclick = () => put(+x.dataset.n));
     b.querySelectorAll('.seg button').forEach(x => x.onclick = () => { click(); start(x.dataset.l); });
-    b.querySelector('[data-a=note]').onclick = e => { noteMode = !noteMode; e.target.textContent = `✏️ Not: ${noteMode ? 'Açık' : 'Kapalı'}`; e.target.classList.toggle('on', noteMode); };
+    b.querySelector('[data-a=note]').onclick = e => { noteMode = !noteMode; e.target.textContent = '✏️ ' + (noteMode ? T('Not: Açık', 'Notes: On') : T('Not: Kapalı', 'Notes: Off')); e.target.classList.toggle('on', noteMode); };
     b.querySelector('[data-a=erase]').onclick = () => { if (sel >= 0 && !P[sel]) { cur[sel] = 0; notes[sel].clear(); draw(); } };
     b.querySelector('[data-a=hint]').onclick = () => { if (done) return; let i = sel >= 0 && !P[sel] && cur[sel] !== S[sel] ? sel : cur.findIndex((v, k) => v !== S[k]); if (i < 0) return; sel = i; const nm = noteMode; noteMode = false; put(S[i]); noteMode = nm; };
     const kd = e => { if (/^[1-9]$/.test(e.key)) put(+e.key); else if (e.key === 'Backspace' || e.key === 'Delete') b.querySelector('[data-a=erase]').click(); else if (sel >= 0 && e.key.startsWith('Arrow')) { e.preventDefault(); const d = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -9, ArrowDown: 9 }[e.key]; sel = (sel + d + 81) % 81; draw(); } };
@@ -316,8 +317,8 @@ const App = (() => {
   function mines() {
     const lv = ls.get('bb_mines_level', 'orta');
     const LV = { kolay: [9, 9, 10], orta: [9, 14, 22], zor: [12, 18, 45] };
-    const b = shell('Mayın<br>Tarlası', `<div class="sd-head"><div class="seg">${Object.keys(LV).map(l => `<button data-l="${l}" class="${l === lv ? 'on' : ''}">${l[0].toUpperCase() + l.slice(1)}</button>`).join('')}</div><span class="mn-left">💣 0</span><span class="mn-time">0:00</span></div>
-      <div class="mn-wrap"><div class="mn-grid"></div></div><div class="sd-tools"><button class="bb-btn mn-mode" data-a="mode">⛏️ Kazma modu</button><button class="bb-btn" data-a="new">🙂 Yeni</button></div><p class="bb-tip">Uzun bas: bayrak · Açık sayıya dokun: çevresini aç</p>`);
+    const b = shell(T('Mayın<br>Tarlası', 'Mine-<br>sweeper'), `<div class="sd-head"><div class="seg">${Object.keys(LV).map(l => `<button data-l="${l}" class="${l === lv ? 'on' : ''}">${LVL()[l]}</button>`).join('')}</div><span class="mn-left">💣 0</span><span class="mn-time">0:00</span></div>
+      <div class="mn-wrap"><div class="mn-grid"></div></div><div class="sd-tools"><button class="bb-btn mn-mode" data-a="mode">⛏️ ${T('Kazma modu', 'Dig mode')}</button><button class="bb-btn" data-a="new">🙂 ${T('Yeni', 'New')}</button></div><p class="bb-tip">${T('Uzun bas: bayrak · Açık sayıya dokun: çevresini aç', 'Long-press: flag · Tap an open number: clear around it')}</p>`);
     const gridEl = b.querySelector('.mn-grid'), leftEl = b.querySelector('.mn-left'), tEl = b.querySelector('.mn-time'), modeB = b.querySelector('[data-a=mode]');
     let W, H, M, cells, first, over, flagMode = false, t0, timer, level = lv;
     onLeave(() => clearInterval(timer));
@@ -345,8 +346,8 @@ const App = (() => {
     }
     function paint() { gridEl.querySelectorAll('.mn-c').forEach((e, i) => { const c = cells[i]; e.className = 'mn-c' + (c.o ? ' o n' + c.n : '') + (c.f && !c.o ? ' f' : '') + (over && c.m ? ' m' : '') + (c.boom ? ' boom' : ''); e.textContent = c.o ? (c.m ? '💥' : c.n || '') : c.f ? '🚩' : (over && c.m ? '💣' : ''); }); }
     function count() { leftEl.textContent = '💣 ' + (M - cells.filter(c => c.f).length); }
-    function lose(i) { over = true; cells[i].boom = true; clearInterval(timer); paint(); blip(120, .4, .08); toast('💥 Mayına bastın! Tekrar dene'); }
-    function check() { if (over) return; if (cells.every(c => c.m || c.o)) { over = true; clearInterval(timer); const t = (Date.now() - t0) / 1000; if (level !== 'kolay') { const bst = ls.get('bb_best_mines', null); if (!bst || t < bst) ls.set('bb_best_mines', Math.round(t)); } cells.forEach(c => { if (c.m) c.f = true; }); paint(); if (true) confetti(); toast(`😎 Tarla temizlendi! ${fmtT(t)}`); } }
+    function lose(i) { over = true; cells[i].boom = true; clearInterval(timer); paint(); blip(120, .4, .08); toast(T('💥 Mayına bastın! Tekrar dene', '💥 You hit a mine! Have another go')); }
+    function check() { if (over) return; if (cells.every(c => c.m || c.o)) { over = true; clearInterval(timer); const t = (Date.now() - t0) / 1000; if (level !== 'kolay') { const bst = ls.get('bb_best_mines', null); if (!bst || t < bst) ls.set('bb_best_mines', Math.round(t)); } cells.forEach(c => { if (c.m) c.f = true; }); paint(); if (true) confetti(); toast(T(`😎 Tarla temizlendi! ${fmtT(t)}`, `😎 Field cleared! ${fmtT(t)}`)); } }
     function bind() {
       gridEl.querySelectorAll('.mn-c').forEach(e => {
         const i = +e.dataset.i; let lt = null, longP = false;
@@ -356,7 +357,7 @@ const App = (() => {
         e.addEventListener('pointerleave', cancel); e.addEventListener('contextmenu', ev => { ev.preventDefault(); cancel(); if (!longP) act(i, true); longP = true; });
       });
     }
-    modeB.onclick = () => { flagMode = !flagMode; modeB.textContent = flagMode ? '🚩 Bayrak modu' : '⛏️ Kazma modu'; modeB.classList.toggle('on', flagMode); };
+    modeB.onclick = () => { flagMode = !flagMode; modeB.textContent = flagMode ? T('🚩 Bayrak modu', '🚩 Flag mode') : T('⛏️ Kazma modu', '⛏️ Dig mode'); modeB.classList.toggle('on', flagMode); };
     b.querySelector('[data-a=new]').onclick = () => { click(); start(level); };
     b.querySelectorAll('.seg button').forEach(x => x.onclick = () => { click(); start(x.dataset.l); });
     start(lv);
@@ -365,7 +366,7 @@ const App = (() => {
 
   /* ==================== BLOK YIĞ (Tetris tarzı) ==================== */
   function blocks() {
-    const b = shell('Blok Yığ', `<div class="bk-wrap"><canvas class="bk-cv" width="200" height="400"></canvas><div class="bk-side"><div class="g2-sc"><small>SKOR</small><b class="sc">0</b></div><div class="g2-sc"><small>SATIR</small><b class="ln">0</b></div><div class="g2-sc"><small>SEVİYE</small><b class="lvv">1</b></div><div class="g2-sc"><small>SIRADAKİ</small><canvas class="bk-nx" width="80" height="80"></canvas></div><div class="g2-sc"><small>EN İYİ</small><b class="bs">${ls.get('bb_best_blocks', 0)}</b></div><button class="bb-btn" data-a="pause">⏸</button></div></div>
+    const b = shell(T('Blok Yığ', 'Block Stack'), `<div class="bk-wrap"><canvas class="bk-cv" width="200" height="400"></canvas><div class="bk-side"><div class="g2-sc"><small>${T('SKOR', 'SCORE')}</small><b class="sc">0</b></div><div class="g2-sc"><small>${T('SATIR', 'LINES')}</small><b class="ln">0</b></div><div class="g2-sc"><small>${T('SEVİYE', 'LEVEL')}</small><b class="lvv">1</b></div><div class="g2-sc"><small>${T('SIRADAKİ', 'NEXT')}</small><canvas class="bk-nx" width="80" height="80"></canvas></div><div class="g2-sc"><small>${T('EN İYİ', 'BEST')}</small><b class="bs">${ls.get('bb_best_blocks', 0)}</b></div><button class="bb-btn" data-a="pause">⏸</button></div></div>
       <div class="bk-ctrl"><button data-k="l">◀</button><button data-k="rot">⟳</button><button data-k="r">▶</button><button data-k="d">▼</button><button data-k="drop">⤓</button></div><div class="bk-over" hidden></div>`);
     const cv = b.querySelector('.bk-cv'), g = cv.getContext('2d'), nx = b.querySelector('.bk-nx').getContext('2d');
     const COLS = 10, ROWS = 20;
@@ -392,7 +393,7 @@ const App = (() => {
     function stepDown(soft) { if (!piece || clearing) return; if (!collide(piece.cells, piece.x, piece.y + 1)) { piece.y++; if (soft) score += 1; } else lock(); }
     function hardDrop() { if (!piece || clearing) return; let d = 0; while (!collide(piece.cells, piece.x, piece.y + 1)) { piece.y++; d++; } score += d * 2; lock(); hud(); }
     function moveX(dx) { if (piece && !clearing && !collide(piece.cells, piece.x + dx, piece.y)) piece.x += dx; }
-    function gameOver() { overF = true; run = false; const o = b.querySelector('.bk-over'); o.hidden = false; o.innerHTML = `<b>Oyun bitti</b><span>Skor: ${score}</span><button class="bb-btn">Yeniden başla</button>`; o.querySelector('button').onclick = () => { o.hidden = true; start(); }; hud(); }
+    function gameOver() { overF = true; run = false; const o = b.querySelector('.bk-over'); o.hidden = false; o.innerHTML = `<b>${T('Oyun bitti', 'Game over')}</b><span>${T('Skor', 'Score')}: ${score}</span><button class="bb-btn">${T('Yeniden başla', 'Play again')}</button>`; o.querySelector('button').onclick = () => { o.hidden = true; start(); }; hud(); }
     function cell(x, y, k, s, alpha) { g.globalAlpha = alpha || 1; const c = COL[k]; g.fillStyle = c; g.beginPath(); g.roundRect(x * s + 1, y * s + 1, s - 2, s - 2, s * .18); g.fill(); g.fillStyle = 'rgba(255,255,255,.35)'; g.fillRect(x * s + 3, y * s + 3, s - 6, s * .22); g.globalAlpha = 1; }
     function draw() {
       const s = sz(), W = COLS * s, H = ROWS * s, dpr = Math.min(devicePixelRatio || 1, 2);
@@ -440,19 +441,19 @@ const App = (() => {
   function lockScreen() {
     document.body.classList.add('locked'); document.body.classList.remove('work-mode', 'dark-mode', 'cbn-mode', 'cbn-dark');
     const m = fromUrl(), pc = m ? m.c : '', pn = m ? m.n : '';
-    root().innerHTML = `<section class="hero lockhero"><p class="eyebrow">Özel alan · yalnızca davetliler</p><h1 class="display xl">BABA<em>.</em></h1>
+    root().innerHTML = `<section class="hero lockhero"><p class="eyebrow">${T('Özel alan · yalnızca davetliler', 'Private space · invitation only')}</p><h1 class="display xl">BABA<em>.</em></h1>
       <div class="lock-opts">
-        <button class="pill big" data-a="open">🔒 Sahibi olarak gir</button>
-        <form class="lock-card" data-f="inv"><h3>🎟 Davet kodum var</h3><input name="n" placeholder="Adın" value="${esc(pn)}" required maxlength="40"><input name="c" placeholder="Kod (ör. B-1A2B3C)" value="${esc(pc)}" required maxlength="12"><button class="pill">Giriş yap</button><p class="lock-msg"></p></form>
-        <form class="lock-card" data-f="req"><h3>✋ Katılma isteği gönder</h3><p class="muted sm">BABA. yalnızca Oğuzhan’ın onay verdiği kişilere açık. İsteğini gönder; uygun görürse sana bir davet kodu yollar.</p><input name="n" placeholder="Adın" required maxlength="40"><textarea name="m" rows="2" placeholder="Kısa bir not (isteğe bağlı)" maxlength="300"></textarea><button class="pill ghost">İsteği gönder</button></form>
+        <button class="pill big" data-a="open">🔒 ${T('Sahibi olarak gir', 'Sign in as the owner')}</button>
+        <form class="lock-card" data-f="inv"><h3>🎟 ${T('Davet kodum var', 'I have an invitation code')}</h3><input name="n" placeholder="${T('Adın', 'Your name')}" value="${esc(pn)}" required maxlength="40"><input name="c" placeholder="${T('Kod (ör. B-1A2B3C)', 'Code (e.g. B-1A2B3C)')}" value="${esc(pc)}" required maxlength="12"><button class="pill">${T('Giriş yap', 'Sign in')}</button><p class="lock-msg"></p></form>
+        <form class="lock-card" data-f="req"><h3>✋ ${T('Katılma isteği gönder', 'Ask to join')}</h3><p class="muted sm">${T('BABA. yalnızca Oğuzhan’ın onay verdiği kişilere açık. İsteğini gönder; uygun görürse sana bir davet kodu yollar.', 'BABA. is open only to people Oğuzhan has approved. Send your request; if he is happy with it, he will send you an invitation code.')}</p><input name="n" placeholder="${T('Adın', 'Your name')}" required maxlength="40"><textarea name="m" rows="2" placeholder="${T('Kısa bir not (isteğe bağlı)', 'A short note (optional)')}" maxlength="300"></textarea><button class="pill ghost">${T('İsteği gönder', 'Send request')}</button></form>
       </div></section>`;
     const q = s => root().querySelector(s);
     q('[data-a=open]').onclick = askOpen;
     q('[data-f=inv]').onsubmit = e => { e.preventDefault(); const f = e.target, n = f.n.value.trim(), c = f.c.value.trim().toUpperCase();
-      if (inviteCode(n) !== c) { f.querySelector('.lock-msg').textContent = 'Kod bu isimle eşleşmiyor. Adını davetteki gibi yaz.'; return; }
+      if (inviteCode(n) !== c) { f.querySelector('.lock-msg').textContent = T('Kod bu isimle eşleşmiyor. Adını davetteki gibi yaz.', 'That code doesn’t match this name. Type your name exactly as it appears in the invitation.'); return; }
       guest = { name: n, code: c, at: Date.now() }; ls.set('baba_guest', guest); location.hash = ''; guestUrl(); render(); };
-    q('[data-f=req]').onsubmit = e => { e.preventDefault(); const f = e.target, t = `Merhaba Oğuzhan, BABA. uygulamasına katılmak istiyorum.\nAdım: ${f.n.value.trim()}${f.m.value.trim() ? '\nNot: ' + f.m.value.trim() : ''}`;
-      if (navigator.share) navigator.share({ title: 'BABA. katılma isteği', text: t }).catch(() => {}); else window.open('https://wa.me/?text=' + encodeURIComponent(t), '_blank', 'noopener'); };
+    q('[data-f=req]').onsubmit = e => { e.preventDefault(); const f = e.target, t = T(`Merhaba Oğuzhan, BABA. uygulamasına katılmak istiyorum.\nAdım: ${f.n.value.trim()}${f.m.value.trim() ? '\nNot: ' + f.m.value.trim() : ''}`, `Hi Oğuzhan, I’d like to join the BABA. app.\nMy name: ${f.n.value.trim()}${f.m.value.trim() ? '\nNote: ' + f.m.value.trim() : ''}`);
+      if (navigator.share) navigator.share({ title: T('BABA. katılma isteği', 'BABA. join request'), text: t }).catch(() => {}); else window.open('https://wa.me/?text=' + encodeURIComponent(t), '_blank', 'noopener'); };
     if (!m) askOpen();
   }
   function render() {
@@ -474,7 +475,7 @@ const App = (() => {
     document.querySelectorAll('.nav a[data-r]').forEach(a => a.classList.toggle('on', a.dataset.r === r || (a.dataset.r === 'cbn' && cbnOn) || (a.dataset.r === 'dost' && r.startsWith('dost/')) || (a.dataset.r === 'oyunlar' && GAMES.some(g => g.id === r))));
     if (r === 'ts' && typeof TS !== 'undefined') { root().innerHTML = '<div id="tsRoot"></div>'; window.scrollTo(0, 0); TS.open(root().querySelector('#tsRoot')); }
     else if (cbnOn) { root().innerHTML = '<div id="cbnRoot"></div>'; window.scrollTo(0, 0); CBN.open(root().querySelector('#cbnRoot'), r); }
-    else if (r === 'draft') { root().innerHTML = '<section class="game-page"><div class="gp-head"><a class="back" href="#oyunlar">← Oyunlar</a></div><div id="draftRoot"></div></section>'; window.scrollTo(0, 0); Draft.open(root().querySelector('#draftRoot')); }
+    else if (r === 'draft') { root().innerHTML = '<section class="game-page"><div class="gp-head"><a class="back" href="#oyunlar">← ' + T('Oyunlar', 'Games') + '</a></div><div id="draftRoot"></div></section>'; window.scrollTo(0, 0); Draft.open(root().querySelector('#draftRoot')); }
     else if (r === 'is' && typeof Is !== 'undefined') { root().innerHTML = '<div id="isRoot"></div>'; window.scrollTo(0, 0); Is.open(root().querySelector('#isRoot')); }
     else if ((r === 'dost' || r.startsWith('dost/')) && typeof Dost !== 'undefined') { root().innerHTML = '<div id="dostRoot"></div>'; window.scrollTo(0, 0); Dost.open(root().querySelector('#dostRoot'), r); }
     else if (r === 'vadi') vadi();
@@ -489,5 +490,5 @@ const App = (() => {
     else hub();
   }
   addEventListener('hashchange', render);
-  return { render, leave, askOpen, lock: () => { if (isOwner()) lock(); else if (confirm('Davetli erişimi bu cihazdan kaldırılsın mı?')) guestOut(); }, isOwner, user: () => isOwner() ? { name: 'Oğuzhan', key: '' } : guest ? { name: guest.name, key: 'g-' + String(guest.code).toLowerCase().replace(/[^a-z0-9-]/g, '') } : null, get unlocked() { return unlocked; } };
+  return { render, leave, askOpen, lock: () => { if (isOwner()) lock(); else if (confirm(T('Davetli erişimi bu cihazdan kaldırılsın mı?', 'Remove guest access from this device?'))) guestOut(); }, isOwner, user: () => isOwner() ? { name: 'Oğuzhan', key: '' } : guest ? { name: guest.name, key: 'g-' + String(guest.code).toLowerCase().replace(/[^a-z0-9-]/g, '') } : null, get unlocked() { return unlocked; } };
 })();

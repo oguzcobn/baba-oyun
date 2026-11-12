@@ -19,8 +19,8 @@ const CBN = (() => {
   let db = null, readyP = null, el = null, cur = { mod: 'home', sub: [] }, leaveFns = [], ticker = null;
 
   /* ---------- dil ---------- */
-  const L = (tr, en) => (S.settings && S.settings.lang === 'en') ? en : tr;
-  const loc = () => (S.settings && S.settings.lang === 'en') ? 'en-GB' : 'tr-TR';
+  const L = (tr, en) => I18N.lang === 'en' ? en : tr;      // BABA. genelindeki dil seçimini izler
+  const loc = () => I18N.locale;
   const low = s => String(s || '').toLocaleLowerCase('tr-TR');
 
   /* ---------- tarih ---------- */
@@ -234,7 +234,7 @@ const CBN = (() => {
   function drawShell() {
     const vis = S.settings.modules.filter(m => !m.hidden);
     const a = (m, cls) => `<a class="${cls}${m.id === cur.mod ? ' on' : ''}" href="#cbn/${m.id}" style="--mc:${COLORS[m.id]}" ${m.id === cur.mod ? 'aria-current="page"' : ''}><i class="cbn-chip">${icon(m.id)}</i><span>${esc(modName(m.id))}</span></a>`;
-    el.innerHTML = `<div class="cbn" lang="${S.settings.lang}">
+    el.innerHTML = `<div class="cbn" lang="${I18N.lang}">
       <a class="cbn-skip" href="#cbnMain">${L('İçeriğe geç', 'Skip to content')}</a>
       <aside class="cbn-side" aria-label="CBN">
         <a class="cbn-brand" href="#cbn"><b>CBN</b><span>Personal OS</span></a>

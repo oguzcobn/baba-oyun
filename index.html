@@ -11,46 +11,50 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="img/icon-180.png">
 <link rel="icon" href="img/icon-192.png">
-<link rel="stylesheet" href="css/app.css?v=27">
-<link rel="stylesheet" href="css/v2.css?v=27">
-<link rel="stylesheet" href="css/cbn.css?v=27">
-<link rel="stylesheet" href="css/ts.css?v=27">
-<link rel="stylesheet" href="css/dost.css?v=27">
+<link rel="stylesheet" href="css/app.css?v=28">
+<link rel="stylesheet" href="css/v2.css?v=28">
+<link rel="stylesheet" href="css/cbn.css?v=28">
+<link rel="stylesheet" href="css/ts.css?v=28">
+<link rel="stylesheet" href="css/dost.css?v=28">
 <title>BABA.</title>
 </head>
 <body>
 <header class="nav">
   <a class="logo" href="#">BABA<span>.</span></a>
-  <nav class="nav-links"><a href="#cbn" data-r="cbn">CBN</a><a href="#is" data-r="is" class="nav-is owner-only">İş</a><a href="#dost" data-r="dost">Dost</a><a href="#oyunlar" data-r="oyunlar">Oyunlar</a><a href="#seyahat" data-r="seyahat">Seyahat</a><a href="#foto" data-r="foto">Fotoğraf</a><a href="#ts" data-r="ts" class="owner-only">Trabzonspor</a></nav>
-  <div class="nav-r"><button class="icon" id="snd" aria-label="Ses">🔊</button><button class="pill sm" id="lockBtn">Kilitle</button></div>
+  <nav class="nav-links"><a href="#cbn" data-r="cbn">CBN</a><a href="#is" data-r="is" class="nav-is owner-only" data-en="Work">İş</a><a href="#dost" data-r="dost">Dost</a><a href="#oyunlar" data-r="oyunlar" data-en="Games">Oyunlar</a><a href="#seyahat" data-r="seyahat" data-en="Travel">Seyahat</a><a href="#foto" data-r="foto" data-en="Photography">Fotoğraf</a><a href="#ts" data-r="ts" class="owner-only">Trabzonspor</a></nav>
+  <div class="nav-r"><div class="lang-sw" role="group" aria-label="Dil / Language"><button type="button" data-lang="tr" lang="tr" aria-label="Türkçe">TR</button><button type="button" data-lang="en" lang="en" aria-label="English">EN</button></div><button class="icon" id="snd" aria-label="Ses" data-en-aria="Sound">🔊</button><button class="pill sm" id="lockBtn" data-en="Lock">Kilitle</button></div>
 </header>
 <main id="view"></main>
-<script src="js/core.js?v=27"></script>
-<script src="js/draft-data.js?v=27"></script>
-<script src="js/draft-nat.js?v=27"></script>
-<script src="js/draft.js?v=27"></script>
-<script src="js/dost.js?v=27"></script>
-<script src="js/is.js?v=27"></script>
-<script src="js/travel.js?v=27"></script>
-<script src="js/foto.js?v=27"></script>
-<script src="js/cbn/core.js?v=27"></script>
-<script src="js/cbn/tasks.js?v=27"></script>
-<script src="js/cbn/notes.js?v=27"></script>
-<script src="js/cbn/calendar.js?v=27"></script>
-<script src="js/cbn/kit.js?v=27"></script>
-<script src="js/cbn/life.js?v=27"></script>
-<script src="js/cbn/money.js?v=27"></script>
-<script src="js/cbn/work.js?v=27"></script>
-<script src="js/cbn/sync.js?v=27"></script>
-<script src="js/cbn/profile.js?v=27"></script>
-<script src="js/cbn/home.js?v=27"></script>
-<script src="js/cbn/settings.js?v=27"></script>
-<script src="js/ts.js?v=27"></script>
-<script src="js/games.js?v=27"></script>
+<script src="js/core.js?v=28"></script>
+<script src="js/draft-data.js?v=28"></script>
+<script src="js/draft-nat.js?v=28"></script>
+<script src="js/draft.js?v=28"></script>
+<script src="js/dost-en.js?v=28"></script>
+<script src="js/dost.js?v=28"></script>
+<script src="js/is.js?v=28"></script>
+<script src="js/travel.js?v=28"></script>
+<script src="js/foto.js?v=28"></script>
+<script src="js/cbn/core.js?v=28"></script>
+<script src="js/cbn/tasks.js?v=28"></script>
+<script src="js/cbn/notes.js?v=28"></script>
+<script src="js/cbn/calendar.js?v=28"></script>
+<script src="js/cbn/kit.js?v=28"></script>
+<script src="js/cbn/life.js?v=28"></script>
+<script src="js/cbn/money.js?v=28"></script>
+<script src="js/cbn/work.js?v=28"></script>
+<script src="js/cbn/sync.js?v=28"></script>
+<script src="js/cbn/profile.js?v=28"></script>
+<script src="js/cbn/home.js?v=28"></script>
+<script src="js/cbn/settings.js?v=28"></script>
+<script src="js/ts.js?v=28"></script>
+<script src="js/games.js?v=28"></script>
 <script>
   const sb=document.getElementById('snd');sb.textContent=Snd.on?'🔊':'🔇';
   sb.onclick=()=>{sb.textContent=Snd.toggle()?'🔊':'🔇'};
   document.getElementById('lockBtn').onclick=()=>App.lock();
+  const navLang=()=>{document.querySelectorAll('[data-en]').forEach(e=>{if(!e.dataset.tr)e.dataset.tr=e.textContent;e.textContent=I18N.lang==='en'?e.dataset.en:e.dataset.tr});document.querySelectorAll('[data-en-aria]').forEach(e=>{if(!e.dataset.trAria)e.dataset.trAria=e.getAttribute('aria-label');e.setAttribute('aria-label',I18N.lang==='en'?e.dataset.enAria:e.dataset.trAria)});document.querySelectorAll('.lang-sw button').forEach(b=>{const on=b.dataset.lang===I18N.lang;b.classList.toggle('on',on);b.setAttribute('aria-pressed',on)})};
+  document.querySelectorAll('.lang-sw button').forEach(b=>b.onclick=()=>I18N.set(b.dataset.lang));
+  I18N.on(()=>{navLang();App.render()});navLang();
   App.render();
   try{Is.start()}catch(e){}
   try{if(App.user())CBN.start()}catch(e){}

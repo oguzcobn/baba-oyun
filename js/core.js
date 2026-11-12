@@ -1,4 +1,16 @@
 "use strict";
+/* Dil: Türkçe (varsayılan) ya da İngilizce (British). T('türkçe', 'english') o anki dile göre seçer. */
+const I18N = (() => {
+  let lang = 'tr'; try { lang = localStorage.getItem('baba_lang') === 'en' ? 'en' : 'tr'; } catch (e) {}
+  const subs = [];
+  document.documentElement.lang = lang;
+  return {
+    get lang() { return lang; }, get locale() { return lang === 'en' ? 'en-GB' : 'tr-TR'; },
+    set(l) { l = l === 'en' ? 'en' : 'tr'; if (l === lang) return; lang = l; try { localStorage.setItem('baba_lang', l); } catch (e) {} document.documentElement.lang = l; subs.forEach(f => { try { f(l); } catch (e) { console.error(e); } }); },
+    on(f) { subs.push(f); }
+  };
+})();
+const T = (tr, en) => I18N.lang === 'en' ? en : tr;
 /* Ses ve konfeti — küçük yardımcılar */
 const Snd = (() => {
   let ctx = null, on = true; try { on = localStorage.getItem('snd') !== '0'; } catch (e) {}

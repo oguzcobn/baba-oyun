@@ -17,6 +17,10 @@ const Draft = (() => {
   const CFG = { opp: 0, K: 12.5, base: 1.2, home: 1.12, away: .92, noise: 2.2, inj: .011, tac: .5, coach: .5 };
   const gauss = () => { let u = 0, v = 0; while (!u) u = Math.random(); while (!v) v = Math.random(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
   const ME = 'Senin Takımın';
+  const TN = n => n === ME ? T(ME, 'Your Team') : n;                            // takım adı (gösterim)
+  const PZ = k => I18N.lang === 'en' ? ({ KL: 'GK', ST: 'CB', BK: 'FB', OS: 'MF', KN: 'W', FV: 'FW' }[k] || k) : k;   // mevki kısaltması
+  const FL = c => I18N.lang === 'en' ? ({ G: 'W', B: 'D', M: 'L' }[c] || c) : c;    // G/B/M → W/D/L
+  const COACH_EN = { 'Pres ve tempo': 'Pressing and tempo', 'Sağlam savunma': 'Solid defence', 'Hücum ve moral': 'Attack and morale', 'Dengeli oyun': 'Balanced play', 'Bordo-mavi ruh': 'Claret-and-blue spirit', 'Yaratıcılık': 'Creativity' };
   const CHEM_MAX = 4;          // tam kimya (100) = +4 reyting puanı
   const TR_FIRST = /^(Kaan|Kerem|Arda|Emre|Okan|Ozan|Okay|Mert|Can|Berat|Yunus|Eren|Efe|Ege|Deniz|Umut|Onur|Volkan|Fatih|Taha|Taylan|Zafer|Mithat|Yusuf|Emin|Bertuğ|Berkay|Batuhan|Hamza|Celil|Samed|Enes|Bilal|Yalçın|Kamil|Ali|Ayberk|Atakan|Melih|Arif|Adil|Rayyan|Bahadır|Baran|Fatih|Tayfur|Bedirhan|Emir|Mustafa|Sefa|Mehmet|Furkan|Veysel|Kahraman|Gökhan|Serdar|Berat|Ahmed|Hasan|Erhan|Metehan|Abdurrahim|Ensar|Salih|Cenk|Sinan|Semih|Rıdvan|Ilhan|Kartal|Doğan|Burak|Hakan|Selçuk|Gökdeniz|Volkan|Serkan|Ömer|Ertuğrul|Yakup|Orhan|Murat|Umut)\b/;
   const nation = p => DRAFT_NAT[p.name] || (/[çğıışşİÇĞŞÖÜöü]/.test(p.name) || TR_FIRST.test(p.name) ? 'TR' : null);
@@ -38,7 +42,7 @@ const Draft = (() => {
   const benchOpen = () => S.bench.findIndex(b => !b);
   const canTake = p => !picked().some(q => q.name === p[0]) && (openSlotsFor(p[1]).length > 0 || benchOpen() >= 0);
   const hide = () => S.mode === 'sefir';
-  const eraTxt = e => e === 'FC27' ? 'FC 27' : e.replace('~', '') + ' · tahmini';
+  const eraTxt = e => e === 'FC27' ? 'FC 27' : e.replace('~', '') + T(' · tahmini', ' · estimated');
 
   /* ---------------- ana çizim ---------------- */
   function open(root) { el = root; stop(); S = ls.get('draft_state', null); if (!S || S.v !== 3) S = fresh(); if (S.phase === 'season') S.phase = 'tactics'; if (S.phase === 'stats' && !S.last) S.phase = 'tactics'; render(); }
@@ -51,23 +55,23 @@ const Draft = (() => {
     const xi = DRAFT_SLOTS.map(s => S.picks[s.id]).filter(Boolean), ch = chemOf(xi);
     CHM = new Map(xi.map((p, i) => [p, ch.per[i]]));
     el.innerHTML = `
-      <section class="dr-hero"><p class="eyebrow">Trendyol Süper Lig 2026-27 · 18 kulüp · son 10 yıl</p><h1 class="display">Kadro<br>kur. <em>102</em><br>puanı vur.</h1>
-        <div class="dr-meta"><span class="chip">Seçim <b>${n}/13</b></span><span class="chip">Joker <b>${S.jokers}</b></span><span class="chip chem-chip">🧪 Kimya <b>${ch.pct}</b>/100</span><span class="chip">Ort. <b>${hide() ? '??' : xi.length ? avg(xi.map(p => p.r)).toFixed(1) : '—'}</b></span>
-          <button class="chip toggle ${hide() ? 'on' : ''}" data-a="mode">${hide() ? '🙈 Ligin Sefiri' : '👁 Normal mod'}</button>
-          <span class="chip">🏆 Rekor <b>${ls.get('draft_best', 0)}</b></span></div></section>
+      <section class="dr-hero"><p class="eyebrow">Trendyol Süper Lig 2026-27 · ${T('18 kulüp · son 10 yıl', '18 clubs · last 10 years')}</p><h1 class="display">${T('Kadro<br>kur. <em>102</em><br>puanı vur.', 'Build a<br>squad. Hit<br><em>102</em> points.')}</h1>
+        <div class="dr-meta"><span class="chip">${T('Seçim', 'Picks')} <b>${n}/13</b></span><span class="chip">${T('Joker', 'Jokers')} <b>${S.jokers}</b></span><span class="chip chem-chip">🧪 ${T('Kimya', 'Chemistry')} <b>${ch.pct}</b>/100</span><span class="chip">${T('Ort.', 'Avg.')} <b>${hide() ? '??' : xi.length ? avg(xi.map(p => p.r)).toFixed(1) : '—'}</b></span>
+          <button class="chip toggle ${hide() ? 'on' : ''}" data-a="mode">${hide() ? T('🙈 Ligin Sefiri', '🙈 Blind mode') : T('👁 Normal mod', '👁 Normal mode')}</button>
+          <span class="chip">🏆 ${T('Rekor', 'Record')} <b>${ls.get('draft_best', 0)}</b></span></div></section>
       <section class="dr-grid">
         <div class="dr-left">
           <div class="draw-box">
-            <div class="draw-head"><span class="eyebrow">Torba</span><span class="muted sm">${S.drawn.length}/18 kulüp çekildi · her kulübün şansı eşit</span></div>
+            <div class="draw-head"><span class="eyebrow">${T('Torba', 'The draw')}</span><span class="muted sm">${T(`${S.drawn.length}/18 kulüp çekildi · her kulübün şansı eşit`, `${S.drawn.length}/18 clubs drawn · every club has an equal chance`)}</span></div>
             <div class="club-grid">${DRAFT_CLUBS.map(tileHtml).join('')}</div>
-            <button class="pill big draw-btn" data-a="spin" ${n >= 13 || S.club ? 'disabled' : ''}>${n >= 13 ? 'Kadro tamam ✓' : S.club ? 'Oyuncunu seç ↓' : 'TAKIM ÇEK'}</button>
+            <button class="pill big draw-btn" data-a="spin" ${n >= 13 || S.club ? 'disabled' : ''}>${n >= 13 ? T('Kadro tamam ✓', 'Squad complete ✓') : S.club ? T('Oyuncunu seç ↓', 'Pick your player ↓') : T('TAKIM ÇEK', 'DRAW A CLUB')}</button>
           </div>
           <div class="pick-panel">${pickPanel()}</div>
         </div>
         <div class="dr-right">
           <div class="pitch">${DRAFT_SLOTS.map(slotHtml).join('')}<div class="pitch-lines"></div></div>
-          <div class="bench"><span class="eyebrow">Yedekler</span>${S.bench.map((p, i) => `<div class="bslot ${p ? 'full' : ''}">${p ? cardInner(p) : '<span>Yedek ' + (i + 1) + '</span>'}</div>`).join('')}</div>
-          <div class="dr-actions"><p class="muted sm chem-help">Kimya: aynı kulüpten ya da aynı ülkeden gelen her takım arkadaşı bir bağ kurar (●○○ → ●●●). Maç gücü = ortalama reyting + kimya (en çok +${CHEM_MAX}); her maçta form ve sakatlık şansı var.</p><button class="pill ghost" data-a="reset">Sıfırla</button><button class="pill" data-a="next" ${n < 13 ? 'disabled' : ''}>Teknik direktör ve taktik →</button></div>
+          <div class="bench"><span class="eyebrow">${T('Yedekler', 'Substitutes')}</span>${S.bench.map((p, i) => `<div class="bslot ${p ? 'full' : ''}">${p ? cardInner(p) : '<span>' + T('Yedek ', 'Sub ') + (i + 1) + '</span>'}</div>`).join('')}</div>
+          <div class="dr-actions"><p class="muted sm chem-help">${T(`Kimya: aynı kulüpten ya da aynı ülkeden gelen her takım arkadaşı bir bağ kurar (●○○ → ●●●). Maç gücü = ortalama reyting + kimya (en çok +${CHEM_MAX}); her maçta form ve sakatlık şansı var.`, `Chemistry: every teammate from the same club or the same country forms a link (●○○ → ●●●). Match strength = average rating + chemistry (up to +${CHEM_MAX}); every match carries a chance of form swings and injuries.`)}</p><button class="pill ghost" data-a="reset">${T('Sıfırla', 'Reset')}</button><button class="pill" data-a="next" ${n < 13 ? 'disabled' : ''}>${T('Teknik direktör ve taktik', 'Manager and tactics')} →</button></div>
         </div>
       </section>`;
     bind();
@@ -80,15 +84,15 @@ const Draft = (() => {
   const rating = p => hide() ? '?' : p[2];
   let CHM = null; // render sırasında hesaplanan oyuncu kimyaları
   function cardInner(p) { const c = CLUB(p.club), k = CHM ? CHM.get(p) : null, n = nation(p) || '–';
-    return `<i style="background:${c.c1}"></i><b>${esc(p.name)}</b><small>${p.pos} · ${hide() ? '??' : p.r} · ${n}</small>${k == null ? '' : `<span class="chem c${k}">${'●'.repeat(k)}${'○'.repeat(3 - k)}</span>`}`; }
-  function slotHtml(s) { const p = S.picks[s.id]; return `<div class="slot ${p ? 'full' : ''}" style="left:${s.x}%;top:${s.y}%">${p ? cardInner(p) : `<span>${s.pos}</span>`}</div>`; }
+    return `<i style="background:${c.c1}"></i><b>${esc(p.name)}</b><small>${PZ(p.pos)} · ${hide() ? '??' : p.r} · ${n}</small>${k == null ? '' : `<span class="chem c${k}">${'●'.repeat(k)}${'○'.repeat(3 - k)}</span>`}`; }
+  function slotHtml(s) { const p = S.picks[s.id]; return `<div class="slot ${p ? 'full' : ''}" style="left:${s.x}%;top:${s.y}%">${p ? cardInner(p) : `<span>${PZ(s.pos)}</span>`}</div>`; }
   function pickPanel() {
-    if (!S.club) return `<p class="muted">“Takım çek”e bas: 18 kulüp karıştırılmış bir torbada, her biri bir kez çıkar. Gelen kulübün güncel FC 27 kadrosundan ya da son 10 yılın yıldızlarından bir oyuncu seç. Mevkisi boşsa sahaya, değilse yedeğe geçer.</p>`;
+    if (!S.club) return `<p class="muted">${T('“Takım çek”e bas: 18 kulüp karıştırılmış bir torbada, her biri bir kez çıkar. Gelen kulübün güncel FC 27 kadrosundan ya da son 10 yılın yıldızlarından bir oyuncu seç. Mevkisi boşsa sahaya, değilse yedeğe geçer.', 'Press “Draw a club”: the 18 clubs are shuffled in a bag and each comes out once. Pick a player from that club’s current FC 27 squad or from the stars of the last 10 years. If their position is free they go on the pitch, otherwise onto the bench.')}</p>`;
     const c = CLUB(S.club), need = new Set(DRAFT_SLOTS.filter(s => !S.picks[s.id]).map(s => s.pos));
     const list = c.players.map((p, i) => ({ p, i })).filter(x => !S.pf || x.p[1] === S.pf).sort((a, b) => b.p[2] - a.p[2]);
-    return `<div class="club-head">${crest(c, 'lg')}<div><h3>${esc(c.name)}</h3><small class="muted">${c.players.length} oyuncu</small></div>${S.jokers > 0 ? `<button class="pill ghost sm" data-a="joker">↻ Joker (${S.jokers})</button>` : ''}</div>
-      <div class="pos-filter"><button class="${!S.pf ? 'on' : ''}" data-pf="">Tümü</button>${Object.keys(DRAFT_POS_NAMES).map(k => `<button class="${S.pf === k ? 'on' : ''} ${need.has(k) ? 'need' : ''}" data-pf="${k}">${k}</button>`).join('')}</div>
-      <div class="plist">${list.map(({ p, i }) => { const ok = canTake(p); return `<button class="pl ${ok ? '' : 'no'}" data-i="${i}" ${ok ? '' : 'disabled'}><span class="pos ${need.has(p[1]) ? 'need' : ''}">${p[1]}</span><b>${esc(p[0])}<small class="era ${p[3] === 'FC27' ? 'off' : ''}">${eraTxt(p[3])}</small></b><span class="rt">${rating(p)}</span></button>`; }).join('') || '<p class="muted">Bu mevkide oyuncu yok.</p>'}</div>`;
+    return `<div class="club-head">${crest(c, 'lg')}<div><h3>${esc(c.name)}</h3><small class="muted">${c.players.length} ${T('oyuncu', 'players')}</small></div>${S.jokers > 0 ? `<button class="pill ghost sm" data-a="joker">↻ ${T('Joker', 'Joker')} (${S.jokers})</button>` : ''}</div>
+      <div class="pos-filter"><button class="${!S.pf ? 'on' : ''}" data-pf="">${T('Tümü', 'All')}</button>${Object.keys(DRAFT_POS_NAMES).map(k => `<button class="${S.pf === k ? 'on' : ''} ${need.has(k) ? 'need' : ''}" data-pf="${k}">${PZ(k)}</button>`).join('')}</div>
+      <div class="plist">${list.map(({ p, i }) => { const ok = canTake(p); return `<button class="pl ${ok ? '' : 'no'}" data-i="${i}" ${ok ? '' : 'disabled'}><span class="pos ${need.has(p[1]) ? 'need' : ''}">${PZ(p[1])}</span><b>${esc(p[0])}<small class="era ${p[3] === 'FC27' ? 'off' : ''}">${eraTxt(p[3])}</small></b><span class="rt">${rating(p)}</span></button>`; }).join('') || `<p class="muted">${T('Bu mevkide oyuncu yok.', 'No players in this position.')}</p>`}</div>`;
   }
   function bind() {
     const q = s => el.querySelector(s);
@@ -140,21 +144,21 @@ const Draft = (() => {
   }
 
   /* ---------------- teknik direktör ve taktik ---------------- */
-  const TAC = {
-    tempo: ['Pas temposu', [['yavas', 'Yavaş'], ['dengeli', 'Dengeli'], ['hizli', 'Hızlı']]],
-    pres: ['Pres', [['dusuk', 'Düşük'], ['orta', 'Orta'], ['yuksek', 'Yüksek']]],
-    hat: ['Savunma hattı', [['geride', 'Geride'], ['dengeli', 'Dengeli'], ['onde', 'Önde']]],
-    yon: ['Hücum yönü', [['kanat', 'Kanatlar'], ['dengeli', 'Dengeli'], ['merkez', 'Merkez']]]
-  };
+  const TACF = () => ({
+    tempo: [T('Pas temposu', 'Passing tempo'), [['yavas', T('Yavaş', 'Slow')], ['dengeli', T('Dengeli', 'Balanced')], ['hizli', T('Hızlı', 'Fast')]]],
+    pres: [T('Pres', 'Pressing'), [['dusuk', T('Düşük', 'Low')], ['orta', T('Orta', 'Medium')], ['yuksek', T('Yüksek', 'High')]]],
+    hat: [T('Savunma hattı', 'Defensive line'), [['geride', T('Geride', 'Deep')], ['dengeli', T('Dengeli', 'Balanced')], ['onde', T('Önde', 'High')]]],
+    yon: [T('Hücum yönü', 'Attacking focus'), [['kanat', T('Kanatlar', 'Wings')], ['dengeli', T('Dengeli', 'Balanced')], ['merkez', T('Merkez', 'Centre')]]]
+  });
   function renderTactics() {
     save();
     const st = strength();
-    el.innerHTML = `<section class="dr-hero"><p class="eyebrow">Adım 2 / 2</p><h1 class="display">Teknik<br>direktör &amp; <em>taktik.</em></h1>
-      <div class="dr-meta"><span class="chip">Hücum <b>${hide() ? '??' : st.att.toFixed(1)}</b></span><span class="chip">Savunma <b>${hide() ? '??' : st.def.toFixed(1)}</b></span><span class="chip chem-chip">🧪 Kimya <b>${st.cp}</b>/100 <small>(+${st.chem.toFixed(1)})</small></span><span class="chip">Ort. reyting <b>${hide() ? '??' : avg(st.xi.map(p => p.r)).toFixed(1)}</b></span>${S.last ? '<button class="chip" data-a="laststats">📊 Son sezon istatistikleri</button>' : ''}</div></section>
+    el.innerHTML = `<section class="dr-hero"><p class="eyebrow">${T('Adım 2 / 2', 'Step 2 of 2')}</p><h1 class="display">${T('Teknik<br>direktör &amp; <em>taktik.</em>', 'Manager<br>&amp; <em>tactics.</em>')}</h1>
+      <div class="dr-meta"><span class="chip">${T('Hücum', 'Attack')} <b>${hide() ? '??' : st.att.toFixed(1)}</b></span><span class="chip">${T('Savunma', 'Defence')} <b>${hide() ? '??' : st.def.toFixed(1)}</b></span><span class="chip chem-chip">🧪 ${T('Kimya', 'Chemistry')} <b>${st.cp}</b>/100 <small>(+${st.chem.toFixed(1)})</small></span><span class="chip">${T('Ort. reyting', 'Avg. rating')} <b>${hide() ? '??' : avg(st.xi.map(p => p.r)).toFixed(1)}</b></span>${S.last ? `<button class="chip" data-a="laststats">📊 ${T('Son sezon istatistikleri', 'Last season’s stats')}</button>` : ''}</div></section>
       <section class="tac">
-        <div class="tac-block"><span class="eyebrow">Teknik direktör</span><div class="coaches">${DRAFT_COACHES.map((c, i) => `<button class="coach ${S.coach === i ? 'on' : ''}" data-c="${i}"><b>${c.name}</b><small>${c.note}</small><span>H ${c.att >= 0 ? '+' : ''}${c.att} · S ${c.def >= 0 ? '+' : ''}${c.def}</span></button>`).join('')}</div></div>
-        ${Object.entries(TAC).map(([k, [lbl, opts]]) => `<div class="tac-block"><span class="eyebrow">${lbl}</span><div class="seg2">${opts.map(([v, t]) => `<button data-k="${k}" data-v="${v}" class="${S.tac[k] === v ? 'on' : ''}">${t}</button>`).join('')}</div></div>`).join('')}
-        <div class="dr-actions"><button class="pill ghost" data-a="back">← Kadroya dön</button><button class="pill big" data-a="play" ${S.coach === null ? 'disabled' : ''}>OYNA · 34 maç</button></div>
+        <div class="tac-block"><span class="eyebrow">${T('Teknik direktör', 'Manager')}</span><div class="coaches">${DRAFT_COACHES.map((c, i) => `<button class="coach ${S.coach === i ? 'on' : ''}" data-c="${i}"><b>${c.name}</b><small>${I18N.lang === 'en' ? (COACH_EN[c.note] || c.note) : c.note}</small><span>${T('H', 'A')} ${c.att >= 0 ? '+' : ''}${c.att} · ${T('S', 'D')} ${c.def >= 0 ? '+' : ''}${c.def}</span></button>`).join('')}</div></div>
+        ${Object.entries(TACF()).map(([k, [lbl, opts]]) => `<div class="tac-block"><span class="eyebrow">${lbl}</span><div class="seg2">${opts.map(([v, t]) => `<button data-k="${k}" data-v="${v}" class="${S.tac[k] === v ? 'on' : ''}">${t}</button>`).join('')}</div></div>`).join('')}
+        <div class="dr-actions"><button class="pill ghost" data-a="back">← ${T('Kadroya dön', 'Back to squad')}</button><button class="pill big" data-a="play" ${S.coach === null ? 'disabled' : ''}>${T('OYNA · 34 maç', 'PLAY · 34 matches')}</button></div>
       </section>`;
     el.querySelectorAll('.coach').forEach(b => b.onclick = () => { S.coach = +b.dataset.c; renderTactics(); });
     el.querySelectorAll('.seg2 button').forEach(b => b.onclick = () => { S.tac[b.dataset.k] = b.dataset.v; renderTactics(); });
@@ -244,23 +248,23 @@ const Draft = (() => {
       if (gh > ga) { H.w++; H.p += 3; A.l++; H.form.push('G'); A.form.push('M'); } else if (gh < ga) { A.w++; A.p += 3; H.l++; H.form.push('M'); A.form.push('G'); } else { H.d++; A.d++; H.p++; A.p++; H.form.push('B'); A.form.push('B'); }
       return { h, a, gh, ga, ev };
     }
-    el.innerHTML = `<section class="dr-hero"><p class="eyebrow">Sezon simülasyonu · ${esc(out.name)}'in yerini sen aldın</p><h1 class="display">Hafta <em class="wk">0</em><span class="slash">/34</span></h1>
-      <div class="dr-meta"><span class="chip">Puan <b class="pts">0</b></span><span class="chip">G-B-M <b class="wdl">0-0-0</b></span><span class="chip">Gol <b class="gl">0:0</b></span><button class="chip toggle" data-a="fast">⏩ Hızlandır</button></div></section>
-      <section class="season"><div class="live"><div class="live-card"><span class="eyebrow lc-t">Maç günü</span><div class="score"><span class="tn h">—</span><b class="sc">0 – 0</b><span class="tn a">—</span></div><div class="minute"><i></i></div><div class="goals-ev"></div><div class="feed"></div></div>
+    el.innerHTML = `<section class="dr-hero"><p class="eyebrow">${T('Sezon simülasyonu', 'Season simulation')} · ${T(`${esc(out.name)}'in yerini sen aldın`, `you have taken ${esc(out.name)}’s place`)}</p><h1 class="display">${T('Hafta', 'Week')} <em class="wk">0</em><span class="slash">/34</span></h1>
+      <div class="dr-meta"><span class="chip">${T('Puan', 'Points')} <b class="pts">0</b></span><span class="chip">${T('G-B-M', 'W-D-L')} <b class="wdl">0-0-0</b></span><span class="chip">${T('Gol', 'Goals')} <b class="gl">0:0</b></span><button class="chip toggle" data-a="fast">⏩ ${T('Hızlandır', 'Speed up')}</button></div></section>
+      <section class="season"><div class="live"><div class="live-card"><span class="eyebrow lc-t">${T('Maç günü', 'Matchday')}</span><div class="score"><span class="tn h">—</span><b class="sc">0 – 0</b><span class="tn a">—</span></div><div class="minute"><i></i></div><div class="goals-ev"></div><div class="feed"></div></div>
         <div class="bar"><i></i></div><div class="mini-kings"></div></div>
-        <div class="table-wrap"><table class="tbl"><thead><tr><th>#</th><th>Takım</th><th>O</th><th>G</th><th>B</th><th>M</th><th>A</th><th>P</th></tr></thead><tbody></tbody></table></div></section>`;
+        <div class="table-wrap"><table class="tbl"><thead><tr><th>#</th><th>${T('Takım', 'Team')}</th><th>${T('O', 'P')}</th><th>${T('G', 'W')}</th><th>${T('B', 'D')}</th><th>${T('M', 'L')}</th><th>${T('A', 'GD')}</th><th>${T('P', 'Pts')}</th></tr></thead><tbody></tbody></table></div></section>`;
     const q = s => el.querySelector(s), me = teams[0];
     let wk = 0, speed = 700;
-    q('[data-a=fast]').onclick = e => { speed = speed > 100 ? 60 : 700; e.target.classList.toggle('on', speed < 100); e.target.textContent = speed < 100 ? '▶ Normal hız' : '⏩ Hızlandır'; };
+    q('[data-a=fast]').onclick = e => { speed = speed > 100 ? 60 : 700; e.target.classList.toggle('on', speed < 100); e.target.textContent = speed < 100 ? T('▶ Normal hız', '▶ Normal speed') : T('⏩ Hızlandır', '⏩ Speed up'); };
     const sorted = () => teams.slice().sort((x, y) => y.p - x.p || (y.gf - y.ga) - (x.gf - x.ga) || y.gf - x.gf);
     function table() {
       const s = sorted();
-      q('.tbl tbody').innerHTML = s.map((t, i) => `<tr class="${t.me ? 'me' : ''}"><td>${i + 1}</td><td><i class="dot" style="background:${t.c1}"></i>${esc(t.name)}</td><td>${t.w + t.d + t.l}</td><td>${t.w}</td><td>${t.d}</td><td>${t.l}</td><td>${t.gf - t.ga}</td><td><b>${t.p}</b></td></tr>`).join('');
+      q('.tbl tbody').innerHTML = s.map((t, i) => `<tr class="${t.me ? 'me' : ''}"><td>${i + 1}</td><td><i class="dot" style="background:${t.c1}"></i>${esc(TN(t.name))}</td><td>${t.w + t.d + t.l}</td><td>${t.w}</td><td>${t.d}</td><td>${t.l}</td><td>${t.gf - t.ga}</td><td><b>${t.p}</b></td></tr>`).join('');
       return s.indexOf(me) + 1;
     }
     function kings() {
       const top = Object.values(stats).filter(s => s.g).sort((a, b) => b.g - a.g || b.a - a.a).slice(0, 3);
-      q('.mini-kings').innerHTML = top.length ? `<span class="eyebrow">Gol krallığı</span>${top.map((s, i) => `<div class="mk ${s.tid === 'me' ? 'me' : ''}"><span>${i + 1}</span><i class="dot" style="background:${s.c1}"></i><b>${esc(s.name)}</b><em>${s.g}</em></div>`).join('')}` : '';
+      q('.mini-kings').innerHTML = top.length ? `<span class="eyebrow">${T('Gol krallığı', 'Top scorers')}</span>${top.map((s, i) => `<div class="mk ${s.tid === 'me' ? 'me' : ''}"><span>${i + 1}</span><i class="dot" style="background:${s.c1}"></i><b>${esc(s.name)}</b><em>${s.g}</em></div>`).join('')}` : '';
     }
     table();
     function week() {
@@ -268,18 +272,18 @@ const Draft = (() => {
       const res = all[wk].map(([h, a]) => play(h, a)), mine = res.find(r => teams[r.h].me || teams[r.a].me);
       Object.keys(inj).forEach(k => { inj[k]--; if (inj[k] <= 0) delete inj[k]; });
       let injMsg = '';
-      st.xi.forEach(p => { if (!inj[p.name] && Math.random() < CFG.inj) { const w = 1 + Math.floor(Math.random() * Math.random() * 7); inj[p.name] = w; injMsg = `🚑 ${p.name} sakatlandı (${w} hafta)`; } });
+      st.xi.forEach(p => { if (!inj[p.name] && Math.random() < CFG.inj) { const w = 1 + Math.floor(Math.random() * Math.random() * 7); inj[p.name] = w; injMsg = T(`🚑 ${p.name} sakatlandı (${w} hafta)`, `🚑 ${p.name} injured (${w} ${w > 1 ? 'weeks' : 'week'})`); } });
       wk++;
       q('.wk').textContent = wk; q('.pts').textContent = me.p; q('.wdl').textContent = `${me.w}-${me.d}-${me.l}`; q('.gl').textContent = `${me.gf}:${me.ga}`;
       q('.bar i').style.width = (wk / 34 * 100) + '%';
       const home = teams[mine.h].me, opp = teams[home ? mine.a : mine.h];
-      q('.lc-t').textContent = `${wk}. hafta · ${home ? 'İç saha' : 'Deplasman'}`;
-      q('.tn.h').textContent = teams[mine.h].name; q('.tn.a').textContent = teams[mine.a].name;
+      q('.lc-t').textContent = T(`${wk}. hafta · ${home ? 'İç saha' : 'Deplasman'}`, `Week ${wk} · ${home ? 'Home' : 'Away'}`);
+      q('.tn.h').textContent = TN(teams[mine.h].name); q('.tn.a').textContent = TN(teams[mine.a].name);
       const myG = home ? mine.gh : mine.ga, opG = home ? mine.ga : mine.gh, r = myG > opG ? 'G' : myG < opG ? 'M' : 'B';
       const mn = q('.minute i'); mn.style.transition = 'none'; mn.style.width = '0'; void mn.offsetWidth; mn.style.transition = `width ${Math.max(40, speed * .7)}ms linear`; mn.style.width = '100%';
       q('.sc').textContent = `${mine.gh} – ${mine.ga}`; q('.live-card').dataset.r = r;
       q('.goals-ev').innerHTML = mine.ev.map(e => `<span class="${e.t === 'me' ? 'mine' : ''}">⚽ ${e.min}' ${esc(e.sc)}${e.as ? ` <small>(${esc(e.as)})</small>` : ''}</span>`).join('');
-      const f = q('.feed'); f.insertAdjacentHTML('afterbegin', `<div class="fr ${r}"><span>${wk}</span><b>${r}</b> ${home ? '' : '@ '}${esc(opp.name)} <em>${myG}–${opG}</em></div>${injMsg ? `<div class="fr inj">${esc(injMsg)}</div>` : ''}`); while (f.children.length > 5) f.lastChild.remove();
+      const f = q('.feed'); f.insertAdjacentHTML('afterbegin', `<div class="fr ${r}"><span>${wk}</span><b>${FL(r)}</b> ${home ? '' : '@ '}${esc(TN(opp.name))} <em>${myG}–${opG}</em></div>${injMsg ? `<div class="fr inj">${esc(injMsg)}</div>` : ''}`); while (f.children.length > 5) f.lastChild.remove();
       if (typeof AdvAudio !== 'undefined' && speed > 100) AdvAudio.note(r === 'G' ? 784 : r === 'B' ? 523 : 330, .12, 'triangle', .04);
       table(); kings(); later(week, speed);
     }
@@ -310,22 +314,22 @@ const Draft = (() => {
   function renderStats() {
     const L = S.last; if (!L) { S.phase = 'tactics'; return renderTactics(); }
     const tab = S.tab || 'awards';
-    const msg = L.w === 34 ? '34’te 34! Efsane sezon!' : L.rank === 1 ? 'Şampiyon!' : L.rank <= 4 ? 'Avrupa’ya gidiyoruz.' : L.rank <= 10 ? 'Orta sıralar.' : L.rank >= 16 ? 'Küme düştük…' : 'Zor bir sezon.';
-    const award = (ic, ttl, s, val) => s ? `<div class="award"><span class="aw-ic">${ic}</span><span class="eyebrow">${ttl}</span><b>${esc(s.name)}</b><small><i class="dot" style="background:${s.c1}"></i>${esc(s.team)}</small><em>${val}</em></div>` : '';
-    const row = (s, i, val) => `<tr class="${s.tid === 'me' ? 'me' : ''}"><td>${i + 1}</td><td><b>${esc(s.name)}</b><small class="muted"> ${s.pos}</small></td><td><i class="dot" style="background:${s.c1}"></i>${esc(s.team)}</td><td><b>${val(s)}</b></td></tr>`;
+    const msg = L.w === 34 ? T('34’te 34! Efsane sezon!', '34 out of 34! A legendary season!') : L.rank === 1 ? T('Şampiyon!', 'Champions!') : L.rank <= 4 ? T('Avrupa’ya gidiyoruz.', 'We’re going to Europe.') : L.rank <= 10 ? T('Orta sıralar.', 'Mid-table.') : L.rank >= 16 ? T('Küme düştük…', 'Relegated…') : T('Zor bir sezon.', 'A tough season.');
+    const award = (ic, ttl, s, val) => s ? `<div class="award"><span class="aw-ic">${ic}</span><span class="eyebrow">${ttl}</span><b>${esc(s.name)}</b><small><i class="dot" style="background:${s.c1}"></i>${esc(TN(s.team))}</small><em>${val}</em></div>` : '';
+    const row = (s, i, val) => `<tr class="${s.tid === 'me' ? 'me' : ''}"><td>${i + 1}</td><td><b>${esc(s.name)}</b><small class="muted"> ${PZ(s.pos)}</small></td><td><i class="dot" style="background:${s.c1}"></i>${esc(TN(s.team))}</td><td><b>${val(s)}</b></td></tr>`;
     const body = {
-      awards: `<div class="awards">${award('⚽', 'Gol kralı', L.scorers[0], L.scorers[0] ? L.scorers[0].g + ' gol' : '')}${award('🎯', 'Asist kralı', L.assists[0], L.assists[0] ? L.assists[0].a + ' asist' : '')}${award('⭐', 'Yılın oyuncusu', L.poy[0], L.poy[0] ? `${L.poy[0].g} gol · ${L.poy[0].a} asist` : '')}${award('🧤', 'Altın eldiven', L.gk[0], L.gk[0] ? L.gk[0].cs + ' gol yemedi' : '')}</div>
-        <div class="poy-list"><span class="eyebrow">Yılın oyuncusu oylaması</span>${L.poy.map((s, i) => `<div class="mk ${s.tid === 'me' ? 'me' : ''}"><span>${i + 1}</span><i class="dot" style="background:${s.c1}"></i><b>${esc(s.name)}</b><small>${esc(s.team)}</small><em>${s.g}G ${s.a}A</em></div>`).join('')}</div>`,
-      table: `<table class="tbl"><thead><tr><th>#</th><th>Takım</th><th>O</th><th>G</th><th>B</th><th>M</th><th>A</th><th class="form">Form</th><th>P</th></tr></thead><tbody>${L.table.map((t, i) => `<tr class="${t.me ? 'me' : ''} ${i >= 15 ? 'rel' : i < 4 ? 'eur' : ''}"><td>${i + 1}</td><td><i class="dot" style="background:${t.c1}"></i>${esc(t.name)}</td><td>${t.w + t.d + t.l}</td><td>${t.w}</td><td>${t.d}</td><td>${t.l}</td><td>${t.gf - t.ga}</td><td class="form">${t.form.split('').map(c => `<i class="f${c}">${c}</i>`).join('')}</td><td><b>${t.p}</b></td></tr>`).join('')}</tbody></table>`,
-      goals: `<table class="tbl"><thead><tr><th>#</th><th>Oyuncu</th><th>Takım</th><th>Gol</th></tr></thead><tbody>${L.scorers.map((s, i) => row(s, i, s => s.g)).join('')}</tbody></table>`,
-      assists: `<table class="tbl"><thead><tr><th>#</th><th>Oyuncu</th><th>Takım</th><th>Asist</th></tr></thead><tbody>${L.assists.map((s, i) => row(s, i, s => s.a)).join('')}</tbody></table>`,
-      mine: `<table class="tbl"><thead><tr><th>Oyuncu</th><th>Mevki</th><th>Maç</th><th>Gol</th><th>Asist</th><th>GY</th></tr></thead><tbody>${L.mine.map(s => `<tr><td><b>${esc(s.name)}</b></td><td>${s.pos}</td><td>${s.apps}</td><td>${s.g}</td><td>${s.a}</td><td>${s.cs}</td></tr>`).join('')}</tbody></table><p class="muted sm">GY: gol yenmeyen maç (kaleci ve defans)</p>`
+      awards: `<div class="awards">${award('⚽', T('Gol kralı', 'Top scorer'), L.scorers[0], L.scorers[0] ? L.scorers[0].g + T(' gol', ' goals') : '')}${award('🎯', T('Asist kralı', 'Most assists'), L.assists[0], L.assists[0] ? L.assists[0].a + T(' asist', ' assists') : '')}${award('⭐', T('Yılın oyuncusu', 'Player of the season'), L.poy[0], L.poy[0] ? `${L.poy[0].g} ${T('gol', 'goals')} · ${L.poy[0].a} ${T('asist', 'assists')}` : '')}${award('🧤', T('Altın eldiven', 'Golden Glove'), L.gk[0], L.gk[0] ? L.gk[0].cs + T(' gol yemedi', ' clean sheets') : '')}</div>
+        <div class="poy-list"><span class="eyebrow">${T('Yılın oyuncusu oylaması', 'Player of the season vote')}</span>${L.poy.map((s, i) => `<div class="mk ${s.tid === 'me' ? 'me' : ''}"><span>${i + 1}</span><i class="dot" style="background:${s.c1}"></i><b>${esc(s.name)}</b><small>${esc(TN(s.team))}</small><em>${s.g}${T('G', 'G')} ${s.a}${T('A', 'A')}</em></div>`).join('')}</div>`,
+      table: `<table class="tbl"><thead><tr><th>#</th><th>${T('Takım', 'Team')}</th><th>${T('O', 'P')}</th><th>${T('G', 'W')}</th><th>${T('B', 'D')}</th><th>${T('M', 'L')}</th><th>${T('A', 'GD')}</th><th class="form">Form</th><th>${T('P', 'Pts')}</th></tr></thead><tbody>${L.table.map((t, i) => `<tr class="${t.me ? 'me' : ''} ${i >= 15 ? 'rel' : i < 4 ? 'eur' : ''}"><td>${i + 1}</td><td><i class="dot" style="background:${t.c1}"></i>${esc(TN(t.name))}</td><td>${t.w + t.d + t.l}</td><td>${t.w}</td><td>${t.d}</td><td>${t.l}</td><td>${t.gf - t.ga}</td><td class="form">${t.form.split('').map(c => `<i class="f${c}">${FL(c)}</i>`).join('')}</td><td><b>${t.p}</b></td></tr>`).join('')}</tbody></table>`,
+      goals: `<table class="tbl"><thead><tr><th>#</th><th>${T('Oyuncu', 'Player')}</th><th>${T('Takım', 'Team')}</th><th>${T('Gol', 'Goals')}</th></tr></thead><tbody>${L.scorers.map((s, i) => row(s, i, s => s.g)).join('')}</tbody></table>`,
+      assists: `<table class="tbl"><thead><tr><th>#</th><th>${T('Oyuncu', 'Player')}</th><th>${T('Takım', 'Team')}</th><th>${T('Asist', 'Assists')}</th></tr></thead><tbody>${L.assists.map((s, i) => row(s, i, s => s.a)).join('')}</tbody></table>`,
+      mine: `<table class="tbl"><thead><tr><th>${T('Oyuncu', 'Player')}</th><th>${T('Mevki', 'Pos.')}</th><th>${T('Maç', 'Apps')}</th><th>${T('Gol', 'Goals')}</th><th>${T('Asist', 'Assists')}</th><th>${T('GY', 'CS')}</th></tr></thead><tbody>${L.mine.map(s => `<tr><td><b>${esc(s.name)}</b></td><td>${PZ(s.pos)}</td><td>${s.apps}</td><td>${s.g}</td><td>${s.a}</td><td>${s.cs}</td></tr>`).join('')}</tbody></table><p class="muted sm">${T('GY: gol yenmeyen maç (kaleci ve defans)', 'CS: clean sheets (goalkeeper and defence)')}</p>`
     }[tab];
-    el.innerHTML = `<section class="dr-hero"><p class="eyebrow">Sezon sonu · ${esc(L.out)}'in yerini sen aldın</p>
-      <div class="end-head"><div class="big-pts">${L.pts}<small>/102</small></div><div><h2>${L.rank}. sıra · ${msg}</h2><p class="muted">${L.w}G ${L.d}B ${L.l}M · Gol ${L.gf}:${L.ga}</p>${L.best ? '<span class="chip on">🏆 Yeni rekor</span>' : `<span class="chip">Rekor ${Math.max(L.prevBest, L.pts)}</span>`}</div></div></section>
-      <nav class="st-tabs">${[['awards', '🏅 Ödüller'], ['table', 'Puan durumu'], ['goals', 'Gol krallığı'], ['assists', 'Asist krallığı'], ['mine', 'Takımım']].map(([k, t]) => `<button class="${tab === k ? 'on' : ''}" data-t="${k}">${t}</button>`).join('')}</nav>
+    el.innerHTML = `<section class="dr-hero"><p class="eyebrow">${T('Sezon sonu', 'End of season')} · ${T(`${esc(L.out)}'in yerini sen aldın`, `you took ${esc(L.out)}’s place`)}</p>
+      <div class="end-head"><div class="big-pts">${L.pts}<small>/102</small></div><div><h2>${T(L.rank + '. sıra', 'Finished ' + L.rank + ([, 'st', 'nd', 'rd'][L.rank % 10 > 3 || [11, 12, 13].includes(L.rank % 100) ? 0 : L.rank % 10] || 'th'))} · ${msg}</h2><p class="muted">${L.w}${FL('G')} ${L.d}${FL('B')} ${L.l}${FL('M')} · ${T('Gol', 'Goals')} ${L.gf}:${L.ga}</p>${L.best ? `<span class="chip on">🏆 ${T('Yeni rekor', 'New record')}</span>` : `<span class="chip">${T('Rekor', 'Record')} ${Math.max(L.prevBest, L.pts)}</span>`}</div></div></section>
+      <nav class="st-tabs">${[['awards', T('🏅 Ödüller', '🏅 Awards')], ['table', T('Puan durumu', 'League table')], ['goals', T('Gol krallığı', 'Top scorers')], ['assists', T('Asist krallığı', 'Top assists')], ['mine', T('Takımım', 'My team')]].map(([k, t]) => `<button class="${tab === k ? 'on' : ''}" data-t="${k}">${t}</button>`).join('')}</nav>
       <section class="st-body">${body}</section>
-      <div class="dr-actions"><button class="pill ghost" data-a="tac">Taktiği değiştir</button><button class="pill ghost" data-a="again">Aynı kadroyla tekrar</button><button class="pill" data-a="new">Yeni draft</button></div>`;
+      <div class="dr-actions"><button class="pill ghost" data-a="tac">${T('Taktiği değiştir', 'Change tactics')}</button><button class="pill ghost" data-a="again">${T('Aynı kadroyla tekrar', 'Replay with the same squad')}</button><button class="pill" data-a="new">${T('Yeni draft', 'New draft')}</button></div>`;
     el.querySelectorAll('.st-tabs button').forEach(b => b.onclick = () => { S.tab = b.dataset.t; save(); renderStats(); });
     el.querySelector('[data-a=tac]').onclick = () => { S.phase = 'tactics'; render(); };
     el.querySelector('[data-a=again]').onclick = () => season();

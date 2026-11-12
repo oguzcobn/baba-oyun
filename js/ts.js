@@ -8,10 +8,14 @@
    ===================================================================== */
 const TS = (() => {
   const API = 'https://www.thesportsdb.com/api/v1/json/123/', KEY = 'baba_ts_cache2', TTL = 30 * 60000;
-  const LINKS = [['TS Club', 'https://trabzonspor.com.tr/'], ['Resmî site', 'https://www.trabzonspor.org.tr/']];
+  const LINKS = () => [['TS Club', 'https://trabzonspor.com.tr/'], [T('Resmî site', 'Official site'), 'https://www.trabzonspor.org.tr/']];
+  const LG_EN = { 'Süper Lig': 'Süper Lig', 'UEFA Konferans Ligi': 'UEFA Conference League', 'UEFA Avrupa Ligi': 'UEFA Europa League', 'UEFA Şampiyonlar Ligi': 'UEFA Champions League', 'Türkiye Kupası': 'Turkish Cup' };
+  const lg = n => I18N.lang === 'en' ? (LG_EN[n] || n) : n;
+  const ERR_EN = { 'son maçlar': 'recent results', 'fikstür': 'fixtures', 'maç verisi': 'match data', 'kadro': 'squad' };
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const TZ = 'Europe/Istanbul', isTS = n => /trabzonspor/i.test(n || '');
-  const POS = { GK: 'Kaleci', DF: 'Defans', MF: 'Orta saha', FW: 'Forvet' };
+  const POSL = { GK: ['Kaleci', 'Goalkeepers'], DF: ['Defans', 'Defenders'], MF: ['Orta saha', 'Midfielders'], FW: ['Forvet', 'Forwards'] };
+  const POS = new Proxy(POSL, { get: (o, k) => o[k] ? T(o[k][0], o[k][1]) : undefined });
   let el = null, timer = null;
 
   const get = async u => { const r = await fetch(u); if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); };
@@ -22,8 +26,8 @@ const TS = (() => {
     const d = new Date(e.dateEvent + 'T' + (has ? t : '12:00:00') + 'Z');
     return isNaN(d) ? null : { d, has };
   };
-  const fmtD = (w, long) => w.d.toLocaleDateString('tr-TR', long ? { timeZone: TZ, weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' } : { timeZone: TZ, day: '2-digit', month: '2-digit', year: 'numeric' });
-  const fmtT = w => w.has ? w.d.toLocaleTimeString('tr-TR', { timeZone: TZ, hour: '2-digit', minute: '2-digit' }) : null;
+  const fmtD = (w, long) => w.d.toLocaleDateString(I18N.locale, long ? { timeZone: TZ, weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' } : { timeZone: TZ, day: '2-digit', month: '2-digit', year: 'numeric' });
+  const fmtT = w => w.has ? w.d.toLocaleTimeString(I18N.locale, { timeZone: TZ, hour: '2-digit', minute: '2-digit' }) : null;
 
   /* ESPN'in herkese açık (anahtarsız) skor servisi: sezonun tüm maçları, lig + Avrupa + kupa */
   const ESPN = 'https://site.api.espn.com/apis/site/v2/sports/soccer/', LG = { 'tur.1': 'Süper Lig', 'uefa.europa.conf': 'UEFA Konferans Ligi', 'uefa.europa': 'UEFA Avrupa Ligi', 'uefa.champions': 'UEFA Şampiyonlar Ligi', 'tur.cup': 'Türkiye Kupası' };
@@ -88,24 +92,24 @@ const TS = (() => {
   function draw(d, stale, busy) {
     if (!el || !el.isConnected) return;
     const nx = d && d.next && d.next[0], w = when(nx), res = (d && d.last) || [], sq = d && d.squad;
-    const outcome = e => { if (e.hs == null || e.as == null || e.hs === '' || e.as === '') return ['–', '']; const h = +e.hs, a = +e.as, ts = isTS(e.home) ? h - a : a - h; return ts > 0 ? ['G', 'w'] : ts < 0 ? ['M', 'l'] : ['B', 'd']; };
+    const outcome = e => { if (e.hs == null || e.as == null || e.hs === '' || e.as === '') return ['–', '']; const h = +e.hs, a = +e.as, ts = isTS(e.home) ? h - a : a - h; return ts > 0 ? [T('G', 'W'), 'w'] : ts < 0 ? [T('M', 'L'), 'l'] : [T('B', 'D'), 'd']; };
     let cd = '';
-    if (w && w.has) { const ms = w.d - Date.now(), dd = Math.floor(ms / 864e5), hh = Math.floor(ms % 864e5 / 3600e3), mm = Math.floor(ms % 3600e3 / 60000); cd = ms > 0 ? (dd ? dd + ' gün ' : '') + hh + ' sa ' + mm + ' dk kaldı' : 'Maç başladı ya da bitti'; }
-    else if (w) { const dd = Math.ceil((w.d - Date.now()) / 864e5); cd = dd > 0 ? dd + ' gün kaldı' : ''; }
+    if (w && w.has) { const ms = w.d - Date.now(), dd = Math.floor(ms / 864e5), hh = Math.floor(ms % 864e5 / 3600e3), mm = Math.floor(ms % 3600e3 / 60000); cd = ms > 0 ? T((dd ? dd + ' gün ' : '') + hh + ' sa ' + mm + ' dk kaldı', (dd ? dd + (dd > 1 ? ' days ' : ' day ') : '') + hh + ' hr ' + mm + ' min to go') : T('Maç başladı ya da bitti', 'Kicked off or finished'); }
+    else if (w) { const dd = Math.ceil((w.d - Date.now()) / 864e5); cd = dd > 0 ? T(dd + ' gün kaldı', dd + (dd > 1 ? ' days to go' : ' day to go')) : ''; }
     const groups = ['GK', 'DF', 'MF', 'FW', ''].map(k => [k, sq ? sq.list.filter(p => (POS[p.pos] ? p.pos : '') === k) : []]).filter(g => g[1].length);
     el.innerHTML = `<div class="ts">
-      <header class="ts-hero"><div><p class="ts-eye">Bordo-Mavi · 1967</p><h1>Trabzonspor<i>.</i></h1><p class="ts-sub">Sıradaki maç, son beş sonuç ve kadro</p></div>
-        <div class="ts-links">${LINKS.map((l, i) => `<a class="ts-btn${i ? ' ghost' : ''}" href="${l[1]}" target="_blank" rel="noopener noreferrer">${l[0]} ↗</a>`).join('')}</div></header>
-      ${!d ? `<p class="ts-msg" role="status">${busy ? 'Veriler yükleniyor…' : 'Veri alınamadı. İnternet bağlantını kontrol edip yeniden dene.'}</p>` : `
-      <section class="ts-next" aria-label="Sıradaki maç"><p class="ts-eye">En yakın maç</p>${nx && w ? `
+      <header class="ts-hero"><div><p class="ts-eye">${T('Bordo-Mavi', 'Claret and Blue')} · 1967</p><h1>Trabzonspor<i>.</i></h1><p class="ts-sub">${T('Sıradaki maç, son beş sonuç ve kadro', 'Next match, last five results and the squad')}</p></div>
+        <div class="ts-links">${LINKS().map((l, i) => `<a class="ts-btn${i ? ' ghost' : ''}" href="${l[1]}" target="_blank" rel="noopener noreferrer">${l[0]} ↗</a>`).join('')}</div></header>
+      ${!d ? `<p class="ts-msg" role="status">${busy ? T('Veriler yükleniyor…', 'Loading data…') : T('Veri alınamadı. İnternet bağlantını kontrol edip yeniden dene.', 'Couldn’t load the data. Check your internet connection and try again.')}</p>` : `
+      <section class="ts-next" aria-label="${T('Sıradaki maç', 'Next match')}"><p class="ts-eye">${T('En yakın maç', 'Next match')}</p>${nx && w ? `
         <div class="ts-vs"><b class="${isTS(nx.home) ? 'me' : ''}">${esc(nx.home)}</b><span>–</span><b class="${isTS(nx.away) ? 'me' : ''}">${esc(nx.away)}</b></div>
-        <div class="ts-when"><div><small>Tarih</small><b>${esc(fmtD(w, true))}</b></div><div><small>Saat (Türkiye)</small><b>${fmtT(w) ? esc(fmtT(w)) : 'Henüz açıklanmadı'}</b></div><div><small>${isTS(nx.home) ? 'İç saha' : 'Deplasman'}</small><b>${esc(nx.venue || (isTS(nx.home) ? (d.team && d.team.stadium) : '') || '—')}</b></div></div>
-        <p class="ts-cd">${esc([nx.league, +nx.round > 0 ? nx.round + '. hafta' : '', cd].filter(Boolean).join(' · '))}</p>` : `<p class="ts-msg">Kaynakta planlanmış maç görünmüyor. Güncel fikstür için resmî siteye bak.</p>`}</section>
+        <div class="ts-when"><div><small>${T('Tarih', 'Date')}</small><b>${esc(fmtD(w, true))}</b></div><div><small>${T('Saat (Türkiye)', 'Kick-off (Turkey time)')}</small><b>${fmtT(w) ? esc(fmtT(w)) : T('Henüz açıklanmadı', 'Not announced yet')}</b></div><div><small>${isTS(nx.home) ? T('İç saha', 'Home') : T('Deplasman', 'Away')}</small><b>${esc(nx.venue || (isTS(nx.home) ? (d.team && d.team.stadium) : '') || '—')}</b></div></div>
+        <p class="ts-cd">${esc([lg(nx.league), +nx.round > 0 ? T(nx.round + '. hafta', 'Matchweek ' + nx.round) : '', cd].filter(Boolean).join(' · '))}</p>` : `<p class="ts-msg">${T('Kaynakta planlanmış maç görünmüyor. Güncel fikstür için resmî siteye bak.', 'No upcoming match in the source. Check the official site for the latest fixtures.')}</p>`}</section>
       <div class="ts-cols">
-        <section class="ts-card" aria-label="Son beş maç"><h2>${res.length >= 5 ? 'Son 5 maç' : 'Son maçlar'}</h2>${res.length ? `<div class="ts-form">${res.slice().reverse().map(e => `<i class="${outcome(e)[1]}">${outcome(e)[0]}</i>`).join('')}</div>${res.map(e => { const ww = when(e), o = outcome(e); return `<div class="ts-row"><i class="${o[1]}">${o[0]}</i><span><b>${esc(e.home)} ${e.hs != null && e.hs !== '' ? esc(e.hs) + ' – ' + esc(e.as) : 'v'} ${esc(e.away)}</b><small>${ww ? esc(fmtD(ww)) : ''}${e.league ? ' · ' + esc(e.league) : ''}</small></span></div>`; }).join('')}${res.length < 5 ? `<p class="ts-note">Kaynaklar şu an yalnızca ${res.length} sonuç verdi; tüm sonuçlar için resmî siteye bak.</p>` : ''}` : `<p class="ts-msg">Sonuçlar alınamadı.</p>`}</section>
-        <section class="ts-card" aria-label="Kadro"><h2>Kadro ${sq ? `<small>${sq.list.length} oyuncu</small>` : ''}</h2>${sq ? groups.map(g => `<h3>${POS[g[0]] || 'Diğer'}</h3><div class="ts-squad">${g[1].map(p => `<div class="ts-p"><i>${esc(p.no || '–')}</i><span><b>${esc(p.name)}</b><small>${esc([p.nat, p.note].filter(Boolean).join(' · '))}</small></span></div>`).join('')}</div>`).join('') + (sq.full ? '' : `<p class="ts-note">Bu kaynak ücretsiz kullanımda kadronun yalnızca bir bölümünü veriyor; tam liste için resmî siteye bak.</p>`) : `<p class="ts-msg">Kadro alınamadı. Resmî siteden bakabilirsin.</p>`}</section>
+        <section class="ts-card" aria-label="${T('Son beş maç', 'Last five matches')}"><h2>${res.length >= 5 ? T('Son 5 maç', 'Last 5 matches') : T('Son maçlar', 'Recent matches')}</h2>${res.length ? `<div class="ts-form">${res.slice().reverse().map(e => `<i class="${outcome(e)[1]}">${outcome(e)[0]}</i>`).join('')}</div>${res.map(e => { const ww = when(e), o = outcome(e); return `<div class="ts-row"><i class="${o[1]}">${o[0]}</i><span><b>${esc(e.home)} ${e.hs != null && e.hs !== '' ? esc(e.hs) + ' – ' + esc(e.as) : 'v'} ${esc(e.away)}</b><small>${ww ? esc(fmtD(ww)) : ''}${e.league ? ' · ' + esc(lg(e.league)) : ''}</small></span></div>`; }).join('')}${res.length < 5 ? `<p class="ts-note">${T(`Kaynaklar şu an yalnızca ${res.length} sonuç verdi; tüm sonuçlar için resmî siteye bak.`, `The sources returned only ${res.length} results for now; see the official site for all of them.`)}</p>` : ''}` : `<p class="ts-msg">${T('Sonuçlar alınamadı.', 'Couldn’t load the results.')}</p>`}</section>
+        <section class="ts-card" aria-label="${T('Kadro', 'Squad')}"><h2>${T('Kadro', 'Squad')} ${sq ? `<small>${sq.list.length} ${T('oyuncu', 'players')}</small>` : ''}</h2>${sq ? groups.map(g => `<h3>${POS[g[0]] || T('Diğer', 'Others')}</h3><div class="ts-squad">${g[1].map(p => `<div class="ts-p"><i>${esc(p.no || '–')}</i><span><b>${esc(p.name)}</b><small>${esc([p.nat, p.note === 'kaptan' ? T('kaptan', 'captain') : p.note === 'kiralık' ? T('kiralık', 'on loan') : p.note].filter(Boolean).join(' · '))}</small></span></div>`).join('')}</div>`).join('') + (sq.full ? '' : `<p class="ts-note">${T('Bu kaynak ücretsiz kullanımda kadronun yalnızca bir bölümünü veriyor; tam liste için resmî siteye bak.', 'On its free plan this source only provides part of the squad; see the official site for the full list.')}</p>`) : `<p class="ts-msg">${T('Kadro alınamadı. Resmî siteden bakabilirsin.', 'Couldn’t load the squad. You can check it on the official site.')}</p>`}</section>
       </div>
-      <p class="ts-foot">${stale ? '⚠ Kaynağa ulaşılamadı; son kayıtlı veri gösteriliyor. ' : ''}Son güncelleme: ${esc(new Date(d.at).toLocaleString('tr-TR', { timeZone: TZ, day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }))}${d.errs && d.errs.length ? ' · alınamayan: ' + esc(d.errs.join(', ')) : ''} · Kaynak: ESPN, TheSportsDB${sq ? ', ' + esc(sq.src) : ''} (gönüllü katkılı; saatler değişebilir, kesin bilgi için resmî site) <button type="button" class="ts-btn ghost sm" data-a="refresh" ${busy ? 'disabled' : ''}>${busy ? 'Yenileniyor…' : 'Yenile'}</button></p>`}
+      <p class="ts-foot">${stale ? T('⚠ Kaynağa ulaşılamadı; son kayıtlı veri gösteriliyor. ', '⚠ Couldn’t reach the source; showing the last saved data. ') : ''}${T('Son güncelleme', 'Last updated')}: ${esc(new Date(d.at).toLocaleString(I18N.locale, { timeZone: TZ, day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }))}${d.errs && d.errs.length ? T(' · alınamayan: ', ' · unavailable: ') + esc(d.errs.map(x => I18N.lang === 'en' ? (ERR_EN[x] || x) : x).join(', ')) : ''} · ${T('Kaynak', 'Sources')}: ESPN, TheSportsDB${sq ? ', ' + esc(sq.src) : ''} ${T('(gönüllü katkılı; saatler değişebilir, kesin bilgi için resmî site)', '(community-maintained; times may change — check the official site to be sure)')} <button type="button" class="ts-btn ghost sm" data-a="refresh" ${busy ? 'disabled' : ''}>${busy ? T('Yenileniyor…', 'Refreshing…') : T('Yenile', 'Refresh')}</button></p>`}
     </div>`;
     const b = el.querySelector('[data-a=refresh]'); if (b) b.onclick = () => refresh(true);
   }

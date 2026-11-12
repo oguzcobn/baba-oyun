@@ -79,7 +79,7 @@
         <p class="cbn-hint">${L('Hesap, ücretsiz bir bulut veritabanında (Supabase) tutulur; herkes yalnızca kendi kayıtlarına erişebilir. Giriş yapmazsan CBN eskisi gibi yalnızca bu cihazda çalışır.', 'The account lives in a free cloud database (Supabase); everyone can access only their own records. If you do not sign in, CBN keeps working on this device only, as before.')}</p>`}</section>
       <section class="cbn-card"><h2>${L('Görünüm ve dil', 'Appearance & language')}</h2><div class="cbn-fg">
         <label>${L('Tema', 'Theme')}${sel('theme', [['system', L('Sistem', 'System')], ['light', L('Açık', 'Light')], ['dark', L('Koyu', 'Dark')]], s.theme)}</label>
-        <label>${L('Dil', 'Language')}${sel('lang', [['tr', 'Türkçe'], ['en', 'English']], s.lang)}</label>
+        <label>${L('Dil', 'Language')}${sel('lang', [['tr', 'Türkçe'], ['en', 'English']], I18N.lang)}</label>
         <label>${L('Tarih biçimi', 'Date format')}${sel('dateFmt', [['dmy', '31.12.2026'], ['mdy', '12/31/2026'], ['ymd', '2026-12-31']], s.dateFmt)}</label>
         <label>${L('Başlangıç sayfası', 'Start page')}${sel('startPage', CBN.MODS.filter(m => m !== 'settings').map(m => [m, CBN.modName(m)]), s.startPage)}</label>
         <label>${L('Varsayılan para birimi', 'Default currency')}${sel('cur', ['TRY', 'GBP', 'EUR', 'USD'].map(c => [c, c]), s.cur || 'TRY')}</label></div></section>
@@ -109,7 +109,7 @@
         <p class="cbn-hint">CBN ${L('veri şeması', 'data schema')} v${CBN.SCHEMA}</p></section></div>`;
 
     const $ = q => main.querySelector(q);
-    ['theme', 'lang', 'dateFmt', 'startPage', 'cur'].forEach(k => $(`[name=${k}]`).onchange = e => { s[k] = e.target.value; CBN.saveSettings(); CBN.redraw(); });
+    ['theme', 'lang', 'dateFmt', 'startPage', 'cur'].forEach(k => $(`[name=${k}]`).onchange = e => { s[k] = e.target.value; if (k === 'lang') { I18N.set(e.target.value); return; } CBN.saveSettings(); CBN.redraw(); });
     main.querySelectorAll('.st-mods li').forEach(li => {
       const m = s.modules.find(x => x.id === li.dataset.id), i = s.modules.indexOf(m);
       li.querySelector('input:not([type])').onchange = e => { m.name = e.target.value.trim().slice(0, 30); CBN.saveSettings(); CBN.redraw(); };
