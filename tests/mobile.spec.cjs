@@ -71,3 +71,31 @@ test.describe('BABA. new daily experience',()=>{
   await expect(page.locator('.bb-lab .baba-actions')).toHaveCount(0);
  });
 });
+
+test.describe('Consolidated category navigation',()=>{
+ test.use({viewport:{width:390,height:844}});
+ test.beforeEach(async({page})=>page.addInitScript(()=>sessionStorage.setItem('baba_ok','1')));
+ for(const [route,links] of [['kesfet',['gundem','akis','play']],['hayat',['seyahat','foto']],['sosyal',['msn','dost']]]){
+  test(route+' shows preserved legacy destinations',async({page})=>{
+   await page.goto(BASE+'#'+route);
+   await expect(page.locator('.bb-group-page')).toBeVisible();
+   for(const id of links)await expect(page.locator('.bb-group-card[href="#'+id+'"]')).toBeVisible();
+   const d=await page.evaluate(()=>[document.documentElement.scrollWidth,document.documentElement.clientWidth]);
+   expect(d[0]).toBeLessThanOrEqual(d[1]+3);
+  });
+ }
+ test('home displays grouped categories instead of duplicated tiles',async({page})=>{
+  await page.goto(BASE);
+  await expect(page.locator('.hub-card[href="#kesfet"]')).toBeVisible();
+  await expect(page.locator('.hub-card[href="#hayat"]')).toBeVisible();
+  await expect(page.locator('.hub-card[href="#sosyal"]')).toBeVisible();
+  await expect(page.locator('.hub-card[href="#gundem"]')).toHaveCount(0);
+  await expect(page.locator('.hub-card[href="#lab"]')).toHaveCount(0);
+ });
+ test('legacy routes remain available and data modules load',async({page})=>{
+  for(const [route,selector] of [['gundem','.bb-gundem'],['akis','.bb-akis'],['play','.bb-play'],['lab','.bb-lab']]){
+   await page.goto(BASE+'#'+route);
+   await expect(page.locator(selector)).toBeVisible();
+  }
+ });
+});
