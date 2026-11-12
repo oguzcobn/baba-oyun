@@ -115,6 +115,8 @@ const App = (() => {
       { id: 'dost', n: '03', t: 'Dost', d: T('Psikoloji okuma alanı · nefes molası', 'Psychology reading room · breathing break'), cls: 'c-dost' },
       { id: 'oyunlar', n: '04', t: T('Oyunlar', 'Games'), d: T('Süper Lig Draft · Empires of the Valley · 2048 · Sudoku · Mayın · Blok', 'Süper Lig Draft · Empires of the Valley · 2048 · Sudoku · Minesweeper · Blocks'), cls: 'c-oyun' },
       { id: 'seyahat', n: '05', t: T('Seyahat', 'Travel'), d: T('Booking · Airbnb · Skyscanner · Gezilerim 3D dünya', 'Booking · Airbnb · Skyscanner · My Travels 3D globe'), cls: 'c-sey' },
+      { id: 'play', n: '10', t: 'PLAY.', d: T('Müzik · video · podcast · izleme listesi', 'Music · video · podcasts · watchlist'), cls: 'c-play' },
+      { id: 'akis', n: '11', t: 'AKIŞ.', d: T('Kişisel paylaşımlar · anılar · kaydedilenler', 'Personal posts · memories · saved items'), cls: 'c-akis' },
       { id: 'gundem', n: '08', t: 'GÜNDEM.', d: T('Haber kaynakları · ilgi alanları · sonra oku', 'News sources · topics · read later'), cls: 'c-gundem' },
       { id: 'lab', n: '09', t: 'LAB.', d: T('Komut oluşturucu · metin araçları · taslaklar', 'Prompt builder · text tools · drafts'), cls: 'c-lab' },
       { id: 'foto', n: '06', t: T('Fotoğraf', 'Photography'), d: T('Pexels · günün fotoğrafçısı · 3D sokak galerisi', 'Pexels · photographer of the day · 3D street gallery'), cls: 'c-foto' },
@@ -482,6 +484,8 @@ const App = (() => {
     else if (cbnOn) { root().innerHTML = '<div id="cbnRoot"></div>'; window.scrollTo(0, 0); CBN.open(root().querySelector('#cbnRoot'), r); }
     else if (r === 'gundem' && typeof Gundem !== 'undefined') { root().innerHTML = '<div id="gundemRoot"></div>'; window.scrollTo(0,0); Gundem.open(root().querySelector('#gundemRoot')); }
     else if (r === 'lab' && typeof Lab !== 'undefined') { root().innerHTML = '<div id="labRoot"></div>'; window.scrollTo(0,0); Lab.open(root().querySelector('#labRoot')); }
+    else if (r === 'play' && typeof Play !== 'undefined') { root().innerHTML = '<div id="playRoot"></div>'; window.scrollTo(0,0); Play.open(root().querySelector('#playRoot')); }
+    else if (r === 'akis' && typeof Akis !== 'undefined') { root().innerHTML = '<div id="akisRoot"></div>'; window.scrollTo(0,0); Akis.open(root().querySelector('#akisRoot')); }
     else if (r === 'draft') { root().innerHTML = '<section class="game-page"><div class="gp-head"><a class="back" href="#oyunlar">← ' + T('Oyunlar', 'Games') + '</a></div><div id="draftRoot"></div></section>'; window.scrollTo(0, 0); Draft.open(root().querySelector('#draftRoot')); }
     else if (r === 'is' && typeof Is !== 'undefined') { root().innerHTML = '<div id="isRoot"></div>'; window.scrollTo(0, 0); Is.open(root().querySelector('#isRoot')); }
     else if ((r === 'dost' || r.startsWith('dost/')) && typeof Dost !== 'undefined') { root().innerHTML = '<div id="dostRoot"></div>'; window.scrollTo(0, 0); Dost.open(root().querySelector('#dostRoot'), r); }
