@@ -123,7 +123,7 @@ const App = (() => {
         <h1 class="display xl">BABA<em>.</em></h1>
         <p class="lead">${T('İş, dinlenme, oyun ve yolculuk — hepsi tek yerde, sadece davetlilere açık.', 'Work, rest, play and travel — all in one place, open by invitation only.')}</p></section>
       <section class="hub">${CATS.map((c, i) => `<a class="hub-card ${c.cls}" href="#${c.id}"><span class="hub-n">${String(i + 1).padStart(2, '0')}</span><h2>${c.t}</h2><p>${c.d}</p><span class="arrow">↗</span></a>`).join('')}</section>
-      <footer class="foot"><div class="foot-word">BABA<span>.</span></div><div class="foot-row">${isOwner() ? `<button class="link" data-a="pin">${T('Şifreyi değiştir', 'Change PIN')}</button><a class="link" href="#erisim">${T('Davetler &amp; erişim', 'Invitations &amp; access')}</a><button class="link" data-a="lock">${T('Kilitle', 'Lock')}</button>` : `<button class="link" data-a="gout">${T('Bu cihazdan çık', 'Sign out on this device')}</button>`}<span class="muted">${T('Yalnızca davetliler için', 'Invitation only')} · ${T('sürüm', 'version')} 35</span></div></footer>`;
+      <footer class="foot"><div class="foot-word">BABA<span>.</span></div><div class="foot-row">${isOwner() ? `<button class="link" data-a="pin">${T('Şifreyi değiştir', 'Change PIN')}</button><a class="link" href="#erisim">${T('Davetler &amp; erişim', 'Invitations &amp; access')}</a><button class="link" data-a="lock">${T('Kilitle', 'Lock')}</button>` : `<button class="link" data-a="gout">${T('Bu cihazdan çık', 'Sign out on this device')}</button>`}<span class="muted">${T('Yalnızca davetliler için', 'Invitation only')} · ${T('sürüm', 'version')} 36</span></div></footer>`;
     const q = s => root().querySelector(s);
     if (q('[data-a=pin]')) q('[data-a=pin]').onclick = () => { click(); changePin(); };
     if (q('[data-a=lock]')) q('[data-a=lock]').onclick = () => { click(); lock(); };
@@ -157,6 +157,7 @@ const App = (() => {
         <div class="hero-row"><p class="lead">${T('Altı oyun, sıfır reklam. Futbol draftından vadide medeniyet kurmaya, kısa molalar için seçilmiş bir koleksiyon.', 'Six games, zero adverts. From a football draft to building a civilisation in the valley — a hand-picked collection for short breaks.')}</p>
           <a class="pill big" href="#draft">${T('Draft’a başla', 'Start the draft')} ↗</a></div></section>
       <section class="feature"><a href="#draft" class="feat-card"><div class="feat-art">${ART.draft}</div><div class="feat-txt"><span class="badge">${T('Günün oyunu', 'Game of the day')}</span><h2>Süper Lig<br>Draft</h2><p>${T('Çark 18 Süper Lig kulübü arasında eşit şansla döner; gelen takımın son 10 yıllık kadrosundan seç, 11+2 kur. Teknik direktörünü ve taktiğini belirle, 34 maçlık sezonu canlı izle. Hedef: 102 puan.', 'The wheel spins across 18 Süper Lig clubs with equal odds; pick from that club’s squads of the last 10 years and build an 11 plus 2. Choose your manager and tactics, then follow the 34-match season live. Target: 102 points.')}</p><div class="card-tags"><span class="chip">${T('Futbol', 'Football')}</span><span class="chip">${T('Strateji', 'Strategy')}</span><span class="chip dark">🏆 ${ls.get('draft_best', 0)} ${T('puan', 'pts')}</span></div></div></a></section>
+      <a class="sc-banner" href="#skor"><span class="sc-crown">🏆</span><span><b>${T('Aile skor tablosu', 'Family leaderboard')}</b><small>${T('Haftanın şampiyonu kim? Rekorlar ve Draft düellosu', 'Who’s champion this week? Records and the Draft duel')}</small></span><i>→</i></a>
       <section class="list"><div class="list-head"><h2 class="display sm">${T('Koleksiyon', 'Collection')}</h2><span class="muted">${GAMES.length} ${T('oyun', 'games')}</span></div>
         <div class="cards">${GAMES.map(card).join('')}</div></section>
 `;
@@ -238,8 +239,8 @@ const App = (() => {
       else if (!canMove()) showOver(T('Hamle kalmadı', 'No moves left'));
     }
     function canMove() { for (let r = 0; r < 4; r++) for (let c = 0; c < 4; c++) { const t = grid[r][c]; if (!t) return true; if (c < 3 && grid[r][c + 1] && grid[r][c + 1].v === t.v) return true; if (r < 3 && grid[r + 1][c] && grid[r + 1][c].v === t.v) return true; } return false; }
-    function showOver(t, canGo) { over.hidden = false; over.innerHTML = `<b>${t}</b><span>${T('Skor', 'Score')}: ${score}</span><div>${canGo ? `<button class="bb-btn" data-a="go">${T('Devam et', 'Keep going')}</button>` : ''}<button class="bb-btn" data-a="again">${T('Yeni oyun', 'New game')}</button></div>`; over.querySelector('[data-a=again]').onclick = () => { ls.set('bb_2048_state', null); tilesEl.innerHTML = ''; fresh(); }; const g = over.querySelector('[data-a=go]'); if (g) g.onclick = () => { over.hidden = true; }; }
-    b.querySelector('[data-a=new]').onclick = () => { click(); ls.set('bb_2048_state', null); tilesEl.innerHTML = ''; fresh(); };
+    function showOver(t, canGo) { if (!canGo) typeof Scores !== 'undefined' && Scores.report('2048', score); over.hidden = false; over.innerHTML = `<b>${t}</b><span>${T('Skor', 'Score')}: ${score}</span><div>${canGo ? `<button class="bb-btn" data-a="go">${T('Devam et', 'Keep going')}</button>` : ''}<button class="bb-btn" data-a="again">${T('Yeni oyun', 'New game')}</button></div>`; over.querySelector('[data-a=again]').onclick = () => { ls.set('bb_2048_state', null); tilesEl.innerHTML = ''; fresh(); }; const g = over.querySelector('[data-a=go]'); if (g) g.onclick = () => { over.hidden = true; }; }
+    b.querySelector('[data-a=new]').onclick = () => { click(); if (score > 0) typeof Scores !== 'undefined' && Scores.report('2048', score); ls.set('bb_2048_state', null); tilesEl.innerHTML = ''; fresh(); };
     b.querySelector('[data-a=undo]').onclick = () => { const h = hist.pop(); if (!h) return; click(); grid = h.g; score = h.s; over.hidden = true; tilesEl.innerHTML = ''; render(true); };
     const kd = e => { const d = { ArrowLeft: 'l', ArrowRight: 'r', ArrowUp: 'u', ArrowDown: 'd', a: 'l', d: 'r', w: 'u', s: 'd' }[e.key]; if (d) { e.preventDefault(); move(d); } };
     addEventListener('keydown', kd); onLeave(() => removeEventListener('keydown', kd));
@@ -301,7 +302,7 @@ const App = (() => {
       if (n !== S[sel]) { errs++; eEl.textContent = '❌ ' + errs; blip(160, .15); }
       else { blip(660, .07); const r = Math.floor(sel / 9), c = sel % 9; for (let k = 0; k < 9; k++) { notes[r * 9 + k].delete(n); notes[k * 9 + c].delete(n); notes[(r - r % 3 + Math.floor(k / 3)) * 9 + (c - c % 3 + k % 3)].delete(n); } }
       draw();
-      if (cur.every((v, i) => v === S[i])) { done = true; clearInterval(timer); const t = (Date.now() - t0) / 1000; const best = ls.get('bb_best_sudoku', null); if (!best || t < best) ls.set('bb_best_sudoku', Math.round(t)); if (true) confetti(); if (true) Snd.win(); toast(T(`🧩 Bitti! ${fmtT(t)} · ${errs} hata`, `🧩 Solved! ${fmtT(t)} · ${errs} mistakes`)); }
+      if (cur.every((v, i) => v === S[i])) { done = true; clearInterval(timer); const t = (Date.now() - t0) / 1000; const best = ls.get('bb_best_sudoku', null); if (!best || t < best) ls.set('bb_best_sudoku', Math.round(t)); { const lvl = ls.get('bb_sudoku_level', 'orta'); if (lvl !== 'kolay' && typeof Scores !== 'undefined') Scores.report('sudoku', Math.round(t), { level: lvl, errs }); } if (true) confetti(); if (true) Snd.win(); toast(T(`🧩 Bitti! ${fmtT(t)} · ${errs} hata`, `🧩 Solved! ${fmtT(t)} · ${errs} mistakes`)); }
     }
     b.querySelectorAll('.sd-pad button').forEach(x => x.onclick = () => put(+x.dataset.n));
     b.querySelectorAll('.seg button').forEach(x => x.onclick = () => { click(); start(x.dataset.l); });
@@ -348,7 +349,7 @@ const App = (() => {
     function paint() { gridEl.querySelectorAll('.mn-c').forEach((e, i) => { const c = cells[i]; e.className = 'mn-c' + (c.o ? ' o n' + c.n : '') + (c.f && !c.o ? ' f' : '') + (over && c.m ? ' m' : '') + (c.boom ? ' boom' : ''); e.textContent = c.o ? (c.m ? '💥' : c.n || '') : c.f ? '🚩' : (over && c.m ? '💣' : ''); }); }
     function count() { leftEl.textContent = '💣 ' + (M - cells.filter(c => c.f).length); }
     function lose(i) { over = true; cells[i].boom = true; clearInterval(timer); paint(); blip(120, .4, .08); toast(T('💥 Mayına bastın! Tekrar dene', '💥 You hit a mine! Have another go')); }
-    function check() { if (over) return; if (cells.every(c => c.m || c.o)) { over = true; clearInterval(timer); const t = (Date.now() - t0) / 1000; if (level !== 'kolay') { const bst = ls.get('bb_best_mines', null); if (!bst || t < bst) ls.set('bb_best_mines', Math.round(t)); } cells.forEach(c => { if (c.m) c.f = true; }); paint(); if (true) confetti(); toast(T(`😎 Tarla temizlendi! ${fmtT(t)}`, `😎 Field cleared! ${fmtT(t)}`)); } }
+    function check() { if (over) return; if (cells.every(c => c.m || c.o)) { over = true; clearInterval(timer); const t = (Date.now() - t0) / 1000; if (level !== 'kolay') { const bst = ls.get('bb_best_mines', null); if (!bst || t < bst) ls.set('bb_best_mines', Math.round(t)); typeof Scores !== 'undefined' && Scores.report('mines', Math.round(t), { level }); } cells.forEach(c => { if (c.m) c.f = true; }); paint(); if (true) confetti(); toast(T(`😎 Tarla temizlendi! ${fmtT(t)}`, `😎 Field cleared! ${fmtT(t)}`)); } }
     function bind() {
       gridEl.querySelectorAll('.mn-c').forEach(e => {
         const i = +e.dataset.i; let lt = null, longP = false;
@@ -394,7 +395,7 @@ const App = (() => {
     function stepDown(soft) { if (!piece || clearing) return; if (!collide(piece.cells, piece.x, piece.y + 1)) { piece.y++; if (soft) score += 1; } else lock(); }
     function hardDrop() { if (!piece || clearing) return; let d = 0; while (!collide(piece.cells, piece.x, piece.y + 1)) { piece.y++; d++; } score += d * 2; lock(); hud(); }
     function moveX(dx) { if (piece && !clearing && !collide(piece.cells, piece.x + dx, piece.y)) piece.x += dx; }
-    function gameOver() { overF = true; run = false; const o = b.querySelector('.bk-over'); o.hidden = false; o.innerHTML = `<b>${T('Oyun bitti', 'Game over')}</b><span>${T('Skor', 'Score')}: ${score}</span><button class="bb-btn">${T('Yeniden başla', 'Play again')}</button>`; o.querySelector('button').onclick = () => { o.hidden = true; start(); }; hud(); }
+    function gameOver() { overF = true; run = false; if (score > 0) typeof Scores !== 'undefined' && Scores.report('blocks', score, { lines }); const o = b.querySelector('.bk-over'); o.hidden = false; o.innerHTML = `<b>${T('Oyun bitti', 'Game over')}</b><span>${T('Skor', 'Score')}: ${score}</span><button class="bb-btn">${T('Yeniden başla', 'Play again')}</button>`; o.querySelector('button').onclick = () => { o.hidden = true; start(); }; hud(); }
     function cell(x, y, k, s, alpha) { g.globalAlpha = alpha || 1; const c = COL[k]; g.fillStyle = c; g.beginPath(); g.roundRect(x * s + 1, y * s + 1, s - 2, s - 2, s * .18); g.fill(); g.fillStyle = 'rgba(255,255,255,.35)'; g.fillRect(x * s + 3, y * s + 3, s - 6, s * .22); g.globalAlpha = 1; }
     function draw() {
       const s = sz(), W = COLS * s, H = ROWS * s, dpr = Math.min(devicePixelRatio || 1, 2);
@@ -481,6 +482,7 @@ const App = (() => {
     else if (r === 'is' && typeof Is !== 'undefined') { root().innerHTML = '<div id="isRoot"></div>'; window.scrollTo(0, 0); Is.open(root().querySelector('#isRoot')); }
     else if ((r === 'dost' || r.startsWith('dost/')) && typeof Dost !== 'undefined') { root().innerHTML = '<div id="dostRoot"></div>'; window.scrollTo(0, 0); Dost.open(root().querySelector('#dostRoot'), r); }
     else if (r === 'msn' && typeof Msn !== 'undefined') { root().innerHTML = '<div id="msnRoot"></div>'; window.scrollTo(0, 0); Msn.mount(root().querySelector('#msnRoot')); }
+    else if (r === 'skor' && typeof Scores !== 'undefined') { root().innerHTML = '<div id="scRoot"></div>'; window.scrollTo(0, 0); Scores.mount(root().querySelector('#scRoot')); }
     else if (r === 'vadi') vadi();
     else if (r === '2048') g2048();
     else if (r === 'sudoku') sudoku();

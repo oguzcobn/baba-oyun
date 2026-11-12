@@ -289,6 +289,7 @@ const Draft = (() => {
     }
     function finish() {
       const rank = table(), best = ls.get('draft_best', 0); if (me.p > best) ls.set('draft_best', me.p);
+      if (typeof Scores !== 'undefined') { Scores.report('draft', me.p, { rank }); const sn = snapshot(); if (sn) Scores.saveSquad(sn); }
       const fin = sorted(), pos = {}; fin.forEach((t, i) => pos[t.id] = i + 1);
       const list = Object.values(stats);
       list.forEach(s => { const tp = pos[s.tid]; s.score = s.g * 1.0 + s.a * .7 + (s.r - 72) * .35 + (s.pos === 'KL' ? s.cs * .45 : (s.pos === 'ST' || s.pos === 'BK') ? s.cs * .18 : 0) + (tp === 1 ? 4 : tp <= 4 ? 1.5 : 0); });
@@ -337,5 +338,29 @@ const Draft = (() => {
     save();
   }
 
-  return { open, stop, _cfg: CFG, get state() { return S; }, _take: take, _spin: spin, _draw: () => drawClub() };
+  /* ---------- Draft düellosu: kayıtlı iki kadro arasında tek maç (aynı tohumla herkes aynı sonucu görür) ---------- */
+  function snapshot() {
+    if (!S) { const st0 = ls.get('draft_state', null); if (!st0 || st0.v !== 3) return null; S = st0; }
+    const xi = DRAFT_SLOTS.map(s => S.picks[s.id]).filter(Boolean);
+    if (xi.length < 11 || S.coach === null) return null;
+    const st = strength(), m = mods(st.xi), f = x => Math.round(x * 100) / 100;
+    return { v: 1, att: f(st.att), def: f(st.def), cp: st.cp, ma: f(m.a * 1000) / 1000, md: f(m.d * 1000) / 1000, avg: Math.round(avg(st.xi.map(p => p.r))), coach: DRAFT_COACHES[S.coach].name, tac: Object.assign({}, S.tac),
+      xi: st.xi.map(p => ({ n: p.name, p: p.pos, r: p.r })), bench: S.bench.filter(Boolean).map(p => ({ n: p.name, p: p.pos, r: p.r })) };
+  }
+  function h2h(H, A, seed) {
+    let s0 = seed >>> 0;
+    const R = () => { s0 = (s0 + 0x6D2B79F5) >>> 0; let t = s0; t = Math.imul(t ^ t >>> 15, t | 1); t ^= t + Math.imul(t ^ t >>> 7, t | 61); return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+    const G = () => { let u = 0, v = 0; while (!u) u = R(); while (!v) v = R(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
+    const pois = l => { const L = Math.exp(-l); let k = 0, p = 1; do { k++; p *= R(); } while (p > L); return k - 1; };
+    const pick = (arr, wf) => { const w = arr.map(wf), tot = w.reduce((a, b) => a + b, 0) || 1; let r = R() * tot; for (let i = 0; i < arr.length; i++) { r -= w[i]; if (r <= 0) return arr[i]; } return arr[arr.length - 1]; };
+    const lam = (att, def) => Math.max(.12, Math.min(4.2, CFG.base * Math.exp((att - def) / CFG.K)));
+    const fh = G() * CFG.noise, fa = G() * CFG.noise;
+    const lh = lam(H.att + fh, A.def + fa) * CFG.home * (H.ma || 1) / (A.md || 1), la = lam(A.att + fa, H.def + fh) * CFG.away * (A.ma || 1) / (H.md || 1);
+    const hs = Math.min(12, pois(lh)), as = Math.min(12, pois(la)), ev = [];
+    const goals = (T, side, n) => { for (let k = 0; k < n; k++) { const sc = pick(T.xi, p => (SC_W[p.p] || .5) * Math.pow(p.r / 75, 2)); const as_ = R() < .78 ? pick(T.xi.filter(p => p !== sc), p => (AS_W[p.p] || 1) * Math.pow(p.r / 75, 4)) : null; ev.push({ s: side, sc: sc.n, as: as_ && as_.n, min: 1 + Math.floor(R() * 90) }); } };
+    goals(H, 'h', hs); goals(A, 'a', as); ev.sort((x, y) => x.min - y.min);
+    return { hs, as, ev };
+  }
+
+  return { open, stop, snapshot, h2h, _cfg: CFG, get state() { return S; }, _take: take, _spin: spin, _draw: () => drawClub() };
 })();

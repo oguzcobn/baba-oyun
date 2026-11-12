@@ -912,5 +912,9 @@ const Msn = (() => {
   setTimeout(() => { try { if (typeof CBN !== 'undefined' && App.user()) CBN.ready().then(check).catch(() => {}); } catch (e) {} }, 2500);
   I18N.on(() => { pushRefresh(); updateDock(); if (el && dock && dock.contains(el)) drawApp(); badge(); });
   setInterval(() => { try { updateDock(); } catch (e) {} }, 3000);
-  return { mount, check, get ready() { return ready; }, _emo: emo };
+  async function sendText(peer, body) {     // başka sayfalardan (ör. Draft düellosu) arkadaşa mesaj
+    if (!ready) return false;
+    try { const r = await api('/rest/v1/msn_messages', { method: 'POST', body: { receiver: peer, kind: 'text', body: String(body).slice(0, 2000) }, prefer: 'return=representation' }); if (r && r[0]) addMsg(r[0], false); return true; } catch (e) { return false; }
+  }
+  return { sendText, mount, check, get ready() { return ready; }, _emo: emo };
 })();
