@@ -3,7 +3,7 @@ const BASE='https://oguzcobn.github.io/baba./';
 for(const [name,device] of [['iPhone 13',devices['iPhone 13']],['Pixel 7',devices['Pixel 7']],['iPad Mini',devices['iPad Mini']],['Desktop Chrome',{viewport:{width:1440,height:900}}]]){
  test.describe(name,()=>{
   const {defaultBrowserType, browserName, ...emulation}=device;
-  test.use({...emulation,browserName:'chromium'});
+  test.use({...emulation});
   test.beforeEach(async({page})=>{
    await page.addInitScript(()=>sessionStorage.setItem('baba_ok','1'));
   });
@@ -48,7 +48,7 @@ for(const [name,device] of [['iPhone 13',devices['iPhone 13']],['Pixel 7',device
 }
 
 test.describe('BABA. new daily experience',()=>{
- test.use({browserName:'chromium',viewport:{width:390,height:844}});
+ test.use({viewport:{width:390,height:844}});
  test.beforeEach(async({page})=>await page.addInitScript(()=>sessionStorage.setItem('baba_ok','1')));
  test('TODAY and mobile nav appear without overflow',async({page})=>{
   await page.goto(BASE+'#today');
