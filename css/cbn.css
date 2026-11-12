@@ -570,3 +570,4 @@ body.cbn-mode{min-height:100dvh}
 .pf-name{width:100%;max-width:300px;text-align:center;font-size:20px!important;font-weight:700;border:2px solid var(--c-ink)!important}
 .pf .cbn-actions{width:100%}.pf .st-sw{margin:0 8px}
 @media(max-width:700px){.hm-av,.hm-av .cbn-av,.hm-av>span{width:84px;height:84px}.hm-side{width:100%}}
+.st-acc{grid-column:1/-1}.st-msg{margin:0;font-weight:600;font-size:14px;min-height:1.2em}.st-sync-state{font-weight:700}

@@ -41,3 +41,6 @@ Oyuncu puanları oyun içi tahmini değerlerdir. Şifre yalnızca çocukların y
 
 ### CBN herkese özel (sürüm 20)
 CBN artık sahibine ve davetli herkese açık. Her kullanıcı kendi adıyla karşılanır ve kendi veritabanını kullanır (sahibi `cbn`, davetli `cbn-g-<davet kodu>`); veriler kişinin kendi cihazında durur, sahibi dahil kimse başkasının kayıtlarını göremez. Örnek projeler ve aile profilleri yalnızca sahibine eklenir.
+
+### Hesap ve cihazlar arası eşitleme (sürüm 23)
+CBN > Ayarlar > "Hesap": e-posta + şifreyle hesap oluşturma / giriş (Supabase, ücretsiz katman). Yerel-öncelikli eşitleme: notlar, klasörler, görevler, etkinlikler, proje/aile/finans/hedef/iş kayıtları, ayarlar ve avatar eşitlenir; not ekleri ve sürüm geçmişi cihazda kalır. Tablo ve güvenlik kuralları: `supabase/setup.sql` (SQL Editor'de bir kez çalıştırılır). Depodaki anahtar herkese açık "publishable" anahtardır; veriyi satır düzeyi güvenlik korur. Kod: `js/cbn/sync.js`.

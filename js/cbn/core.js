@@ -91,9 +91,10 @@ const CBN = (() => {
     clear: n => txDone(n, s => s.clear())
   };
   const saveErr = e => { console.error('[CBN] kayıt hatası', e); toast(L('Kayıt yazılamadı. Depolama alanını kontrol et.', 'Could not save. Check device storage.'), { type: 'err' }); };
-  function put(n, o) { const a = S[n]; if (Array.isArray(a)) { const i = a.findIndex(x => x.id === o.id); if (i < 0) a.push(o); else a[i] = o; } return idb.put(n, o).catch(saveErr); }
-  function del(n, id) { const a = S[n]; if (Array.isArray(a)) { const i = a.findIndex(x => x.id === id); if (i >= 0) a.splice(i, 1); } return idb.del(n, id).catch(saveErr); }
-  const saveSettings = () => idb.put('meta', { key: 'settings', value: S.settings }).catch(saveErr);
+  const hook = (n, id, d) => { try { if (typeof CBN !== 'undefined' && CBN.sync) CBN.sync.mark(n, id, d); } catch (e) {} };
+  function put(n, o) { hook(n, o.id, false); const a = S[n]; if (Array.isArray(a)) { const i = a.findIndex(x => x.id === o.id); if (i < 0) a.push(o); else a[i] = o; } return idb.put(n, o).catch(saveErr); }
+  function del(n, id) { hook(n, id, true); const a = S[n]; if (Array.isArray(a)) { const i = a.findIndex(x => x.id === id); if (i >= 0) a.splice(i, 1); } return idb.del(n, id).catch(saveErr); }
+  const saveSettings = () => hook('meta', 'settings', false) || idb.put('meta', { key: 'settings', value: S.settings }).catch(saveErr);
 
   async function init() {
     if (!('indexedDB' in window)) throw new Error('noidb');
@@ -115,6 +116,7 @@ const CBN = (() => {
       await idb.put('meta', { key: 'seeded', value: Date.now() });
       await idb.put('meta', { key: 'schema', value: SCHEMA });
     }
+    if (typeof CBN !== 'undefined' && CBN.sync) await CBN.sync.attach();
   }
   const ready = () => {
     if (!me()) return Promise.reject(new Error('nouser'));
@@ -239,7 +241,7 @@ const CBN = (() => {
         <button type="button" class="cbn-find">${icon('search')}<span>${L('Ara ya da komut…', 'Search or command…')}</span><kbd>Ctrl K</kbd></button>
         <nav class="cbn-menu" aria-label="${L('CBN modülleri', 'CBN modules')}">${vis.map(m => a(m, 'cbn-link')).join('')}</nav>
         <a class="cbn-me" href="#cbn/settings">${CBN.profile && CBN.profile.mine(34) || ''}<span>${esc(CBN.profile ? CBN.profile.name() : '')}</span></a>
-        <div class="cbn-side-foot"><button type="button" class="cbn-link cbn-theme">${themeBtn()}</button><p>${L('Veriler yalnızca bu cihazda', 'Data stays on this device')}</p></div>
+        <div class="cbn-side-foot"><button type="button" class="cbn-link cbn-theme">${themeBtn()}</button><p class="cbn-sync">${CBN.sync ? esc(CBN.sync.label()) : L('Veriler yalnızca bu cihazda', 'Data stays on this device')}</p></div>
       </aside>
       <section class="cbn-main" id="cbnMain" tabindex="-1"></section>
       <nav class="cbn-tabs" aria-label="${L('CBN modülleri', 'CBN modules')}">${vis.slice(0, 4).map(m => a(m, 'cbn-tab')).join('')}<button type="button" class="cbn-tab${vis.slice(0, 4).some(m => m.id === cur.mod) ? '' : ' on'}" data-more style="--mc:#64748B"><i class="cbn-chip">${icon('more')}</i><span>${L('Menü', 'Menu')}</span></button></nav>
@@ -311,5 +313,5 @@ const CBN = (() => {
     ready().then(check).catch(() => {});
   }
 
-  return { SCHEMA, S, L, loc, low, esc, uid, pad, ymd, today, pd, addDays, nowHM, fmtDate, fmtTime, fmtStamp, fmtDay, idb, put, del, saveSettings, normSettings, defaults, reload, sanitize, toText, icon, toast, modal, confirmBox, promptBox, download, empty, me, applyTheme, isDark, toggleTheme, COLORS, go, refresh, redraw, open, leave, onLeave, register, start, modName, MODS, MOD_NAME, get cur() { return cur; } };
+  return { SCHEMA, S, L, loc, low, esc, uid, pad, ymd, today, pd, addDays, nowHM, fmtDate, fmtTime, fmtStamp, fmtDay, idb, put, del, saveSettings, normSettings, defaults, reload, sanitize, toText, icon, toast, modal, confirmBox, promptBox, download, empty, me, dbName, applyTheme, isDark, toggleTheme, COLORS, go, refresh, redraw, open, leave, onLeave, register, start, modName, MODS, MOD_NAME, get cur() { return cur; } };
 })();

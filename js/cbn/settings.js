@@ -50,11 +50,11 @@
           close();
           try {
             const stores = ['notes', 'folders', 'tasks', 'events', 'items', 'versions'];
-            if (replace) for (const s of [...stores, 'files']) await idb.clear(s);
+            if (replace) { await CBN.sync.markAllDeleted(); for (const s of [...stores, 'files']) await idb.clear(s); }
             for (const s of stores) for (const o of d[s]) await idb.put(s, o);
             let bad = 0; for (const f of files) { try { await idb.put('files', { id: f.id, noteId: f.noteId, name: str(f.name, 200), type: str(f.type, 100), size: num(f.size) || 0, blob: await d2b(f.data) }); } catch (er) { bad++; } }
             if (replace && j.data.settings) { const cur = S.settings, ns = CBN.normSettings(j.data.settings); ns.lastBackup = cur.lastBackup; await idb.put('meta', { key: 'settings', value: ns }); }
-            await CBN.reload(); CBN.redraw();
+            await CBN.reload(); await CBN.sync.afterRestore(); CBN.redraw();
             toast(L('Yedek geri yüklendi', 'Backup restored') + (bad ? ` · ${bad} ${L('ek okunamadı', 'attachments failed')}` : ''));
           } catch (er) { console.error(er); toast(L('Geri yükleme tamamlanamadı', 'Restore did not complete'), { type: 'err' }); try { await CBN.reload(); CBN.redraw(); } catch (e2) {} }
         };
@@ -66,9 +66,17 @@
     const perm = 'Notification' in window ? Notification.permission : 'unsupported';
     const permTxt = { granted: L('İzin verildi', 'Allowed'), denied: L('Tarayıcıda engelli', 'Blocked in browser'), default: L('Henüz izin istenmedi', 'Not requested yet'), unsupported: L('Bu tarayıcı desteklemiyor', 'Not supported by this browser') }[perm];
     const soon = (v, a) => `<li><b>${v}</b> ${a.map(x => `<span class="cbn-badge">${x}</span>`).join(' ')}</li>`;
-    main.innerHTML = `<header class="cbn-head"><div><h1>${esc(CBN.modName('settings'))}</h1><p class="cbn-sub">${L('Ayarlar ve tüm veriler yalnızca bu cihazda saklanır.', 'Settings and all data are stored on this device only.')}</p></div></header>
+    main.innerHTML = `<header class="cbn-head"><div><h1>${esc(CBN.modName('settings'))}</h1><p class="cbn-sub">${CBN.sync.user ? L('Kayıtların bu cihazda saklanır ve hesabınla eşitlenir.', 'Your records are stored on this device and synced with your account.') : L('Ayarlar ve tüm veriler yalnızca bu cihazda saklanır.', 'Settings and all data are stored on this device only.')}</p></div></header>
       <div class="st">
       <section class="cbn-card st-prof"><h2>${L('Profil ve avatar', 'Profile & avatar')}</h2><div class="st-pf">${CBN.profile.mine(96) || `<div class="st-noav">?</div>`}<div><b>${esc(CBN.profile.name())}</b><p class="cbn-hint">${L('Avatar, birkaç soruya verdiğin yanıtlardan otomatik çizilir. İstediğin zaman yeniden oluşturabilirsin.', 'The avatar is drawn automatically from your answers to a few questions. You can recreate it any time.')}</p><button type="button" class="cbn-btn" data-a="avatar">${CBN.profile.has() ? L('Avatarı yeniden oluştur', 'Recreate avatar') : L('Avatar oluştur', 'Create avatar')}</button></div></div></section>
+      <section class="cbn-card st-acc"><h2>${L('Hesap ve cihazlar arası eşitleme', 'Account & sync across devices')}</h2>${CBN.sync.user ? `
+        <p>${L('Giriş yapılan hesap', 'Signed in as')}: <b>${esc(CBN.sync.user.email)}</b></p><p class="st-sync-state">${esc(CBN.sync.label())}</p>
+        <div class="cbn-actions left"><button type="button" class="cbn-btn" data-a="syncnow">${L('Şimdi eşitle', 'Sync now')}</button><button type="button" class="cbn-btn ghost" data-a="signout">${L('Çıkış yap', 'Sign out')}</button></div>
+        <p class="cbn-hint">${L('Başka bir cihazda aynı e-posta ve şifreyle giriş yapınca kayıtların oraya da gelir. Not ekleri (dosyalar) ve sürüm geçmişi eşitlenmez, cihazda kalır. Çıkış yapınca bu cihazdaki kayıtlar silinmez.', 'Sign in with the same email and password on another device and your records appear there too. Note attachments (files) and version history are not synced; they stay on the device. Signing out does not delete the records on this device.')}</p>` : `
+        <p>${L('Hesap oluştur ya da giriş yap; notların, görevlerin, takvimin ve avatarın tüm cihazlarında aynı olsun.', 'Create an account or sign in so your notes, tasks, calendar and avatar are the same on all your devices.')}</p>
+        <form class="cbn-form st-login"><div class="cbn-fg"><label>${L('E-posta', 'Email')}<input type="email" name="email" autocomplete="username" required></label><label>${L('Şifre (en az 6 karakter)', 'Password (min. 6 characters)')}<input type="password" name="pw" autocomplete="current-password" minlength="6" required></label></div>
+          <div class="cbn-actions left"><button class="cbn-btn" data-m="in">${L('Giriş yap', 'Sign in')}</button><button class="cbn-btn ghost" data-m="up">${L('Hesap oluştur', 'Create account')}</button></div><p class="st-msg" role="status" aria-live="polite"></p></form>
+        <p class="cbn-hint">${L('Hesap, ücretsiz bir bulut veritabanında (Supabase) tutulur; herkes yalnızca kendi kayıtlarına erişebilir. Giriş yapmazsan CBN eskisi gibi yalnızca bu cihazda çalışır.', 'The account lives in a free cloud database (Supabase); everyone can access only their own records. If you do not sign in, CBN keeps working on this device only, as before.')}</p>`}</section>
       <section class="cbn-card"><h2>${L('Görünüm ve dil', 'Appearance & language')}</h2><div class="cbn-fg">
         <label>${L('Tema', 'Theme')}${sel('theme', [['system', L('Sistem', 'System')], ['light', L('Açık', 'Light')], ['dark', L('Koyu', 'Dark')]], s.theme)}</label>
         <label>${L('Dil', 'Language')}${sel('lang', [['tr', 'Türkçe'], ['en', 'English']], s.lang)}</label>
@@ -91,13 +99,13 @@
         <p class="cbn-hint">${L('Veriler tarayıcının IndexedDB deposunda durur: tarayıcı verisini temizlersen ya da cihaz değiştirirsen kaybolur, cihazlar arasında eşitlenmez. Düzenli yedek al. Yedek dosyası şifresizdir; notların ve eklerin tamamını içerir.', 'Data lives in the browser’s IndexedDB: clearing browser data or switching devices loses it, and nothing syncs across devices. Back up regularly. The backup file is unencrypted and contains all your notes and attachments.')}</p></section>
 
       <section class="cbn-card"><h2>${L('Entegrasyonlar', 'Integrations')}</h2><ul class="st-int">
-        ${[['Google Calendar', L('Entegrasyon katmanı hazır, bağlantı yok', 'Integration layer ready, no connection')], [L('Bulut senkronizasyonu', 'Cloud sync'), L('Kimlik doğrulamalı backend (ör. Supabase) kurulmadan açılamaz', 'Cannot be enabled without an authenticated backend (e.g. Supabase)')], [L('Kur dönüşümü', 'Currency conversion'), L('Güvenilir kur servisi bağlı değil', 'No trusted rate service connected')], [L('Arka plan bildirimleri', 'Background push'), L('Sunucu tarafı zamanlayıcı gerekir', 'Needs a server-side scheduler')]].map(x => `<li><b>${esc(x[0])}</b><span>${esc(x[1])}</span><span class="cbn-badge${x[2] ? ' ok' : ''}">${x[2] ? L('Bağlı', 'Connected') : L('Bağlı değil', 'Not connected')}</span></li>`).join('')}</ul></section>
+        ${[['Google Calendar', L('Entegrasyon katmanı hazır, bağlantı yok', 'Integration layer ready, no connection')], [L('Bulut senkronizasyonu', 'Cloud sync'), CBN.sync.user ? L('Hesabınla eşitleniyor (Supabase)', 'Syncing with your account (Supabase)') : L('Hazır — yukarıdan hesap oluştur ya da giriş yap', 'Ready — create an account or sign in above'), !!CBN.sync.user], [L('Arka plan bildirimleri', 'Background push'), L('Sunucu tarafı zamanlayıcı gerekir', 'Needs a server-side scheduler')]].map(x => `<li><b>${esc(x[0])}</b><span>${esc(x[1])}</span><span class="cbn-badge${x[2] ? ' ok' : ''}">${x[2] ? L('Bağlı', 'Connected') : L('Bağlı değil', 'Not connected')}</span></li>`).join('')}</ul></section>
 
       <section class="cbn-card"><h2>${L('Yol haritası', 'Roadmap')}</h2><ul class="st-road">
         ${soon(L('Sürüm 1', 'Version 1'), ['Dashboard', 'Notes', 'Tasks', 'Calendar', 'Quick Capture', L('Yedekleme', 'Backup')])}
         ${soon(L('Sürüm 2', 'Version 2'), ['Projects & Idea Lab', 'Family Hub', 'Global Search', 'Voice Inbox'])}
         ${soon(L('Sürüm 3 — bu sürüm', 'Version 3 — this release'), ['Finance', 'Goals & Habits', 'Work Space', 'Knowledge Graph'])}
-        ${soon(L('Altyapı bekleyenler', 'Waiting on infrastructure'), [L('Bulut senkronizasyonu', 'Cloud sync'), 'Vault', 'Smart Routines', L('Arka plan bildirimleri', 'Background push')])}</ul>
+        ${soon(L('Altyapı bekleyenler', 'Waiting on infrastructure'), ['Vault', 'Smart Routines', L('Arka plan bildirimleri', 'Background push')])}</ul>
         <p class="cbn-hint">CBN ${L('veri şeması', 'data schema')} v${CBN.SCHEMA}</p></section></div>`;
 
     const $ = q => main.querySelector(q);
@@ -111,6 +119,15 @@
     $('[name=notif]').onchange = e => { s.notif = e.target.checked; CBN.saveSettings(); };
     if ($('[data-a=perm]')) $('[data-a=perm]').onclick = async () => { try { await Notification.requestPermission(); } catch (e) {} CBN.refresh(); };
     $('[data-a=avatar]').onclick = () => CBN.profile.wizard();
+    const lf = $('.st-login');
+    if (lf) { let mode = 'in'; lf.querySelectorAll('[data-m]').forEach(b => b.onclick = () => mode = b.dataset.m); lf.onsubmit = async e => {
+      e.preventDefault(); const msg = lf.querySelector('.st-msg'), bs = lf.querySelectorAll('button'); bs.forEach(b => b.disabled = true); msg.textContent = L('Bağlanıyor…', 'Connecting…');
+      try { const r = mode === 'up' ? await CBN.sync.signUp(lf.email.value.trim(), lf.pw.value) : await CBN.sync.signIn(lf.email.value.trim(), lf.pw.value);
+        if (r === 'confirm') { msg.textContent = L('Hesap oluşturuldu. E-postana gelen onay bağlantısına tıkla, sonra burada “Giriş yap”a bas.', 'Account created. Click the confirmation link in your email, then press “Sign in” here.'); bs.forEach(b => b.disabled = false); return; }
+        if (r) toast(mode === 'up' ? L('Hesap oluşturuldu, eşitleme açık', 'Account created, sync is on') : L('Giriş yapıldı, kayıtlar eşitlendi', 'Signed in, records synced')); CBN.redraw();
+      } catch (er) { msg.textContent = er.message || String(er); bs.forEach(b => b.disabled = false); } }; }
+    if ($('[data-a=syncnow]')) $('[data-a=syncnow]').onclick = async () => { await CBN.sync.now(); const st = CBN.sync.state; toast(st.s === 'ok' ? L('Eşitlendi', 'Synced') : L('Eşitlenemedi: ', 'Sync failed: ') + st.err, { type: st.s === 'ok' ? '' : 'err' }); CBN.refresh(); };
+    if ($('[data-a=signout]')) $('[data-a=signout]').onclick = async () => { if (!await confirmBox(L('Bu cihazda hesaptan çıkılsın mı? Kayıtların cihazda ve bulutta kalır; yalnızca eşitleme durur.', 'Sign out on this device? Your records stay on the device and in the cloud; only syncing stops.'), L('Çıkış yap', 'Sign out'))) return; await CBN.sync.signOut(); CBN.redraw(); };
     $('[data-a=export]').onclick = exportAll;
     const fi = $('input[type=file]'); $('[data-a=import]').onclick = () => fi.click(); fi.onchange = () => { const f = fi.files[0]; fi.value = ''; if (f) importFile(f); };
     $('[data-a=persist]').onclick = async () => { let ok = false; try { ok = !!(navigator.storage && navigator.storage.persist && await navigator.storage.persist()); } catch (e) {} toast(ok ? L('Kalıcı depolama etkin: tarayıcı bu veriyi kendiliğinden silmez', 'Persistent storage granted: the browser will not evict this data on its own') : L('Tarayıcı kalıcı depolama izni vermedi; düzenli yedek al', 'The browser did not grant persistent storage; keep regular backups'), { type: ok ? '' : 'err' }); };
