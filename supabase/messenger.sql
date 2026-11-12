@@ -441,3 +441,68 @@ end $$;
 
 revoke all on function public.msn_room_invite(uuid), public.msn_room_invite_off(uuid), public.msn_room_peek(text), public.msn_room_join(text) from public, anon;
 grant execute on function public.msn_room_invite(uuid), public.msn_room_invite_off(uuid), public.msn_room_peek(text), public.msn_room_join(text) to authenticated;
+
+-- =====================================================================
+-- UYGULAMA KAPALIYKEN BİLDİRİM (Web Push). Ücretsiz: Supabase Edge Function "msn-push" gönderir.
+-- Anahtarlar (VAPID) fonksiyon tarafından ilk çalışmada üretilip burada saklanır; kimse göremez.
+-- =====================================================================
+create table if not exists public.msn_push (
+  endpoint   text primary key check (char_length(endpoint) < 1000),
+  member     uuid not null references auth.users (id) on delete cascade,
+  p256dh     text not null check (char_length(p256dh) < 200),
+  auth       text not null check (char_length(auth) < 100),
+  lang       text not null default 'tr' check (lang in ('tr','en')),
+  url        text not null default '' check (char_length(url) < 300),
+  created_at timestamptz not null default now()
+);
+create index if not exists msn_push_member on public.msn_push (member);
+create table if not exists public.msn_push_keys (id int primary key default 1 check (id = 1), pub text not null, priv text not null);
+create table if not exists public.msn_push_sent (tbl text not null, rid bigint not null, at timestamptz not null default now(), primary key (tbl, rid));
+alter table public.msn_push      enable row level security;
+alter table public.msn_push_keys enable row level security;   -- politika yok: yalnızca sunucu (service role) erişir
+alter table public.msn_push_sent enable row level security;
+drop policy if exists msn_push_sel on public.msn_push;
+create policy msn_push_sel on public.msn_push for select to authenticated using ((select auth.uid()) = member);
+revoke all on public.msn_push, public.msn_push_keys, public.msn_push_sent from anon, authenticated;
+grant select on public.msn_push to authenticated;
+
+-- Bu cihazın bildirim aboneliğini kaydet (cihaz başka hesaba geçtiyse eskisini devralır).
+create or replace function public.msn_push_save(p_endpoint text, p_p256dh text, p_auth text, p_lang text, p_url text) returns boolean
+language plpgsql security definer set search_path = '' as $$
+declare me uuid := auth.uid();
+begin
+  if me is null or p_endpoint !~ '^https://' then return false; end if;
+  if (select count(*) from public.msn_push where member = me) >= 10 then
+    delete from public.msn_push where endpoint in (select endpoint from public.msn_push where member = me order by created_at limit 1);
+  end if;
+  insert into public.msn_push (endpoint, member, p256dh, auth, lang, url)
+  values (p_endpoint, me, p_p256dh, p_auth, case when p_lang = 'en' then 'en' else 'tr' end, left(coalesce(p_url, ''), 300))
+  on conflict (endpoint) do update set member = me, p256dh = excluded.p256dh, auth = excluded.auth, lang = excluded.lang, url = excluded.url, created_at = now();
+  return true;
+end $$;
+create or replace function public.msn_push_remove(p_endpoint text) returns boolean
+language sql security definer set search_path = '' as $$
+  delete from public.msn_push where endpoint = p_endpoint and member = auth.uid() returning true;
+$$;
+revoke all on function public.msn_push_save(text, text, text, text, text), public.msn_push_remove(text) from public, anon;
+grant execute on function public.msn_push_save(text, text, text, text, text), public.msn_push_remove(text) to authenticated;
+
+-- Yeni mesajda fonksiyonu çağır. Fonksiyon kaydı veritabanından kendisi okur ve her mesajı en fazla bir kez gönderir,
+-- bu yüzden çağrıda gizli bir anahtar gerekmez. Fonksiyon kurulmamışsa çağrı sessizce boşa düşer, mesajlaşma etkilenmez.
+create extension if not exists pg_net;
+create or replace function public.msn_push_hook() returns trigger
+language plpgsql security definer set search_path = '' as $$
+begin
+  if tg_table_name = 'msn_room_msgs' and new.kind <> 'text' then return new; end if;
+  perform net.http_post(
+    url := 'https://zjzbpeiuhreyfdihzzzj.supabase.co/functions/v1/msn-push',
+    body := jsonb_build_object('table', tg_table_name, 'id', new.id),
+    headers := '{"Content-Type": "application/json"}'::jsonb,
+    timeout_milliseconds := 8000);
+  return new;
+exception when others then return new;
+end $$;
+drop trigger if exists msn_push_hook on public.msn_messages;
+drop trigger if exists msn_push_hook on public.msn_room_msgs;
+create trigger msn_push_hook after insert on public.msn_messages for each row execute function public.msn_push_hook();
+create trigger msn_push_hook after insert on public.msn_room_msgs for each row execute function public.msn_push_hook();

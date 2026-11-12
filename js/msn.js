@@ -11,6 +11,8 @@ const Msn = (() => {
   /* grup davet bağlantısı: ...?grup=<anahtar>#msn — anahtarı sakla, adres çubuğundan temizle */
   const JOIN_KEY = 'msn_join';
   try { const u = new URL(location.href), t = u.searchParams.get('grup'); if (t && /^[a-f0-9]{32}$/.test(t)) { localStorage.setItem(JOIN_KEY, JSON.stringify({ t, at: Date.now() })); u.searchParams.delete('grup'); history.replaceState(null, '', u.pathname + u.search + (u.hash || '#msn')); } } catch (e) {}
+  let openOnReady = '';
+  try { const u = new URL(location.href), k = u.searchParams.get('ac'); if (k && /^(r:)?[0-9a-f-]{36}$/.test(k)) { openOnReady = k; u.searchParams.delete('ac'); history.replaceState(null, '', u.pathname + u.search + (u.hash || '#msn')); } } catch (e) {}
   const pendingJoin = () => { try { const j = JSON.parse(localStorage.getItem(JOIN_KEY) || 'null'); if (j && j.t && Date.now() - j.at < 7 * 864e5) return j.t; localStorage.removeItem(JOIN_KEY); } catch (e) {} return ''; };
   const BASE = 'https://zjzbpeiuhreyfdihzzzj.supabase.co', KEY = 'sb_publishable_LyV2L0UpIAPnuGEdfgNc2Q_hrY8uqgG';
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -61,6 +63,8 @@ const Msn = (() => {
         ready = true; lastErr = '';
         connect(); startTimers(); beat();
         setTimeout(checkJoin, 300);
+        pushRefresh();
+        if (openOnReady) { const k = openOnReady; openOnReady = ''; setTimeout(() => openTarget(k), 400); }
       } catch (e) { if (missing(e)) setupMissing = true; else lastErr = e.message || String(e); ready = false; }
       finally { booting = null; draw(); badge(); }
     })();
@@ -415,13 +419,14 @@ const Msn = (() => {
     a.innerHTML = `<aside class="ms-list"><div class="ms-me"></div>
         <div class="ms-tools"><input class="ms-search" type="search" placeholder="${T('Kişi ara', 'Search contacts')}" aria-label="${T('Kişi ara', 'Search contacts')}"><button type="button" class="ms-btn sm" data-a="add">+ ${T('Ekle', 'Add')}</button></div>
         <div class="ms-groups"></div>
-        <div class="ms-list-foot"><button type="button" class="ms-link" data-a="newroom2">👥 ${T('Grup sohbeti', 'Group chat')}</button><button type="button" class="ms-link" data-a="newgrp">+ ${T('Liste grubu', 'List group')}</button><button type="button" class="ms-link" data-a="mute">${prefs.mute ? '🔇 ' + T('Sesler kapalı', 'Sounds off') : '🔊 ' + T('Sesler açık', 'Sounds on')}</button><button type="button" class="ms-link" data-a="out">↩ ${T('Çıkış yap', 'Sign out')}</button><button type="button" class="ms-link" data-a="pop">${prefs.nopop ? '🔕 ' + T('Açılır pencere kapalı', 'Pop-ups off') : '🔔 ' + T('Açılır pencere açık', 'Pop-ups on')}</button><span class="ms-live" title="${wsOk ? T('Anlık bağlantı açık', 'Live connection on') : T('Yoklama ile güncelleniyor', 'Updating by polling')}">${wsOk ? '● ' + T('Canlı', 'Live') : '○ ' + T('Bağlanıyor', 'Connecting')}</span></div></aside>
+        <div class="ms-list-foot"><button type="button" class="ms-link" data-a="newroom2">👥 ${T('Grup sohbeti', 'Group chat')}</button><button type="button" class="ms-link" data-a="newgrp">+ ${T('Liste grubu', 'List group')}</button><button type="button" class="ms-link" data-a="mute">${prefs.mute ? '🔇 ' + T('Sesler kapalı', 'Sounds off') : '🔊 ' + T('Sesler açık', 'Sounds on')}</button><button type="button" class="ms-link" data-a="push">${pushLabel()}</button><button type="button" class="ms-link" data-a="out">↩ ${T('Çıkış yap', 'Sign out')}</button><button type="button" class="ms-link" data-a="pop">${prefs.nopop ? '🔕 ' + T('Açılır pencere kapalı', 'Pop-ups off') : '🔔 ' + T('Açılır pencere açık', 'Pop-ups on')}</button><span class="ms-live" title="${wsOk ? T('Anlık bağlantı açık', 'Live connection on') : T('Yoklama ile güncelleniyor', 'Updating by polling')}">${wsOk ? '● ' + T('Canlı', 'Live') : '○ ' + T('Bağlanıyor', 'Connecting')}</span></div></aside>
       <section class="ms-chat" aria-live="off"></section>`;
     a.querySelector('.ms-search').oninput = () => drawList();
     a.querySelector('[data-a=add]').onclick = addFriend;
     a.querySelector('[data-a=newgrp]').onclick = newGroup;
     a.querySelector('[data-a=newroom2]').onclick = newRoom;
-    a.querySelector('[data-a=out]').onclick = async () => { if (!confirm(T('Bu cihazda Messenger’dan (ve CBN hesabından) çıkılsın mı?', 'Sign out of Messenger (and your CBN account) on this device?'))) return; try { await CBN.sync.signOut(); } catch (e) {} stopAll(); closeDock(); if (pageEl && pageEl.isConnected) page(pageEl); };
+    a.querySelector('[data-a=out]').onclick = async () => { if (!confirm(T('Bu cihazda Messenger’dan (ve CBN hesabından) çıkılsın mı?', 'Sign out of Messenger (and your CBN account) on this device?'))) return; if (pushOn) await disablePush(); try { await CBN.sync.signOut(); } catch (e) {} stopAll(); closeDock(); if (pageEl && pageEl.isConnected) page(pageEl); };
+    a.querySelector('[data-a=push]').onclick = e => togglePush(e.target);
     a.querySelector('[data-a=pop]').onclick = e => { prefs.nopop = !prefs.nopop; savePrefs(); e.target.textContent = prefs.nopop ? '🔕 ' + T('Açılır pencere kapalı', 'Pop-ups off') : '🔔 ' + T('Açılır pencere açık', 'Pop-ups on'); };
     a.querySelector('[data-a=mute]').onclick = e => { prefs.mute = !prefs.mute; savePrefs(); e.target.textContent = prefs.mute ? '🔇 ' + T('Sesler kapalı', 'Sounds off') : '🔊 ' + T('Sesler açık', 'Sounds on'); };
     drawMe(); drawList(); drawChat();
@@ -468,6 +473,7 @@ const Msn = (() => {
     let html = '';
     const rl = [...rooms.values()].filter(r => !q || r.name.toLocaleLowerCase(I18N.locale).includes(q)).sort((a, b) => (rUnread.get(b.id) || 0) - (rUnread.get(a.id) || 0) || a.name.localeCompare(b.name, I18N.locale));
     if (rl.length || !q) html += `<div class="ms-g ms-rooms"><div class="ms-gh"><span class="ms-gt-s">👥 ${T('Grup sohbetleri', 'Group chats')} <span>(${rooms.size})</span></span><button type="button" class="ms-link sm" data-a="newroom" aria-label="${T('Yeni grup sohbeti', 'New group chat')}">+</button></div>${rl.map(r => { const n = rUnread.get(r.id) || 0, ppl = (r.people || []).filter(p => p.id !== uid); return `<button type="button" class="ms-c${open === 'r:' + r.id ? ' on' : ''}" data-room="${r.id}"><span class="ms-stack">${ppl.length ? ppl.slice(0, 3).map(p => `<span>${avatar(p, 26)}</span>`).join('') : '<span class="ms-ini c1" style="width:40px;height:40px;font-size:18px">👥</span>'}</span><span class="ms-c-t"><b>${esc(r.name)}</b><small>${r.people ? T(`${r.people.length} kişi`, `${r.people.length} people`) : T('Grup sohbeti', 'Group chat')}</small></span>${n ? `<em class="ms-ub">${n}</em>` : ''}</button>`; }).join('') || `<p class="ms-empty">${T('En çok 6 kişiyle aynı odada konuşmak için + düğmesine bas', 'Press + to chat with up to 6 people in one room')}</p>`}</div>`;
+    if (pushAsk()) html += `<div class="ms-pushask"><b>📲 ${T('Uygulama kapalıyken de haberdar ol', 'Get notified even when the app is closed')}</b><p>${pushHint() || T('Biri yazınca telefonun normal bir mesaj gibi bildirim versin.', 'Your phone shows a notification like a normal message when someone writes.')}</p>${pushHint() ? '' : `<button type="button" class="ms-btn sm" data-a="pushon">${T('Bildirimleri aç', 'Turn on notifications')}</button>`}<button type="button" class="ms-link" data-a="pushlater">${T('Sonra', 'Later')}</button></div>`;
     if (inc.length) html += `<div class="ms-req"><p class="ms-gh">${T('Arkadaşlık istekleri', 'Friend requests')} <span>${inc.length}</span></p>${inc.map(p => `<div class="ms-rq"><span class="ms-av">${avatar(p, 36)}</span><span class="ms-c-t"><b>${esc(p.name || p.code)}</b><small>${esc(p.code)}</small></span><button type="button" class="ms-btn sm" data-acc="${p.id}">${T('Kabul et', 'Accept')}</button><button type="button" class="ms-link" data-rej="${p.id}">${T('Reddet', 'Decline')}</button></div>`).join('')}</div>`;
     prefs.groups.forEach(g => {
       const ids = [...friends.values()].filter(f => f.grp === g).map(f => f.friend).filter(id => !q || name(id).toLocaleLowerCase(I18N.locale).includes(q) || (profiles.get(id) && (profiles.get(id).code || '').toLowerCase().includes(q)));
@@ -482,6 +488,8 @@ const Msn = (() => {
     box.querySelectorAll('[data-c]').forEach(b => b.onclick = () => openChat(b.dataset.c));
     box.querySelectorAll('[data-room]').forEach(b => b.onclick = () => openRoom(b.dataset.room));
     const nr = box.querySelector('[data-a=newroom]'); if (nr) nr.onclick = newRoom;
+    const po = box.querySelector('[data-a=pushon]'); if (po) po.onclick = () => togglePush(po, true);
+    const pl = box.querySelector('[data-a=pushlater]'); if (pl) pl.onclick = () => { try { localStorage.setItem('msn_push_later', Date.now()); } catch (e) {} drawList(); };
     box.querySelectorAll('[data-g]').forEach(b => b.onclick = () => { const g = b.dataset.g; prefs.closed[g] = !prefs.closed[g]; savePrefs(); drawList(); });
     box.querySelectorAll('[data-gm]').forEach(b => b.onclick = () => editGroup(b.dataset.gm));
     box.querySelectorAll('[data-acc]').forEach(b => b.onclick = () => acceptReq(b.dataset.acc));
@@ -761,6 +769,49 @@ const Msn = (() => {
     if (open === key) drawMsgs();
   }
 
+  /* ---------------- uygulama kapalıyken bildirim (Web Push) ---------------- */
+  const FN = BASE + '/functions/v1/msn-push';
+  const pushOk = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window && (location.protocol === 'https:' || location.hostname === 'localhost');
+  const isIOS = () => /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const standalone = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+  let pushOn = false;
+  try { pushOn = localStorage.getItem('msn_push_on') === '1' && 'Notification' in window && Notification.permission === 'granted'; } catch (e) {}
+  const pushHint = () => (isIOS() && !standalone()) ? T('iPhone’da bildirim için önce Safari’de Paylaş → “Ana Ekrana Ekle” ile uygulamayı ekle, sonra oradan açıp bu düğmeye bas.', 'On iPhone, first add the app with Share → “Add to Home Screen” in Safari, then open it from there and tap this button.') : (!pushOk() ? T('Bu tarayıcı uygulama kapalıyken bildirimi desteklemiyor.', 'This browser doesn’t support notifications while the app is closed.') : '');
+  const pushAsk = () => { if (pushOn) return false; try { if (Notification.permission === 'denied') return false; const l = +localStorage.getItem('msn_push_later') || 0; if (Date.now() - l < 14 * 864e5) return false; } catch (e) { return false; } return 'Notification' in window || isIOS(); };
+  const pushLabel = () => pushOn ? '📲 ' + T('Kapalıyken bildirim: açık', 'Notifications when closed: on') : '📲 ' + T('Kapalıyken bildirim: kapalı', 'Notifications when closed: off');
+  const b64u = s => { const p = '='.repeat((4 - s.length % 4) % 4), b = atob((s + p).replace(/-/g, '+').replace(/_/g, '/')); return Uint8Array.from(b, c => c.charCodeAt(0)); };
+  const sameKey = (a, b) => { if (!a) return false; a = new Uint8Array(a); return a.length === b.length && a.every((x, i) => x === b[i]); };
+  async function saveSub(sub) { const j = sub.toJSON(); await rpc('msn_push_save', { p_endpoint: j.endpoint, p_p256dh: j.keys.p256dh, p_auth: j.keys.auth, p_lang: I18N.lang, p_url: location.origin + location.pathname }); }
+  async function enablePush() {
+    const h = pushHint(); if (h) throw new Error(h);
+    const perm = await Notification.requestPermission();
+    if (perm !== 'granted') throw new Error(T('Bildirim izni verilmedi. Telefonun Ayarlar → Bildirimler bölümünden BABA.’ya izin verebilirsin.', 'Notification permission wasn’t given. You can allow BABA. in your phone’s Settings → Notifications.'));
+    let pub = '';
+    try { const r = await fetch(FN); pub = (await r.json()).publicKey; } catch (e) {}
+    if (!pub) throw new Error(App.isOwner() ? T('Bildirim sunucusu henüz kurulmamış: Supabase’de “msn-push” fonksiyonunu kurman gerekiyor.', 'The notification server isn’t set up yet: you need to deploy the “msn-push” function in Supabase.') : T('Bildirimler henüz hazır değil; uygulama sahibinin kurulumu bitirmesi gerekiyor.', 'Notifications aren’t ready yet; the app owner needs to finish the set-up.'));
+    const key = b64u(pub), reg = await navigator.serviceWorker.ready;
+    let sub = await reg.pushManager.getSubscription();
+    if (sub && !sameKey(sub.options && sub.options.applicationServerKey, key)) { try { await sub.unsubscribe(); } catch (e) {} sub = null; }
+    if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key });
+    await saveSub(sub);
+    pushOn = true; try { localStorage.setItem('msn_push_on', '1'); } catch (e) {}
+  }
+  async function disablePush() {
+    pushOn = false; try { localStorage.setItem('msn_push_on', '0'); } catch (e) {}
+    try { const reg = await navigator.serviceWorker.ready, sub = await reg.pushManager.getSubscription(); if (sub) { try { await rpc('msn_push_remove', { p_endpoint: sub.endpoint }); } catch (e) {} await sub.unsubscribe(); } } catch (e) {}
+  }
+  async function togglePush(btn, forceOn) {
+    const lbl = btn && btn.textContent; if (btn) { btn.disabled = true; btn.textContent = '…'; }
+    try { if (pushOn && !forceOn) { await disablePush(); toast(T('Kapalıyken bildirim kapatıldı', 'Notifications when closed are off'), '🔕'); } else { await enablePush(); toast(T('Tamam! Uygulama kapalıyken de bildirim gelecek.', 'Done! You’ll get notifications even when the app is closed.'), '📲'); } }
+    catch (e) { if (btn) btn.textContent = lbl; modal(`<p class="ms-k">${T('Bildirimler', 'Notifications')}</p><h2>${T('Açılamadı', 'Couldn’t turn on')}</h2><p>${esc(e.message || e)}</p>`); }
+    finally { if (btn) btn.disabled = false; if (el && el.isConnected) { const f = el.querySelector('[data-a=push]'); if (f) f.textContent = pushLabel(); drawList(); } }
+  }
+  async function pushRefresh() {      // izin verilmişse aboneliği bu hesap ve dil için tazele
+    if (!pushOn || !pushOk()) return;
+    try { const reg = await navigator.serviceWorker.ready, sub = await reg.pushManager.getSubscription(); if (sub) await saveSub(sub); else { pushOn = false; localStorage.setItem('msn_push_on', '0'); const f = el && el.isConnected && el.querySelector('[data-a=push]'); if (f) f.textContent = pushLabel(); } } catch (e) {}
+  }
+  if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', ev => { const d = ev.data || {}; if (d.msnOpen !== undefined && ready) { if (d.msnOpen) openTarget(d.msnOpen); else location.hash = '#msn'; } });
+
   /* ---------------- köşe paneli (her sayfada) ---------------- */
   let dock = null, pageEl = null;
   const onPage = () => (location.hash.slice(1) === 'msn');
@@ -859,7 +910,7 @@ const Msn = (() => {
   }
   setInterval(() => { try { check(); } catch (e) {} }, 15000);
   setTimeout(() => { try { if (typeof CBN !== 'undefined' && App.user()) CBN.ready().then(check).catch(() => {}); } catch (e) {} }, 2500);
-  I18N.on(() => { updateDock(); if (el && dock && dock.contains(el)) drawApp(); badge(); });
+  I18N.on(() => { pushRefresh(); updateDock(); if (el && dock && dock.contains(el)) drawApp(); badge(); });
   setInterval(() => { try { updateDock(); } catch (e) {} }, 3000);
   return { mount, check, get ready() { return ready; }, _emo: emo };
 })();

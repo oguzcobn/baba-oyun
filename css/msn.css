@@ -306,3 +306,7 @@ body:has(.ms-dock.open) .ms-toasts{right:auto;left:16px}
   .ms-dock.open,.ms-dock.open.left{left:0;right:0;bottom:0;align-items:stretch}
   .ms-dock.open .ms-panel{max-height:none}
 }
+
+.ms-pushask{margin:6px 4px 10px;padding:14px;border-radius:18px;background:linear-gradient(135deg,#0b2a8f,#1d55d6);color:#fff;display:grid;gap:8px;justify-items:start}
+.ms-pushask p{margin:0;font-size:13px;line-height:1.45;opacity:.9}
+.ms-pushask .ms-btn{background:#ceff00;color:#151010}.ms-pushask .ms-link{color:#fff;padding:2px 0}
