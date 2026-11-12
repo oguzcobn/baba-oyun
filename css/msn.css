@@ -310,3 +310,31 @@ body:has(.ms-dock.open) .ms-toasts{right:auto;left:16px}
 .ms-pushask{margin:6px 4px 10px;padding:14px;border-radius:18px;background:linear-gradient(135deg,#0b2a8f,#1d55d6);color:#fff;display:grid;gap:8px;justify-items:start}
 .ms-pushask p{margin:0;font-size:13px;line-height:1.45;opacity:.9}
 .ms-pushask .ms-btn{background:#ceff00;color:#151010}.ms-pushask .ms-link{color:#fff;padding:2px 0}
+
+
+/* Mobile dock chat: keep the message composer visible without fullscreen.
+   Hide BABA's bottom navigation while a Messenger conversation is expanded. */
+@media(max-width:760px){
+  body:has(.ms-dock.open) #bbMobileNav{display:none!important}
+  body:has(.ms-dock.open) .baba-shared-actions{display:none!important}
+  .ms-dock.open{z-index:10050!important;position:fixed;inset:0 0 0 0!important;display:flex;align-items:stretch;justify-content:flex-end;pointer-events:auto}
+  .ms-dock.open .ms-panel{
+    flex:1;min-height:0;max-height:none!important;width:100%;
+    height:100dvh;height:100svh;
+    border-radius:0;display:flex;flex-direction:column;
+  }
+  .ms-dock.open .ms-mini,.ms-dock.open .ms-app.compact,.ms-dock.open .ms-app.compact .ms-chat{
+    min-height:0;max-height:none;overflow:hidden;
+  }
+  .ms-dock.open .ms-app.compact .ms-chat{flex:1}
+  .ms-dock.open .ms-app.compact .ms-msgs{
+    flex:1 1 0;min-height:0!important;height:0!important;max-height:none!important;
+    overflow-y:auto;-webkit-overflow-scrolling:touch;
+  }
+  .ms-dock.open .ms-app.compact .ms-comp{
+    flex:0 0 auto;min-height:64px;position:relative;z-index:2;
+    padding-bottom:calc(12px + env(safe-area-inset-bottom));
+    background:#fff;
+  }
+  .ms-dock.open .ms-app.compact .ms-in{font-size:16px;min-height:44px}
+}

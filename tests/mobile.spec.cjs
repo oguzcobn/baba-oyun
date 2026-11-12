@@ -99,3 +99,21 @@ test.describe('Consolidated category navigation',()=>{
   }
  });
 });
+
+test.describe('Mobile Messenger composer',()=>{
+ test.use({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
+ test('expanded dock does not hide message input behind bottom navigation',async({page})=>{
+  await page.goto(BASE+'#sosyal');
+  await page.addStyleTag({content:'.ms-dock.open{display:flex!important}.ms-dock.open .ms-panel{display:flex!important}.ms-dock.open .ms-mini{display:flex!important}.ms-dock.open .ms-app.compact{display:flex!important}.ms-dock.open .ms-app.compact .ms-chat{display:flex!important}'});
+  await page.evaluate(()=>{
+   const dock=document.createElement('div');dock.className='ms-dock open';
+   dock.innerHTML='<div class="ms-panel"><div class="ms-ph">Messenger</div><div class="ms-mini"><div class="ms-app compact chatting"><div class="ms-chat"><div class="ms-ch">Chat</div><div class="ms-msgs">Messages</div><form class="ms-comp"><textarea class="ms-in" placeholder="Message"></textarea><button class="ms-send">Send</button></form></div></div></div></div>';
+   document.body.appendChild(dock);
+  });
+  const input=page.locator('.ms-dock.open .ms-in');
+  await expect(input).toBeVisible();
+  const bounds=await input.boundingBox();
+  expect(bounds.y+bounds.height).toBeLessThanOrEqual(844);
+  await expect(page.locator('#bbMobileNav')).toBeHidden();
+ });
+});
