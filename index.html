@@ -13,6 +13,7 @@
 <link rel="icon" href="img/icon-192.png">
 <link rel="stylesheet" href="css/app.css?v=36">
 <link rel="stylesheet" href="css/v2.css?v=36">
+<link rel="stylesheet" href="css/features.css?v=37">
 <link rel="stylesheet" href="css/cbn.css?v=36">
 <link rel="stylesheet" href="css/ts.css?v=36">
 <link rel="stylesheet" href="css/dost.css?v=36">
@@ -22,7 +23,7 @@
 <body>
 <header class="nav">
   <a class="logo" href="#">BABA<span>.</span></a>
-  <nav class="nav-links"><a href="#cbn" data-r="cbn">CBN</a><a href="#msn" data-r="msn">Messenger</a><a href="#is" data-r="is" class="nav-is owner-only" data-en="Work">İş</a><a href="#dost" data-r="dost">Dost</a><a href="#oyunlar" data-r="oyunlar" data-en="Games">Oyunlar</a><a href="#seyahat" data-r="seyahat" data-en="Travel">Seyahat</a><a href="#foto" data-r="foto" data-en="Photography">Fotoğraf</a><a href="#ts" data-r="ts" class="owner-only">Trabzonspor</a></nav>
+  <nav class="nav-links"><a href="#cbn" data-r="cbn">CBN</a><a href="#msn" data-r="msn">Messenger</a><a href="#is" data-r="is" class="nav-is owner-only" data-en="Work">İş</a><a href="#dost" data-r="dost">Dost</a><a href="#oyunlar" data-r="oyunlar" data-en="Games">Oyunlar</a><a href="#seyahat" data-r="seyahat" data-en="Travel">Seyahat</a><a href="#foto" data-r="foto" data-en="Photography">Fotoğraf</a><a href="#ts" data-r="ts" class="owner-only">Trabzonspor</a><a href="#gundem" data-r="gundem" data-en="News">Gündem</a><a href="#lab" data-r="lab">LAB.</a></nav>
   <div class="nav-r"><div class="lang-sw" role="group" aria-label="Dil / Language"><button type="button" data-lang="tr" lang="tr" aria-label="Türkçe">TR</button><button type="button" data-lang="en" lang="en" aria-label="English">EN</button></div><button class="icon" id="snd" aria-label="Ses" data-en-aria="Sound">🔊</button><button class="pill sm" id="lockBtn" data-en="Lock">Kilitle</button></div>
 </header>
 <main id="view"></main>
@@ -51,7 +52,9 @@
 <script src="js/cbn/settings.js?v=36"></script>
 <script src="js/ts.js?v=36"></script>
 <script src="js/msn.js?v=36"></script>
-<script src="js/games.js?v=36"></script>
+<script src="js/gundem.js?v=37"></script>
+<script src="js/lab.js?v=37"></script>
+<script src="js/games.js?v=37"></script>
 <script>
   const sb=document.getElementById('snd');sb.textContent=Snd.on?'🔊':'🔇';
   sb.onclick=()=>{sb.textContent=Snd.toggle()?'🔊':'🔇'};
