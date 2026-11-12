@@ -107,7 +107,7 @@ const App = (() => {
     return root().querySelector('.bb-body');
   }
   function hub() {
-    const d = new Date(), name = isOwner() ? 'Oğuzhan' : (guest && guest.name);
+    const d = new Date(), pn = (typeof CBN !== 'undefined' && CBN.S && CBN.S.settings && CBN.S.settings.profile && CBN.S.settings.profile.name) || '', name = pn || (isOwner() ? 'Oğuzhan' : (guest && guest.name));
     const CATS = [
       { id: 'cbn', n: '01', t: 'CBN<i>Personal OS</i>', d: T('Notlar · görevler · takvim · projeler · aile · finans · hedefler — kişisel asistanın, yalnızca sana özel', 'Notes · tasks · calendar · projects · family · finance · goals — your personal assistant, just for you'), cls: 'c-cbn' },
       { id: 'msn', n: '02', t: 'Messenger<i>' + T('sohbet', 'chat') + '</i>', d: T('Aile, arkadaşlar, iş — durumlar, titreşim, gruplar; MSN usulü anlık mesajlaşma', 'Family, friends, work — statuses, nudges, groups; instant messaging the MSN way'), cls: 'c-msn' },
@@ -123,7 +123,7 @@ const App = (() => {
         <h1 class="display xl">BABA<em>.</em></h1>
         <p class="lead">${T('İş, dinlenme, oyun ve yolculuk — hepsi tek yerde, sadece davetlilere açık.', 'Work, rest, play and travel — all in one place, open by invitation only.')}</p></section>
       <section class="hub">${CATS.map((c, i) => `<a class="hub-card ${c.cls}" href="#${c.id}"><span class="hub-n">${String(i + 1).padStart(2, '0')}</span><h2>${c.t}</h2><p>${c.d}</p><span class="arrow">↗</span></a>`).join('')}</section>
-      <footer class="foot"><div class="foot-word">BABA<span>.</span></div><div class="foot-row">${isOwner() ? `<button class="link" data-a="pin">${T('Şifreyi değiştir', 'Change PIN')}</button><a class="link" href="#erisim">${T('Davetler &amp; erişim', 'Invitations &amp; access')}</a><button class="link" data-a="lock">${T('Kilitle', 'Lock')}</button>` : `<button class="link" data-a="gout">${T('Bu cihazdan çık', 'Sign out on this device')}</button>`}<span class="muted">${T('Yalnızca davetliler için', 'Invitation only')} · ${T('sürüm', 'version')} 29</span></div></footer>`;
+      <footer class="foot"><div class="foot-word">BABA<span>.</span></div><div class="foot-row">${isOwner() ? `<button class="link" data-a="pin">${T('Şifreyi değiştir', 'Change PIN')}</button><a class="link" href="#erisim">${T('Davetler &amp; erişim', 'Invitations &amp; access')}</a><button class="link" data-a="lock">${T('Kilitle', 'Lock')}</button>` : `<button class="link" data-a="gout">${T('Bu cihazdan çık', 'Sign out on this device')}</button>`}<span class="muted">${T('Yalnızca davetliler için', 'Invitation only')} · ${T('sürüm', 'version')} 30</span></div></footer>`;
     const q = s => root().querySelector(s);
     if (q('[data-a=pin]')) q('[data-a=pin]').onclick = () => { click(); changePin(); };
     if (q('[data-a=lock]')) q('[data-a=lock]').onclick = () => { click(); lock(); };

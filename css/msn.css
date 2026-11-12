@@ -211,3 +211,70 @@ body.msn-mode main{max-width:none;padding:0}
 .ms-hero.in .ms-h1 .b{font-size:clamp(20px,2.4vw,34px)}
 .ms-sec.cream:has(.ms-app){padding-top:34px}
 @media (max-width:700px){.ms-hero.in{min-height:300px}.ms-hero.in .ms-hero-txt{padding:34px 20px 70px}.ms-hero.in .ms-eye{display:none}.ms-hero.in .ms-sticker{display:none}}
+
+/* ---------- grup sohbetleri ---------- */
+.ms-gt-s{display:flex;align-items:center;gap:6px;font-weight:800;color:var(--claret)}
+.ms-rooms{background:linear-gradient(180deg,#fff4f7,transparent);border-radius:18px;padding-bottom:4px}
+.ms-stack{display:inline-flex;align-items:center;width:46px;height:40px;position:relative;flex:none}
+.ms-stack>span{display:block;border-radius:50%;box-shadow:0 0 0 2px #fff;margin-left:-12px;background:#fff}
+.ms-stack>span:first-child{margin-left:0}
+.ms-stack.lg{width:auto;min-width:46px}
+.ms-stack svg{display:block;border-radius:50%}
+.ms-stack .ms-ini{display:grid;border-radius:50%}
+.ms-stack>.ms-ini{margin:0}
+.ms-pickc{margin:4px 0 -4px;font-weight:700;font-size:14px}.ms-pickc b{color:var(--claret)}
+.ms-people{display:grid;gap:6px;max-height:280px;overflow:auto;padding:2px}
+.ms-person{display:grid!important;grid-template-columns:auto auto 1fr;align-items:center;gap:10px!important;padding:8px 10px;border-radius:14px;background:var(--cream);cursor:pointer;font-weight:700}
+.ms-person input{width:20px;height:20px;accent-color:var(--claret)}
+.ms-person:has(input:disabled){opacity:.45;cursor:default}
+.ms-person .ms-av::after{display:none}
+.ms-ddh{margin:4px 6px;font-size:12px;font-weight:800;color:var(--blue)}
+.ms-ddp{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:8px;padding:4px 6px;font-size:14px;font-weight:600}
+.ms-ddp .ms-av::after{display:none}.ms-ddp small{color:var(--claret)}
+.ms-b.named{margin-top:6px}
+.ms-who{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:800;color:var(--claret);margin:-2px 0 4px}
+.ms-who .ms-av::after{display:none}
+
+/* ---------- köşe paneli: her sayfada açılabilen Messenger ---------- */
+.ms-dock{position:fixed;right:calc(18px + env(safe-area-inset-right));bottom:calc(18px + env(safe-area-inset-bottom));z-index:110;display:flex;flex-direction:column;align-items:flex-end;gap:12px;pointer-events:none}
+.ms-dock[hidden]{display:none}
+.ms-dock>*{pointer-events:auto}
+.ms-fab{position:relative;width:62px;height:62px;border-radius:50%;border:0;cursor:pointer;background:radial-gradient(circle at 30% 25%,#1d55d6,#0b2a8f);box-shadow:0 12px 34px rgba(11,42,143,.45),0 0 0 4px #fff;display:grid;place-items:center;transition:transform .2s}
+.ms-fab svg{width:36px;height:36px;animation:msRock 7s ease-in-out infinite}
+.ms-fab:hover{transform:translateY(-2px) scale(1.04)}
+.ms-dock.open .ms-fab{transform:scale(.9)}
+.ms-fb{position:absolute;top:-4px;right:-4px;min-width:24px;height:24px;padding:0 6px;border-radius:12px;background:#7b1e3b;color:#fff;font:800 12px/24px system-ui,sans-serif;box-shadow:0 0 0 3px #fff}
+.ms-fb[hidden]{display:none}
+.ms-ping{animation:msPing .9s ease}
+@keyframes msPing{0%,100%{transform:scale(1)}25%{transform:scale(1.18) rotate(-8deg)}50%{transform:scale(.95) rotate(6deg)}75%{transform:scale(1.08)}}
+.ms-panel{width:min(400px,calc(100vw - 24px));height:min(620px,calc(100svh - 120px));background:#fef1e2;border-radius:26px;box-shadow:0 30px 80px rgba(10,20,60,.35);display:flex;flex-direction:column;overflow:hidden;animation:msIn .25s ease both}
+.ms-panel[hidden]{display:none}
+.ms-ph{display:flex;align-items:center;gap:10px;padding:12px 12px 12px 18px;background:linear-gradient(120deg,#0b2a8f,#1d55d6);color:#fff;font-family:ui-rounded,"SF Pro Rounded","Nunito","Segoe UI",system-ui,sans-serif}
+.ms-ph b{flex:1;font-size:17px;font-style:italic;font-family:Georgia,serif;color:#ceff00;font-size:20px}
+.ms-ph .ms-link{color:#fff;font-size:13px;text-decoration:none}
+.ms-ph .ms-x{position:static;width:32px;height:32px;font-size:20px;background:rgba(255,255,255,.16);color:#fff}
+.ms-mini{flex:1;min-height:0;display:flex;margin:0}
+.ms-app.compact{flex:1;display:flex;flex-direction:column;gap:0;min-height:0;max-width:none;margin:0}
+.ms-app.compact .ms-list,.ms-app.compact .ms-chat{flex:1;min-height:0;border-radius:0;box-shadow:none}
+.ms-app.compact .ms-chat{display:none}.ms-app.compact.chatting .ms-list{display:none}.ms-app.compact.chatting .ms-chat{display:flex}
+.ms-app.compact .ms-back{display:grid;place-items:center}
+.ms-app.compact .ms-groups{max-height:none}
+.ms-app.compact .ms-msgs{max-height:none;min-height:0;height:auto;flex:1}
+.ms-app.compact .ms-me{padding:12px 14px}
+.ms-app.compact .ms-list-foot{font-size:12px}
+.ms-app.compact .ms-blank{padding:24px}
+body:has(.ms-dock:not([hidden])) .ms-toasts{bottom:calc(96px + env(safe-area-inset-bottom))}
+body:has(.ms-dock.open) .ms-toasts{right:auto;left:16px}
+@media (max-width:600px){
+  .ms-dock{right:12px;bottom:calc(12px + env(safe-area-inset-bottom))}
+  .ms-dock.open{left:0;right:0;bottom:0;align-items:stretch}
+  .ms-dock.open .ms-fab{display:none}
+  .ms-panel{width:100%;height:calc(100svh - 60px);border-radius:24px 24px 0 0}
+  .ms-fab{width:56px;height:56px}
+}
+
+.ms-check{display:flex!important;align-items:flex-start;gap:10px!important;font-weight:600!important;cursor:pointer}
+.ms-check input{width:20px;height:20px;margin-top:1px;accent-color:var(--claret);flex:none}
+.ms-name{border:0;background:none;color:inherit;font:inherit;padding:0;text-align:left;cursor:pointer;display:flex;align-items:center;gap:6px;min-width:0}
+.ms-name b{font-size:18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ms-name i{font-style:normal;opacity:.7;font-size:14px}.ms-name:hover i{opacity:1;color:var(--lime)}

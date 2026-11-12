@@ -225,3 +225,164 @@ do $$ begin
   begin alter publication supabase_realtime add table public.msn_friends;  exception when duplicate_object then null; end;
   begin alter publication supabase_realtime add table public.msn_typing;   exception when duplicate_object then null; end;
 end $$;
+
+-- =====================================================================
+-- GRUP SOHBETLERİ (en çok 6 kişi). Bu bölüm de tekrar çalıştırılabilir.
+-- Odaya yalnızca kurucunun ya da üyelerin onaylı arkadaşları eklenebilir.
+-- =====================================================================
+create table if not exists public.msn_rooms (
+  id         uuid primary key default gen_random_uuid(),
+  name       text not null check (char_length(name) between 1 and 40),
+  owner      uuid references auth.users (id) on delete set null,
+  created_at timestamptz not null default now()
+);
+create table if not exists public.msn_room_members (
+  room      uuid not null references public.msn_rooms (id) on delete cascade,
+  member    uuid not null references auth.users (id) on delete cascade,
+  last_read bigint not null default 0,
+  joined_at timestamptz not null default now(),
+  primary key (room, member)
+);
+create table if not exists public.msn_room_msgs (
+  id         bigint generated always as identity primary key,
+  room       uuid not null references public.msn_rooms (id) on delete cascade,
+  sender     uuid default auth.uid() references auth.users (id) on delete set null,
+  kind       text not null default 'text' check (kind in ('text','system')),
+  body       text not null default '' check (char_length(body) <= 2000),
+  created_at timestamptz not null default now()
+);
+create index if not exists msn_room_msgs_room on public.msn_room_msgs (room, id desc);
+create index if not exists msn_room_members_member on public.msn_room_members (member);
+
+create or replace function public.msn_in_room(p_room uuid, p_user uuid) returns boolean
+language sql stable security definer set search_path = '' as $$
+  select exists (select 1 from public.msn_room_members where room = p_room and member = p_user);
+$$;
+
+alter table public.msn_rooms        enable row level security;
+alter table public.msn_room_members enable row level security;
+alter table public.msn_room_msgs    enable row level security;
+
+drop policy if exists msn_r_sel  on public.msn_rooms;
+drop policy if exists msn_rm_sel on public.msn_room_members;
+drop policy if exists msn_rm_upd on public.msn_room_members;
+drop policy if exists msn_rg_sel on public.msn_room_msgs;
+drop policy if exists msn_rg_ins on public.msn_room_msgs;
+create policy msn_r_sel  on public.msn_rooms        for select to authenticated using (public.msn_in_room(id, (select auth.uid())));
+create policy msn_rm_sel on public.msn_room_members for select to authenticated using (public.msn_in_room(room, (select auth.uid())));
+create policy msn_rm_upd on public.msn_room_members for update to authenticated using ((select auth.uid()) = member) with check ((select auth.uid()) = member);
+create policy msn_rg_sel on public.msn_room_msgs    for select to authenticated using (public.msn_in_room(room, (select auth.uid())));
+create policy msn_rg_ins on public.msn_room_msgs    for insert to authenticated with check (kind = 'text' and public.msn_in_room(room, (select auth.uid())));
+
+-- üye yalnızca kendi "okundu" işaretini değiştirebilir; mesajda gönderen ve zaman sunucudan gelir
+create or replace function public.msn_room_guard() returns trigger
+language plpgsql set search_path = '' as $$
+begin
+  if current_user <> 'authenticated' then return new; end if;
+  if tg_table_name = 'msn_room_members' then
+    new.room := old.room; new.member := old.member; new.joined_at := old.joined_at;
+    new.last_read := greatest(old.last_read, new.last_read);
+  elsif tg_table_name = 'msn_room_msgs' then
+    new.sender := auth.uid(); new.created_at := now(); new.kind := 'text';
+  end if;
+  return new;
+end $$;
+drop trigger if exists msn_room_guard on public.msn_room_members;
+drop trigger if exists msn_room_guard on public.msn_room_msgs;
+create trigger msn_room_guard before update on public.msn_room_members for each row execute function public.msn_room_guard();
+create trigger msn_room_guard before insert on public.msn_room_msgs for each row execute function public.msn_room_guard();
+
+create or replace function public.msn_room_sys(p_room uuid, p_body text) returns void
+language sql security definer set search_path = '' as $$
+  insert into public.msn_room_msgs (room, sender, kind, body) values (p_room, auth.uid(), 'system', left(p_body, 300));
+$$;
+
+-- Oda kur: üyeler kurucunun onaylı arkadaşları olmalı; kurucu dahil en çok 6 kişi.
+create or replace function public.msn_room_create(p_name text, p_members uuid[]) returns uuid
+language plpgsql security definer set search_path = '' as $$
+declare me uuid := auth.uid(); r uuid; m uuid; n int := 0;
+begin
+  if me is null then raise exception 'not signed in'; end if;
+  if (select count(*) from public.msn_room_members where member = me) >= 50 then raise exception 'too many rooms'; end if;
+  if coalesce(array_length(p_members, 1), 0) < 1 then raise exception 'pick at least one person'; end if;
+  if (select count(distinct x) from unnest(p_members) x where x <> me) > 5 then raise exception 'max 6 people'; end if;
+  insert into public.msn_rooms (name, owner) values (left(coalesce(nullif(trim(p_name), ''), 'Grup'), 40), me) returning id into r;
+  insert into public.msn_room_members (room, member) values (r, me);
+  foreach m in array p_members loop
+    if m <> me and public.msn_can_msg(me, m) and not public.msn_in_room(r, m) then
+      insert into public.msn_room_members (room, member) values (r, m); n := n + 1;
+    end if;
+  end loop;
+  if n = 0 then delete from public.msn_rooms where id = r; raise exception 'no valid friends'; end if;
+  perform public.msn_room_sys(r, 'created');
+  return r;
+end $$;
+
+create or replace function public.msn_room_add(p_room uuid, p_member uuid) returns text
+language plpgsql security definer set search_path = '' as $$
+declare me uuid := auth.uid();
+begin
+  if not public.msn_in_room(p_room, me) then return 'notmember'; end if;
+  if public.msn_in_room(p_room, p_member) then return 'exists'; end if;
+  if not public.msn_can_msg(me, p_member) then return 'notfriend'; end if;
+  if (select count(*) from public.msn_room_members where room = p_room) >= 6 then return 'full'; end if;
+  insert into public.msn_room_members (room, member) values (p_room, p_member);
+  perform public.msn_room_sys(p_room, 'added:' || p_member::text);
+  return 'ok';
+end $$;
+
+-- Kurucu bir üyeyi çıkarabilir.
+create or replace function public.msn_room_kick(p_room uuid, p_member uuid) returns boolean
+language plpgsql security definer set search_path = '' as $$
+declare me uuid := auth.uid();
+begin
+  if p_member = me or not exists (select 1 from public.msn_rooms where id = p_room and owner = me) then return false; end if;
+  delete from public.msn_room_members where room = p_room and member = p_member;
+  if found then perform public.msn_room_sys(p_room, 'removed:' || p_member::text); end if;
+  return found;
+end $$;
+
+-- Odadan ayrıl. Kurucu ayrılırsa en eski üye kurucu olur; kimse kalmazsa oda silinir.
+create or replace function public.msn_room_leave(p_room uuid) returns boolean
+language plpgsql security definer set search_path = '' as $$
+declare me uuid := auth.uid(); nxt uuid;
+begin
+  delete from public.msn_room_members where room = p_room and member = me;
+  if not found then return false; end if;
+  select member into nxt from public.msn_room_members where room = p_room order by joined_at limit 1;
+  if nxt is null then delete from public.msn_rooms where id = p_room; return true; end if;
+  update public.msn_rooms set owner = nxt where id = p_room and (owner = me or owner is null);
+  perform public.msn_room_sys(p_room, 'left');
+  return true;
+end $$;
+
+create or replace function public.msn_room_rename(p_room uuid, p_name text) returns boolean
+language plpgsql security definer set search_path = '' as $$
+begin
+  if not public.msn_in_room(p_room, auth.uid()) or nullif(trim(p_name), '') is null then return false; end if;
+  update public.msn_rooms set name = left(trim(p_name), 40) where id = p_room;
+  perform public.msn_room_sys(p_room, 'renamed:' || left(trim(p_name), 40));
+  return true;
+end $$;
+
+-- Odadaki kişilerin adı ve avatarı (arkadaşın olmasalar da); durumları gizli kalır.
+create or replace function public.msn_room_people(p_room uuid) returns table (id uuid, name text, code text, avatar jsonb, last_read bigint)
+language sql stable security definer set search_path = '' as $$
+  select p.id, p.name, p.code, p.avatar, m.last_read
+  from public.msn_room_members m join public.msn_profiles p on p.id = m.member
+  where m.room = p_room and public.msn_in_room(p_room, auth.uid())
+  order by m.joined_at;
+$$;
+
+revoke all on public.msn_rooms, public.msn_room_members, public.msn_room_msgs from anon, authenticated;
+grant select on public.msn_rooms to authenticated;
+grant select, update on public.msn_room_members to authenticated;
+grant select, insert on public.msn_room_msgs to authenticated;
+revoke all on function public.msn_in_room(uuid, uuid), public.msn_room_sys(uuid, text), public.msn_room_create(text, uuid[]), public.msn_room_add(uuid, uuid), public.msn_room_kick(uuid, uuid), public.msn_room_leave(uuid), public.msn_room_rename(uuid, text), public.msn_room_people(uuid) from public, anon;
+grant execute on function public.msn_in_room(uuid, uuid), public.msn_room_create(text, uuid[]), public.msn_room_add(uuid, uuid), public.msn_room_kick(uuid, uuid), public.msn_room_leave(uuid), public.msn_room_rename(uuid, text), public.msn_room_people(uuid) to authenticated;
+
+do $$ begin
+  begin alter publication supabase_realtime add table public.msn_room_msgs;    exception when duplicate_object then null; end;
+  begin alter publication supabase_realtime add table public.msn_room_members; exception when duplicate_object then null; end;
+  begin alter publication supabase_realtime add table public.msn_rooms;        exception when duplicate_object then null; end;
+end $$;

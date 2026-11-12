@@ -15,7 +15,8 @@
   const akey = () => 'cbn_auth:' + CBN.dbName();
   const setSt = (s, err) => { st = { s, at: s === 'ok' ? Date.now() : st.at, err: err || '' }; const e = document.querySelector('.cbn-sync'); if (e) e.textContent = label(); const b = document.querySelector('.st-sync-state'); if (b) b.textContent = label(); };
   const label = () => !auth ? L('Veriler yalnızca bu cihazda', 'Data stays on this device') : st.s === 'sync' ? L('☁ Eşitleniyor…', '☁ Syncing…') : st.s === 'err' ? L('☁ Eşitlenemedi', '☁ Sync failed') + (st.err ? ' · ' + st.err : '') : st.at ? L('☁ Eşitlendi · ', '☁ Synced · ') + CBN.fmtTime(st.at) : L('☁ Hesap bağlı', '☁ Account linked');
-  const saveAuth = () => { try { if (auth) localStorage.setItem(akey(), JSON.stringify(auth)); else localStorage.removeItem(akey()); } catch (e) {} };
+  let remember = true;      // "Beni hatırla": açıksa oturum cihazda kalır, kapalıysa tarayıcı kapanınca biter
+  const saveAuth = () => { try { const keep = remember ? localStorage : sessionStorage, other = remember ? sessionStorage : localStorage; other.removeItem(akey()); if (auth) keep.setItem(akey(), JSON.stringify(auth)); else keep.removeItem(akey()); } catch (e) {} };
   const persist = () => { clearTimeout(saveT); saveT = setTimeout(() => { idb.put('meta', { key: 'outbox', value: out }).catch(() => {}); }, 250); };
   const persistNow = () => { clearTimeout(saveT); return Promise.all([idb.put('meta', { key: 'outbox', value: out }), idb.put('meta', { key: 'sync', value: sm })]).catch(() => {}); };
 
@@ -44,8 +45,9 @@
     }
     return true;
   }
-  async function signIn(email, password) { try { setSession(await call('/auth/v1/token?grant_type=password', { method: 'POST', body: { email, password } })); } catch (e) { throw new Error(trErr(e)); } if (!await linkCheck()) return false; await sync(); return true; }
-  async function signUp(email, password) {
+  async function signIn(email, password, rem) { remember = rem !== false; try { setSession(await call('/auth/v1/token?grant_type=password', { method: 'POST', body: { email, password } })); } catch (e) { throw new Error(trErr(e)); } if (!await linkCheck()) return false; await sync(); return true; }
+  async function signUp(email, password, rem) {
+    remember = rem !== false;
     let j; try { j = await call('/auth/v1/signup', { method: 'POST', body: { email, password } }); } catch (e) { throw new Error(trErr(e)); }
     if (j && j.access_token) { setSession(j); if (!await linkCheck()) return false; await sync(); return true; }
     return 'confirm';        // e-posta onayı açıksa oturum dönmez
@@ -121,7 +123,7 @@
   /* çekirdek, veritabanı her açıldığında çağırır (kullanıcı değişince de) */
   async function attach() {
     attached = CBN.dbName(); out = {}; sm = { user: '', cursor: '' }; auth = null; st = { s: 'off', at: 0, err: '' };
-    try { auth = JSON.parse(localStorage.getItem(akey()) || 'null'); if (!auth || !auth.refresh_token || !auth.user) auth = null; } catch (e) { auth = null; }
+    try { const ls_ = localStorage.getItem(akey()), ss_ = sessionStorage.getItem(akey()); remember = !!ls_ || !ss_; auth = JSON.parse(ls_ || ss_ || 'null'); if (!auth || !auth.refresh_token || !auth.user) auth = null; } catch (e) { auth = null; }
     try { const [o, m] = await Promise.all([idb.get('meta', 'outbox'), idb.get('meta', 'sync')]); if (o && o.value && typeof o.value === 'object') out = o.value; if (m && m.value && typeof m.value === 'object') sm = { user: String(m.value.user || ''), cursor: String(m.value.cursor || '') }; } catch (e) {}
     if (!wired) { wired = true; document.addEventListener('visibilitychange', () => { if (!document.hidden && auth) sync(); }); addEventListener('online', () => { if (auth) sync(); }); setInterval(() => { if (auth && !document.hidden) sync(); }, 60000); }
     if (auth) sync();
