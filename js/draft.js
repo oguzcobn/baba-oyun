@@ -44,6 +44,21 @@ const Draft = (() => {
   const hide = () => S.mode === 'sefir';
   const eraTxt = e => e === 'FC27' ? 'FC 27' : e.replace('~', '') + T(' · tahmini', ' · estimated');
 
+  /* Sezon arşivi: kadro ve mevcut oyun durumu korunur; son 20 sezon ayrı tutulur. */
+  const HISTORY_KEY = 'draft_history_v1';
+  function history() { const rows = ls.get(HISTORY_KEY, []); return Array.isArray(rows) ? rows.filter(x => x && Number.isFinite(x.pts) && Number.isFinite(x.rank)).slice(0, 20) : []; }
+  function recordSeason(L) {
+    const row = { id: Date.now() + '-' + rnd(100000), date: new Date().toISOString(), pts: L.pts, rank: L.rank, w: L.w, d: L.d, l: L.l, gf: L.gf, ga: L.ga, mode: S.mode, coach: S.coach === null ? '' : DRAFT_COACHES[S.coach].name, chemistry: strength().cp, avg: Math.round(avg(DRAFT_SLOTS.map(s => S.picks[s.id]).filter(Boolean).map(p => p.r)) * 10) / 10, title: L.rank === 1 };
+    ls.set(HISTORY_KEY, [row, ...history()].slice(0, 20));
+  }
+  function careerHtml() {
+    const rows = history();
+    const titles = rows.filter(x => x.title).length, best = rows.length ? Math.max(...rows.map(x => x.pts)) : 0;
+    return `<section class="dr-career"><div class="dr-career-head"><div><p class="eyebrow">${T('Draft kariyeri','Draft career')}</p><h2>${T('Sezon arşivi','Season history')}</h2></div><span class="chip">🏆 ${titles} ${T('şampiyonluk','titles')}</span></div>
+      <div class="dr-career-kpis"><span><b>${rows.length}</b><small>${T('Sezon','Seasons')}</small></span><span><b>${best}</b><small>${T('En yüksek puan','Best points')}</small></span><span><b>${rows.length ? (rows.reduce((a,x)=>a+x.pts,0)/rows.length).toFixed(1) : '—'}</b><small>${T('Puan ortalaması','Average points')}</small></span></div>
+      ${rows.length ? `<div class="dr-career-list">${rows.slice(0,8).map(x=>`<div class="dr-career-row"><span>${new Date(x.date).toLocaleDateString(I18N.locale)}</span><strong>${x.pts} ${T('puan','pts')}</strong><span>#${x.rank}</span><small>${x.w}${T('G','W')} ${x.d}${T('B','D')} ${x.l}${T('M','L')}</small></div>`).join('')}</div>` : `<p class="muted">${T('İlk sezonunu tamamladığında sonuçların burada saklanacak.','Finish your first season to see results here.')}</p>`}
+      </section>`;
+  }
   /* ---------------- ana çizim ---------------- */
   function open(root) { el = root; stop(); S = ls.get('draft_state', null); if (!S || S.v !== 3) S = fresh(); if (S.phase === 'season') S.phase = 'tactics'; if (S.phase === 'stats' && !S.last) S.phase = 'tactics'; render(); }
   function save() { ls.set('draft_state', S); }
@@ -73,7 +88,7 @@ const Draft = (() => {
           <div class="bench"><span class="eyebrow">${T('Yedekler', 'Substitutes')}</span>${S.bench.map((p, i) => `<div class="bslot ${p ? 'full' : ''}${swapCls('b', i)}" ${p ? `data-b="${i}" role="button" tabindex="0"` : ''}>${p ? cardInner(p) : '<span>' + T('Yedek ', 'Sub ') + (i + 1) + '</span>'}</div>`).join('')}${S.bench.some(Boolean) && xi.length ? `<p class="muted sm swap-help">${swapSel ? T('Şimdi yer değiştireceği oyuncuya dokun (parlayanlar uygun) · iptal için tekrar dokun', 'Now tap the player to swap with (highlighted ones fit) · tap again to cancel') : T('🔁 Yedekle ilk 11’i değiştirmek için oyuncuya dokun', '🔁 Tap a player to swap a sub with the starting XI')}</p>` : ''}</div>
           <div class="dr-actions"><p class="muted sm chem-help">${T(`Kimya: aynı kulüpten ya da aynı ülkeden gelen her takım arkadaşı bir bağ kurar (●○○ → ●●●). Maç gücü = ortalama reyting + kimya (en çok +${CHEM_MAX}); her maçta form ve sakatlık şansı var.`, `Chemistry: every teammate from the same club or the same country forms a link (●○○ → ●●●). Match strength = average rating + chemistry (up to +${CHEM_MAX}); every match carries a chance of form swings and injuries.`)}</p><button class="pill ghost" data-a="reset">${T('Sıfırla', 'Reset')}</button><button class="pill" data-a="next" ${n < 13 ? 'disabled' : ''}>${T('Teknik direktör ve taktik', 'Manager and tactics')} →</button></div>
         </div>
-      </section>`;
+      </section>${careerHtml()}`;
     bind();
   }
   function crest(c, cls) { return `<span class="crest ${cls || ''}" style="--c1:${c.c1};--c2:${c.c2}"><b>${esc(c.short)}</b></span>`; }
@@ -339,6 +354,7 @@ const Draft = (() => {
         poy: top(list, (a, b) => b.score - a.score, 5),
         mine: list.filter(s => s.tid === 'me').sort((a, b) => b.g + b.a - (a.g + a.a) || b.r - a.r)
       };
+      recordSeason(S.last);
       S.phase = 'stats'; S.tab = 'awards'; save();
       if (rank === 1 && typeof confetti === 'function') confetti();
       renderStats();
@@ -366,6 +382,7 @@ const Draft = (() => {
       <div class="end-head"><div class="big-pts">${L.pts}<small>/102</small></div><div><h2>${T(L.rank + '. sıra', 'Finished ' + L.rank + ([, 'st', 'nd', 'rd'][L.rank % 10 > 3 || [11, 12, 13].includes(L.rank % 100) ? 0 : L.rank % 10] || 'th'))} · ${msg}</h2><p class="muted">${L.w}${FL('G')} ${L.d}${FL('B')} ${L.l}${FL('M')} · ${T('Gol', 'Goals')} ${L.gf}:${L.ga}</p>${L.best ? `<span class="chip on">🏆 ${T('Yeni rekor', 'New record')}</span>` : `<span class="chip">${T('Rekor', 'Record')} ${Math.max(L.prevBest, L.pts)}</span>`}</div></div></section>
       <nav class="st-tabs">${[['awards', T('🏅 Ödüller', '🏅 Awards')], ['table', T('Puan durumu', 'League table')], ['goals', T('Gol krallığı', 'Top scorers')], ['assists', T('Asist krallığı', 'Top assists')], ['mine', T('Takımım', 'My team')]].map(([k, t]) => `<button class="${tab === k ? 'on' : ''}" data-t="${k}">${t}</button>`).join('')}</nav>
       <section class="st-body">${body}</section>
+      ${careerHtml()}
       <div class="dr-actions"><button class="pill ghost" data-a="tac">${T('Taktiği değiştir', 'Change tactics')}</button><button class="pill ghost" data-a="again">${T('Aynı kadroyla tekrar', 'Replay with the same squad')}</button><button class="pill" data-a="new">${T('Yeni draft', 'New draft')}</button></div>`;
     el.querySelectorAll('.st-tabs button').forEach(b => b.onclick = () => { S.tab = b.dataset.t; save(); renderStats(); });
     el.querySelector('[data-a=tac]').onclick = () => { S.phase = 'tactics'; render(); };

@@ -117,3 +117,19 @@ test.describe('Mobile Messenger composer',()=>{
   await expect(page.locator('#bbMobileNav')).toBeHidden();
  });
 });
+
+test.describe('Draft career history',()=>{
+ test.use({viewport:{width:390,height:844}});
+ test.beforeEach(async({page})=>page.addInitScript(()=>sessionStorage.setItem('baba_ok','1')));
+ test('draft opens with an empty career panel',async({page})=>{
+  await page.goto(BASE+'#draft');
+  await expect(page.locator('.dr-career')).toBeVisible();
+  await expect(page.locator('.dr-career-kpis')).toBeVisible();
+ });
+ test('draft archive survives reload without resetting existing squad',async({page})=>{
+  await page.goto(BASE+'#draft');
+  await page.evaluate(()=>localStorage.setItem('draft_history_v1',JSON.stringify([{id:'test',date:'2026-11-12T00:00:00.000Z',pts:82,rank:2,w:25,d:7,l:2,gf:70,ga:20,title:false}])));
+  await page.reload();
+  await expect(page.locator('.dr-career')).toContainText('82');
+ });
+});
