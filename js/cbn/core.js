@@ -172,7 +172,8 @@ const CBN = (() => {
     more: '<circle cx="5" cy="12" r="1.500"/><circle cx="12" cy="12" r="1.500"/><circle cx="19" cy="12" r="1.500"/>',
     settings: '<path d="M4 6h8M16 6h4M4 12h2M10 12h10M4 18h10M18 18h2"/><circle cx="14" cy="6" r="2"/><circle cx="8" cy="12" r="2"/><circle cx="16" cy="18" r="2"/>',
     sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
-    moon: '<path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5z"/>'
+    moon: '<path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5z"/>',
+    bell: '<path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4/>'
   };
   const icon = n => `<svg class="cbn-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[n] || ''}</svg>`;
 
@@ -231,6 +232,24 @@ const CBN = (() => {
   const go = path => { const h = '#cbn' + (path ? '/' + path : ''); if (location.hash === h) refresh(); else location.hash = h; };
   function leave() { leaveFns.forEach(f => { try { f(); } catch (e) { console.error(e); } }); leaveFns = []; document.querySelectorAll('.cbn-ov').forEach(o => o.remove()); }
   const onLeave = f => leaveFns.push(f);
+
+  /* Notification center reads existing local tasks and calendar events. */
+  function notificationItems() {
+    const td = today(), end = addDays(td, 7);
+    const tasks = S.tasks.filter(t => t.due && t.due <= end && !['completed', 'cancelled'].includes(t.status))
+      .map(t => ({ type: 'task', id: t.id, title: t.title, date: t.due, time: t.dueTime || '', late: t.due < td }));
+    const events = S.events.filter(e => e.date && e.date >= td && e.date <= end)
+      .map(e => ({ type: 'event', id: e.id, title: e.title, date: e.date, time: e.start || '', late: false }));
+    return tasks.concat(events).sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time) || String(a.title || '').localeCompare(String(b.title || ''))).slice(0, 100);
+  }
+  function showNotificationCenter() {
+    const entries = notificationItems();
+    const rows = entries.map(n => `<button class="cbn-notification-row${n.late ? ' late' : ''}" type="button" data-type="${n.type}" data-id="${esc(n.id)}"><span class="cbn-notification-kind">${n.type === 'task' ? icon('tasks') : icon('calendar')}</span><span class="cbn-notification-info"><strong>${esc(n.title || L('Başlıksız', 'Untitled'))}</strong><small>${esc(fmtDay(n.date))} · ${esc(fmtDate(n.date))}${n.time ? ' · ' + esc(n.time) : ''}${n.late ? ' · ' + L('Gecikmiş', 'Overdue') : ''}</small></span><span aria-hidden="true">›</span></button>`).join('');
+    modal({ title: L('Bildirim Merkezi', 'Notification Center'), wide: true,
+      html: `<p class="cbn-notification-intro">${L('Geciken görevler ve önümüzdeki 7 günün görev ve etkinlikleri. Uygulama kapalıyken bildirim gönderilmez.', 'Overdue tasks and tasks/events in the next 7 days. Notifications are not sent when the app is closed.')}</p>${entries.length ? `<div class="cbn-notification-list">${rows}</div>` : empty('🔔', L('Yaklaşan kayıt yok', 'Nothing coming up'), L('Görev ve takvim kayıtların burada görünecek.', 'Tasks and calendar events will appear here.'))}`,
+      onOpen(box, close) { box.querySelectorAll('.cbn-notification-row').forEach(btn => btn.onclick = () => { const type = btn.dataset.type; const id = btn.dataset.id; close(); if (type === 'task') { go('tasks/today'); if (CBN.tasks && CBN.tasks.form) { const task = S.tasks.find(t => t.id === id); if (task) CBN.tasks.form(task); } } else go('calendar/' + (S.events.find(e => e.id === id) || {}).date); }); }
+    });
+  }
   function drawShell() {
     const vis = S.settings.modules.filter(m => !m.hidden);
     const a = (m, cls) => `<a class="${cls}${m.id === cur.mod ? ' on' : ''}" href="#cbn/${m.id}" style="--mc:${COLORS[m.id]}" ${m.id === cur.mod ? 'aria-current="page"' : ''}><i class="cbn-chip">${icon(m.id)}</i><span>${esc(modName(m.id))}</span></a>`;
@@ -241,14 +260,15 @@ const CBN = (() => {
         <button type="button" class="cbn-find">${icon('search')}<span>${L('Ara ya da komut…', 'Search or command…')}</span><kbd>Ctrl K</kbd></button>
         <nav class="cbn-menu" aria-label="${L('CBN modülleri', 'CBN modules')}">${vis.map(m => a(m, 'cbn-link')).join('')}</nav>
         <a class="cbn-me" href="#cbn/settings">${CBN.profile && CBN.profile.mine(34) || ''}<span>${esc(CBN.profile ? CBN.profile.name() : '')}</span></a>
-        <div class="cbn-side-foot"><button type="button" class="cbn-link cbn-theme">${themeBtn()}</button><p class="cbn-sync">${CBN.sync ? esc(CBN.sync.label()) : L('Veriler yalnızca bu cihazda', 'Data stays on this device')}</p></div>
+        <div class="cbn-side-foot"><button type="button" class="cbn-link cbn-notifications">${icon('bell')}<span>${L('Bildirim Merkezi', 'Notification Center')}</span><span class="cbn-notifications-count">${notificationItems().length}</span></button><button type="button" class="cbn-link cbn-theme">${themeBtn()}</button><p class="cbn-sync">${CBN.sync ? esc(CBN.sync.label()) : L('Veriler yalnızca bu cihazda', 'Data stays on this device')}</p></div>
       </aside>
       <section class="cbn-main" id="cbnMain" tabindex="-1"></section>
       <nav class="cbn-tabs" aria-label="${L('CBN modülleri', 'CBN modules')}">${vis.slice(0, 4).map(m => a(m, 'cbn-tab')).join('')}<button type="button" class="cbn-tab${vis.slice(0, 4).some(m => m.id === cur.mod) ? '' : ' on'}" data-more style="--mc:#64748B"><i class="cbn-chip">${icon('more')}</i><span>${L('Menü', 'Menu')}</span></button></nav>
     </div>`;
+    el.querySelector('.cbn-notifications').onclick = showNotificationCenter;
     el.querySelector('.cbn-theme').onclick = toggleTheme;
     el.querySelector('.cbn-find').onclick = () => CBN.palette && CBN.palette();
-    el.querySelector('[data-more]').onclick = () => modal({ title: 'CBN', html: `<div class="cbn-more">${vis.map(m => a(m, 'cbn-mi')).join('')}<button type="button" class="cbn-mi" data-find style="--mc:#111827"><i class="cbn-chip">${icon('search')}</i><span>${L('Ara', 'Search')}</span></button></div>`, onOpen(box, close) { box.querySelector('[data-find]').onclick = () => { close(); CBN.palette && CBN.palette(); }; } });
+    el.querySelector('[data-more]').onclick = () => modal({ title: 'CBN', html: `<div class="cbn-more">${vis.map(m => a(m, 'cbn-mi')).join('')}<button type="button" class="cbn-mi" data-notifications style="--mc:#6366F1"><i class="cbn-chip">${icon('bell')}</i><span>${L('Bildirimler', 'Notifications')}</span></button><button type="button" class="cbn-mi" data-find style="--mc:#111827"><i class="cbn-chip">${icon('search')}</i><span>${L('Ara', 'Search')}</span></button></div>`, onOpen(box, close) { box.querySelector('[data-notifications]').onclick = () => { close(); showNotificationCenter(); }; box.querySelector('[data-find]').onclick = () => { close(); CBN.palette && CBN.palette(); }; } });
   }
   function renderMod() {
     const main = el && el.querySelector('#cbnMain'); if (!main) return;
