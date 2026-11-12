@@ -144,3 +144,28 @@ test.describe('Draft manager mode',()=>{
   await expect(page.locator('#draftRoot')).toBeVisible();
  });
 });
+
+test.describe('HAYAT life simulation',()=>{
+ test.use({viewport:{width:390,height:844}});
+ test.beforeEach(async({page})=>page.addInitScript(()=>sessionStorage.setItem('baba_ok','1')));
+ test('creates character, chooses actions, saves and restores',async({page})=>{
+  await page.goto(BASE+'#hayat-oyunu');
+  await expect(page.locator('.life-intro')).toBeVisible();
+  await page.locator('#lifeName').fill('Test Oyuncu');
+  await page.locator('#lifeStart').click();
+  await expect(page.locator('.life-meters')).toBeVisible();
+  await page.locator('[data-action="do:study"]').click();
+  await page.locator('[data-action="month"]').click();
+  await page.reload();
+  await expect(page.locator('.life-time')).toContainText('18');
+  await page.locator('[data-action="tab:money"]').click();
+  await expect(page.locator('.life-budget')).toBeVisible();
+  await page.locator('[data-action="tab:people"]').click();
+  await expect(page.locator('.life-people')).toBeVisible();
+ });
+ test('old games still accessible',async({page})=>{
+  await page.goto(BASE+'#oyunlar');
+  await expect(page.locator('a[href="#draft"]')).toBeVisible();
+  await expect(page.locator('a[href="#hayat-oyunu"]')).toBeVisible();
+ });
+});

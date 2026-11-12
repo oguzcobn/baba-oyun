@@ -92,6 +92,7 @@ const App = (() => {
 
   /* ---------------- menü ---------------- */
   const GAMES = [
+    { id:'hayat-oyunu',name:['HAYAT. — Gerçek Yaşam','LIFE. — Life Simulator'],tags:[['Simülasyon','Simulation'],['Kariyer','Career'],['İlişkiler','Relationships']],best:()=>T('Kendi hikâyeni yaz','Write your story') },
     { id: 'draft', name: 'Süper Lig Draft', tags: [['Futbol', 'Football'], ['18 kulüp', '18 clubs'], ['İstatistik', 'Stats']], best: () => ls.get('draft_best', 0) + T(' p', ' pts') },
     { id: 'vadi', name: 'Empires of the Valley', tags: [['Strateji', 'Strategy'], ['Şehir kurma', 'City-building']], best: () => T('1. Bölüm', 'Chapter 1') },
     { id: '2048', name: '2048', tags: [['Bulmaca', 'Puzzle'], ['Kaydır', 'Swipe']], best: () => ls.get('bb_best_2048', 0) },
@@ -485,6 +486,7 @@ const App = (() => {
     else if (r === 'lab' && typeof Lab !== 'undefined') { root().innerHTML = '<div id="labRoot"></div>'; window.scrollTo(0,0); Lab.open(root().querySelector('#labRoot')); }
     else if (r === 'play' && typeof Play !== 'undefined') { root().innerHTML = '<div id="playRoot"></div>'; window.scrollTo(0,0); Play.open(root().querySelector('#playRoot')); }
     else if (r === 'akis' && typeof Akis !== 'undefined') { root().innerHTML = '<div id="akisRoot"></div>'; window.scrollTo(0,0); Akis.open(root().querySelector('#akisRoot')); }
+    else if (r === 'hayat-oyunu' && typeof LifeGame !== 'undefined') { root().innerHTML='<section class="game-page"><div class="gp-head"><a class="back" href="#oyunlar">← '+T('Oyunlar','Games')+'</a></div><div id="lifeGameRoot"></div></section>';window.scrollTo(0,0);LifeGame.open(root().querySelector('#lifeGameRoot')); }
     else if (r === 'draft') { root().innerHTML = '<section class="game-page"><div class="gp-head"><a class="back" href="#oyunlar">← ' + T('Oyunlar', 'Games') + '</a></div><div id="draftRoot"></div></section>'; window.scrollTo(0, 0); Draft.open(root().querySelector('#draftRoot')); }
     else if (r === 'is' && typeof Is !== 'undefined') { root().innerHTML = '<div id="isRoot"></div>'; window.scrollTo(0, 0); Is.open(root().querySelector('#isRoot')); }
     else if ((r === 'dost' || r.startsWith('dost/')) && typeof Dost !== 'undefined') { root().innerHTML = '<div id="dostRoot"></div>'; window.scrollTo(0, 0); Dost.open(root().querySelector('#dostRoot'), r); }
