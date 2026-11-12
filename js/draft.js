@@ -310,7 +310,7 @@ const Draft = (() => {
     const q = s => el.querySelector(s), me = teams[0];
     if(weekly){
       const panel=document.createElement('section');panel.className='dr-manager';
-      panel.innerHTML='<div class="dr-manager-top"><h2>'+T('Menajer masası','Manager desk')+'</h2><span>💰 <b class="dr-budget">25</b> M€</span></div><p>'+T('Her hafta taktik seç, formu takip et ve transfer yap.','Choose tactics, track form and make transfers each week.')+'</p><div class="dr-manager-grid"><div><h3>'+T('Taktikler','Tactics')+'</h3><div class="dr-manager-tactics"></div></div><div><h3>'+T('Transfer pazarı','Transfer market')+'</h3><div class="dr-manager-market"></div></div></div><p class="dr-manager-status" role="status"></p><button class="pill big dr-next-week">'+T('1. haftayı oyna ▶','Play week 1 ▶')+'</button>';
+      panel.innerHTML='<div class="dr-manager-top"><h2>'+T('Menajer masası','Manager desk')+'</h2><span>💰 <b class="dr-budget">25</b> M€</span></div><p>'+T('Her hafta taktik seç, formu takip et ve transfer yap.','Choose tactics, track form and make transfers each week.')+'</p><div class="dr-manager-form" aria-label="Player form and injuries"></div><div class="dr-manager-grid"><div><h3>'+T('Taktikler','Tactics')+'</h3><div class="dr-manager-tactics"></div></div><div><h3>'+T('Transfer pazarı','Transfer market')+'</h3><div class="dr-manager-market"></div></div></div><p class="dr-manager-status" role="status"></p><button class="pill big dr-next-week">'+T('1. haftayı oyna ▶','Play week 1 ▶')+'</button>';
       q('.season').before(panel);
     }
     let wk = 0, speed = 700;
@@ -336,6 +336,7 @@ const Draft = (() => {
         q('.dr-manager-status').textContent=T('Transfer tamamlandı: ','Signed: ')+p.name;
         managerRender();
       });
+      q('.dr-manager-form').innerHTML='<h3>'+T('Oyuncu formu ve sakatlıklar','Player form and injuries')+'</h3><div class="dr-form-list">'+st.xi.map(p=>'<span class="dr-form-player">'+esc(p.name)+' <b>'+(inj[p.name]?'🚑 '+inj[p.name]+T(' hafta',' weeks'):(form[p.name]>0?'↗ +':'↘ ')+(form[p.name]||0))+'</b></span>').join('')+'</div>';
       q('.dr-budget').textContent=budget;
     }
     if(weekly){managerRender();q('.dr-next-week').onclick=()=>week();}
