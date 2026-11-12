@@ -48,8 +48,8 @@ const BABADaily=(()=>{
  function mobile(){
   let bar=document.getElementById('bbMobileNav');if(!isPrivate()){bar?.remove();return}
   if(!bar){bar=document.createElement('nav');bar.id='bbMobileNav';bar.setAttribute('aria-label',T('Mobil gezinme','Mobile navigation'));document.body.appendChild(bar)}
-  const entries=[['today','calendar-days',T('Bugün','Today')],['cbn','check-square',T('CBN','CBN')],['','house',T('Ana','Home')],['play','play',T('PLAY','PLAY')],['backup','database',T('Yedek','Backup')]];
-  const current=location.hash.slice(1).split('/')[0];bar.innerHTML=entries.map(([id,icon,label])=>'<a href="#'+id+'" '+(id===current?'aria-current="page"':'')+'><span aria-hidden="true">'+({today:'◷',cbn:'☑','':'⌂',play:'▷',backup:'▣'}[id])+'</span><small>'+esc(label)+'</small></a>').join('');
+  const entries=[['today','calendar-days',T('Bugün','Today')],['cbn','check-square',T('CBN','CBN')],['','house',T('Ana','Home')],['kesfet','play',T('Keşfet','Discover')],['backup','database',T('Yedek','Backup')]];
+  const current=location.hash.slice(1).split('/')[0];bar.innerHTML=entries.map(([id,icon,label])=>'<a href="#'+id+'" '+(id===current?'aria-current="page"':'')+'><span aria-hidden="true">'+({today:'◷',cbn:'☑','':'⌂',kesfet:'▷',backup:'▣'}[id])+'</span><small>'+esc(label)+'</small></a>').join('');
  }
  function related(){
   const page=document.querySelector('.bb-feature.bb-gundem,.bb-feature.bb-lab,.bb-feature.bb-play,.bb-feature.bb-akis');

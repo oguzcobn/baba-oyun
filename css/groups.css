@@ -1,0 +1,14 @@
+/* Consolidated category hubs: legacy routes are never redirected or deleted. */
+.bb-group-page{max-width:1200px;margin:auto;padding:clamp(32px,6vw,88px) clamp(18px,5vw,60px) 110px}
+.bb-group-page h1{font-size:clamp(65px,14vw,170px);letter-spacing:-.09em;line-height:.9;margin:25px 0;font-weight:900}
+.bb-group-back{color:inherit;text-decoration:none;font-weight:700}.bb-group-sub{font-size:clamp(16px,2vw,23px);opacity:.75;max-width:650px}
+.bb-group-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,265px),1fr));gap:16px;margin-top:35px}
+.bb-group-card{min-height:190px;padding:23px;display:flex;flex-direction:column;align-items:flex-start;justify-content:space-between;border:1px solid var(--line,#d0d0d0);border-radius:18px;background:var(--paper,#fff);color:var(--ink,#161616);text-decoration:none;transition:transform .2s ease,box-shadow .2s ease}
+.bb-group-card:hover,.bb-group-card:focus-visible{transform:translateY(-3px);box-shadow:0 12px 30px #0002}
+.bb-group-card h2{font-size:clamp(23px,3vw,34px);letter-spacing:-.04em;margin:12px 0 0}.bb-group-card p{opacity:.65}.bb-group-card>span:last-child{align-self:flex-end;font-size:24px}
+.bb-group-number,.bb-group-hint{font-size:12px;opacity:.55}.bb-group-hint{margin-top:22px}
+.bb-cbn-shortcuts{display:flex;flex-wrap:wrap;gap:8px;padding:10px 14px;background:#0f172a;color:white;position:relative;z-index:3}
+.bb-cbn-shortcuts a,.bb-work-shortcut{display:inline-flex;padding:9px 13px;border:1px solid #ffffff55;border-radius:100px;color:inherit;text-decoration:none;font:700 12px/1.4 system-ui}
+.bb-work-shortcut{margin:12px;background:#122b4b;color:white}
+@media(max-width:760px){.bb-group-grid{grid-template-columns:1fr}.bb-group-card{min-height:145px}.bb-cbn-shortcuts{padding:8px;gap:5px}.bb-cbn-shortcuts a{font-size:11px;padding:8px 9px}}
+@media(prefers-reduced-motion:reduce){.bb-group-card{transition:none}.bb-group-card:hover{transform:none}}
