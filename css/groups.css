@@ -1,14 +1,184 @@
-/* Consolidated category hubs: legacy routes are never redirected or deleted. */
-.bb-group-page{max-width:1200px;margin:auto;padding:clamp(32px,6vw,88px) clamp(18px,5vw,60px) 110px}
-.bb-group-page h1{font-size:clamp(65px,14vw,170px);letter-spacing:-.09em;line-height:.9;margin:25px 0;font-weight:900}
-.bb-group-back{color:inherit;text-decoration:none;font-weight:700}.bb-group-sub{font-size:clamp(16px,2vw,23px);opacity:.75;max-width:650px}
-.bb-group-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,265px),1fr));gap:16px;margin-top:35px}
-.bb-group-card{min-height:190px;padding:23px;display:flex;flex-direction:column;align-items:flex-start;justify-content:space-between;border:1px solid var(--line,#d0d0d0);border-radius:18px;background:var(--paper,#fff);color:var(--ink,#161616);text-decoration:none;transition:transform .2s ease,box-shadow .2s ease}
-.bb-group-card:hover,.bb-group-card:focus-visible{transform:translateY(-3px);box-shadow:0 12px 30px #0002}
-.bb-group-card h2{font-size:clamp(23px,3vw,34px);letter-spacing:-.04em;margin:12px 0 0}.bb-group-card p{opacity:.65}.bb-group-card>span:last-child{align-self:flex-end;font-size:24px}
-.bb-group-number,.bb-group-hint{font-size:12px;opacity:.55}.bb-group-hint{margin-top:22px}
+/* =====================================================================
+   BABA. merkez sayfaları (KEŞFET · HAYAT · SOSYAL · İŞ) + BUGÜN.
+   Sınıf sözleşmesi korunur: .bb-group-page, .bb-group-card[href], .bb-today h1
+   ===================================================================== */
+body.hb-mode main{max-width:none;padding:0}
+.hb{--hb-pad:clamp(18px,5vw,72px);--hb-r:32px;position:relative;overflow:hidden;min-height:100svh;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Inter","Segoe UI",system-ui,sans-serif}
+.hb *{box-sizing:border-box}
+
+/* ---------- hero ---------- */
+.hb-hero{position:relative;min-height:min(92svh,860px);display:flex;align-items:flex-end;padding:calc(var(--hb-pad) + 20px) var(--hb-pad) clamp(48px,8vh,96px);isolation:isolate;overflow:hidden}
+.hb-hero-in{position:relative;z-index:2;max-width:1240px;width:100%;margin:0 auto}
+.hb .bb-group-back{display:inline-flex;align-items:center;gap:6px;font:600 14px/1 inherit;color:inherit;opacity:.75;text-decoration:none;padding:8px 14px;border-radius:999px;border:1px solid currentColor;border-color:color-mix(in srgb,currentColor 25%,transparent);backdrop-filter:blur(10px)}
+.hb .bb-group-back:hover{opacity:1}
+.hb-eye{margin:28px 0 0;font:600 12px/1.4 inherit;letter-spacing:.18em;text-transform:uppercase;opacity:.7;display:flex;flex-wrap:wrap;gap:6px 14px}
+.hb-eye span{letter-spacing:.08em;text-transform:none;opacity:.8;font-weight:500}
+.hb h1{margin:14px 0 10px;font-weight:800;font-size:clamp(68px,15.5vw,236px);line-height:.86;letter-spacing:-.065em;overflow-wrap:normal;word-break:keep-all}
+.hb-split{display:inline-block;white-space:nowrap}
+.hb-split span{display:inline-block;transform:translateY(105%) rotate(4deg);opacity:0;transition:transform .9s cubic-bezier(.2,.9,.1,1) var(--d),opacity .6s ease var(--d)}
+.hb.ready .hb-split span{transform:none;opacity:1}
+.hb .bb-group-sub{margin:0;max-width:640px;font-size:clamp(18px,2.2vw,26px);line-height:1.35;letter-spacing:-.01em;opacity:.8}
+.hb-jump{display:flex;flex-wrap:wrap;gap:8px;margin-top:26px}
+.hb-jump a{font:600 13px/1 inherit;letter-spacing:.04em;padding:12px 18px;border-radius:999px;text-decoration:none;color:inherit;background:color-mix(in srgb,currentColor 9%,transparent);transition:background .25s,transform .25s}
+.hb-jump a:hover{background:color-mix(in srgb,currentColor 18%,transparent);transform:translateY(-2px)}
+.hb-scroll{position:absolute;right:var(--hb-pad);bottom:28px;z-index:2;display:flex;align-items:center;gap:10px;font:600 11px/1 inherit;letter-spacing:.2em;text-transform:uppercase;opacity:.55}
+.hb-scroll i{width:1px;height:42px;background:currentColor;position:relative;overflow:hidden}
+.hb-scroll i::after{content:"";position:absolute;left:0;top:-40%;width:1px;height:40%;background:currentColor;animation:hbDrop 1.8s ease-in-out infinite}
+@keyframes hbDrop{to{top:110%}}
+
+/* ---------- bento ---------- */
+.hb-bento{position:relative;z-index:2;max-width:1240px;margin:0 auto;padding:0 var(--hb-pad);display:grid;gap:18px;grid-template-columns:repeat(12,1fr)}
+.hb-bento.n3 .hb-card:nth-child(1){grid-column:span 12;min-height:420px}
+.hb-bento.n3 .hb-card:nth-child(n+2){grid-column:span 6}
+.hb-bento.n2 .hb-card:nth-child(1){grid-column:span 7}
+.hb-bento.n2 .hb-card:nth-child(2){grid-column:span 5}
+.hb-card{position:relative;display:flex;flex-direction:column;justify-content:space-between;min-height:460px;padding:clamp(22px,3vw,36px);border-radius:var(--hb-r);text-decoration:none;color:inherit;overflow:hidden;isolation:isolate;
+  opacity:0;transform:translateY(40px) scale(.98);transition:opacity .8s ease calc(var(--i)*120ms),transform .9s cubic-bezier(.2,.9,.1,1) calc(var(--i)*120ms),box-shadow .4s}
+.hb-card.in{opacity:1;transform:none}
+.hb-card::before{content:"";position:absolute;inset:0;z-index:-1;background:radial-gradient(420px circle at var(--mx,50%) var(--my,30%),color-mix(in srgb,currentColor 12%,transparent),transparent 60%);opacity:0;transition:opacity .4s}
+.hb-card:hover::before{opacity:1}
+.hb-card:hover{transform:translateY(-6px)}
+.hb-card-art{position:relative;flex:1;display:grid;place-items:center;min-height:180px;margin-bottom:18px}
+.hb-card-txt{position:relative;display:grid;gap:8px;max-width:560px}
+.hb .bb-group-number{font:600 12px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.1em;opacity:.55}
+.hb-card h2{margin:0;font-size:clamp(30px,4.2vw,58px);line-height:.95;letter-spacing:-.045em;font-weight:800;overflow-wrap:anywhere}
+.hb-card p{margin:0;font-size:clamp(15px,1.5vw,18px);line-height:1.45;opacity:.72}
+.hb-live{display:inline-flex;align-items:center;gap:8px;width:max-content;max-width:100%;margin-top:6px;font:600 12px/1 inherit;letter-spacing:.04em;padding:8px 12px;border-radius:999px;background:color-mix(in srgb,currentColor 10%,transparent)}
+.hb-live::before{content:"";width:7px;height:7px;border-radius:50%;background:#34c759;box-shadow:0 0 0 0 #34c75988;animation:hbPing 2s infinite}
+@keyframes hbPing{70%{box-shadow:0 0 0 8px #34c75900}}
+.hb-go{position:absolute;right:clamp(20px,3vw,32px);top:clamp(20px,3vw,32px);display:grid;place-items:center;width:52px;height:52px;border-radius:50%;font-size:22px;background:color-mix(in srgb,currentColor 10%,transparent);transition:transform .4s cubic-bezier(.2,.9,.1,1),background .3s}
+.hb-card:hover .hb-go{transform:rotate(45deg) scale(1.08)}
+.hb-foot{max-width:1240px;margin:0 auto;padding:28px var(--hb-pad) 120px}
+.hb .bb-group-hint{margin:0;font-size:12px;opacity:.45}
+
+/* ---------- KEŞFET · OpenAI havası ---------- */
+.hb-kesfet{background:#f7f7f4;color:#0d0d0d}
+.hb-aurora{position:absolute;inset:-20% -10% 0;z-index:-1;filter:blur(70px) saturate(1.2);opacity:.85}
+.hb-aurora i{position:absolute;border-radius:50%;mix-blend-mode:multiply;animation:hbFloat 18s ease-in-out infinite}
+.hb-aurora i:nth-child(1){width:46vw;height:46vw;left:8%;top:10%;background:#c4b5fd}
+.hb-aurora i:nth-child(2){width:40vw;height:40vw;right:6%;top:4%;background:#99f6e4;animation-delay:-5s}
+.hb-aurora i:nth-child(3){width:34vw;height:34vw;left:38%;top:34%;background:#fdba74;animation-delay:-9s}
+.hb-aurora i:nth-child(4){width:28vw;height:28vw;right:24%;top:46%;background:#f9a8d4;animation-delay:-13s}
+@keyframes hbFloat{33%{transform:translate(6%,-8%) scale(1.08)}66%{transform:translate(-7%,6%) scale(.94)}}
+.hb-kesfet .hb-hero::after{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(180deg,transparent 55%,#f7f7f4);pointer-events:none}
+.hb-kesfet h1{font-weight:700;letter-spacing:-.07em}
+.hb-kesfet .hb-card{background:#fff;box-shadow:0 1px 0 #0000000d,0 30px 60px -30px #0000002e;border:1px solid #0000000f}
+.hb-kesfet .hb-card:nth-child(1){background:linear-gradient(120deg,#111 0,#1c1c1e 60%,#2c2c2e);color:#fff}
+.hb-news{width:min(100%,560px);display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.hb-news i{height:90px;border-radius:14px;background:linear-gradient(135deg,#c4b5fd,#99f6e4);animation:hbShine 6s ease-in-out infinite}
+.hb-news i:nth-child(2){background:linear-gradient(135deg,#fdba74,#f9a8d4);animation-delay:-2s}.hb-news i:nth-child(3){background:linear-gradient(135deg,#93c5fd,#c4b5fd);animation-delay:-4s}
+.hb-news b{height:9px;border-radius:5px;background:currentColor;opacity:.22}.hb-news b:nth-of-type(odd){opacity:.12;width:70%}
+@keyframes hbShine{50%{filter:hue-rotate(40deg) brightness(1.08)}}
+.hb-feed{position:relative;width:220px;height:170px}
+.hb-feed span{position:absolute;inset:0;border-radius:20px;background:#fff;border:1px solid #00000012;box-shadow:0 20px 40px -20px #0004;transform:rotate(calc((var(--k,0) - 1)*7deg)) translateY(calc(var(--k,0)*-10px));transition:transform .6s cubic-bezier(.2,.9,.1,1)}
+.hb-feed span:nth-child(1){--k:0;background:linear-gradient(160deg,#fff,#f4f0ff)}.hb-feed span:nth-child(2){--k:1}.hb-feed span:nth-child(3){--k:2;background:linear-gradient(160deg,#fff,#effcf9)}
+.hb-feed span::before{content:"";position:absolute;left:16px;top:16px;width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#c4b5fd,#fdba74)}
+.hb-feed span::after{content:"";position:absolute;left:16px;right:16px;bottom:18px;height:44px;border-radius:10px;background:repeating-linear-gradient(180deg,#0000001a 0 8px,transparent 8px 16px)}
+.hb-card:hover .hb-feed span{transform:rotate(calc((var(--k) - 1)*14deg)) translate(calc((var(--k) - 1)*26px),calc(var(--k)*-6px))}
+.hb-play{display:grid;justify-items:center;gap:16px;width:100%}
+.hb-play em{display:grid;place-items:center;width:86px;height:86px;border-radius:50%;font-style:normal;font-size:28px;color:#fff;background:conic-gradient(from 0deg,#c4b5fd,#99f6e4,#fdba74,#f9a8d4,#c4b5fd);box-shadow:0 20px 40px -14px #a78bfa;animation:hbSpinS 12s linear infinite}
+.hb-play div{display:flex;align-items:flex-end;gap:4px;height:46px}
+.hb-play i{width:5px;border-radius:3px;background:currentColor;opacity:.35;height:20%;animation:hbBar 1.1s ease-in-out infinite;animation-delay:calc(var(--i)*-70ms)}
+@keyframes hbBar{50%{height:100%;opacity:.8}}
+@keyframes hbSpinS{to{filter:hue-rotate(360deg)}}
+
+/* ---------- HAYAT · Apple havası ---------- */
+.hb-hayat{background:#000;color:#f5f5f7}
+.hb-hayat h1 .hb-split{background:linear-gradient(100deg,#fff 0,#ffd59e 30%,#ff8a5c 55%,#ff3d6e 80%,#b14cff);-webkit-background-clip:text;background-clip:text;color:transparent}
+.hb-hayat .hb-split span{color:transparent}
+.hb-horizon{position:absolute;inset:auto 0 0 0;width:100%;height:68%;z-index:-1}
+.hb-sun{transform-origin:600px 330px;animation:hbSun 9s ease-in-out infinite}
+@keyframes hbSun{50%{transform:scale(1.06);opacity:.9}}
+.hb-jet{animation:hbJet 16s linear infinite}
+@keyframes hbJet{from{transform:translate(-200px,120px)}to{transform:translate(1400px,40px)}}
+.hb-hayat .hb-card{background:#111113;border:1px solid #ffffff14;min-height:520px}
+.hb-hayat .hb-card:nth-child(1){background:radial-gradient(120% 90% at 50% 0,#1d2a55,#0a0a0c 70%)}
+.hb-hayat .hb-card:nth-child(2){background:radial-gradient(120% 90% at 50% 0,#3a1630,#0a0a0c 70%)}
+.hb-hayat .hb-card h2{background:linear-gradient(90deg,#fff,#c7c7cc);-webkit-background-clip:text;background-clip:text;color:transparent}
+.hb-travel{width:100%;max-width:520px}
+.hb-arc{stroke-dasharray:420;stroke-dashoffset:420;animation:hbDraw 3.5s cubic-bezier(.5,0,.2,1) infinite}
+@keyframes hbDraw{60%,100%{stroke-dashoffset:0}}
+.hb-plane{offset-path:path("M70 170 Q 200 20 330 150");offset-rotate:auto;animation:hbFly 3.5s cubic-bezier(.5,0,.2,1) infinite}
+@keyframes hbFly{from{offset-distance:0}60%,to{offset-distance:100%}}
+.hb-photo{position:relative;width:230px;height:220px}
+.hb-photo span{position:absolute;left:50%;top:50%;width:150px;height:190px;margin:-95px 0 0 -75px;border-radius:14px;border:6px solid #fff;box-shadow:0 30px 50px -20px #000;transition:transform .7s cubic-bezier(.2,.9,.1,1)}
+.hb-photo .p1{background:linear-gradient(160deg,#ffb35c,#ff3d6e);transform:rotate(-12deg)}
+.hb-photo .p2{background:linear-gradient(160deg,#5ec8f2,#1d55d6);transform:rotate(-4deg)}
+.hb-photo .p3{background:linear-gradient(160deg,#a3e635,#0f766e);transform:rotate(5deg)}
+.hb-photo .p4{background:radial-gradient(circle at 50% 38%,#ffe9b0 0 18%,transparent 19%),linear-gradient(180deg,#2a1a4a 0 60%,#120a22 60%);transform:rotate(12deg)}
+.hb-card:hover .hb-photo .p1{transform:rotate(-28deg) translate(-70px,10px)}.hb-card:hover .hb-photo .p2{transform:rotate(-10deg) translate(-24px,-6px)}
+.hb-card:hover .hb-photo .p3{transform:rotate(10deg) translate(24px,-6px)}.hb-card:hover .hb-photo .p4{transform:rotate(26deg) translate(70px,10px)}
+
+/* ---------- SOSYAL · iOS Mesajlar sıcaklığı ---------- */
+.hb-sosyal{background:linear-gradient(160deg,#eef4ff 0,#f6efff 45%,#fff3ea 100%);color:#1d1d1f}
+.hb-sosyal h1 .hb-split{background:linear-gradient(90deg,#0a84ff,#5e5ce6 50%,#ff375f);-webkit-background-clip:text;background-clip:text;color:transparent}
+.hb-sosyal .hb-split span{color:transparent}
+.hb-bubbles{position:absolute;inset:0;z-index:-1}
+.hb-bubbles span{position:absolute;bottom:-60px;left:calc(8% + var(--i)*11.5%);display:grid;place-items:center;width:64px;height:64px;border-radius:22px 22px 22px 6px;background:#fff;font-size:28px;box-shadow:0 20px 40px -18px #5e5ce666;animation:hbRise 14s linear infinite;animation-delay:calc(var(--i)*-1.8s)}
+.hb-bubbles span:nth-child(odd){border-radius:22px 22px 6px 22px;background:linear-gradient(135deg,#0a84ff,#5e5ce6)}
+@keyframes hbRise{from{transform:translateY(0) rotate(-6deg);opacity:0}10%{opacity:1}90%{opacity:1}to{transform:translateY(-110svh) rotate(8deg);opacity:0}}
+.hb-sosyal .hb-card{background:#ffffffcc;backdrop-filter:blur(20px);border:1px solid #fff;box-shadow:0 30px 60px -30px #5e5ce655}
+.hb-sosyal .hb-card:nth-child(1){background:linear-gradient(150deg,#0a84ff,#5e5ce6);color:#fff}
+.hb-chat{display:grid;gap:10px;width:min(100%,380px)}
+.hb-chat p{margin:0;padding:12px 16px;border-radius:22px;font-size:16px;max-width:78%;opacity:0;transform:translateY(12px) scale(.96);animation:hbMsg 8s ease-in-out infinite}
+.hb-chat .l{justify-self:start;background:#ffffff2e;border-bottom-left-radius:6px}
+.hb-chat .r{justify-self:end;background:#fff;color:#1d1d1f;border-bottom-right-radius:6px}
+.hb-chat p:nth-child(2){animation-delay:.8s}.hb-chat p:nth-child(3){animation-delay:1.6s}.hb-chat p:nth-child(4){animation-delay:2.4s}
+.hb-chat .t{display:flex;gap:5px;padding:14px 16px}.hb-chat .t i{width:8px;height:8px;border-radius:50%;background:#8e8e93;animation:hbDot 1s ease-in-out infinite}
+.hb-chat .t i:nth-child(2){animation-delay:.15s}.hb-chat .t i:nth-child(3){animation-delay:.3s}
+@keyframes hbMsg{0%{opacity:0;transform:translateY(12px) scale(.96)}8%,85%{opacity:1;transform:none}100%{opacity:0}}
+@keyframes hbDot{50%{transform:translateY(-4px);opacity:.4}}
+.hb-breath{position:relative;display:grid;place-items:center;width:220px;height:220px}
+.hb-breath span{position:absolute;inset:0;border-radius:50%;background:radial-gradient(circle,#ffb38a55,#6a4bff22 60%,transparent 70%);animation:hbBreath 8s ease-in-out infinite}
+.hb-breath span:nth-child(2){inset:30px;background:radial-gradient(circle,#ffb38a88,#6a4bff33 70%,transparent 72%);animation-delay:.4s}
+.hb-breath span:nth-child(3){inset:64px;background:linear-gradient(135deg,#ff9f7a,#8b6bff);animation-delay:.8s}
+.hb-breath em{position:relative;font-style:normal;font-weight:700;color:#fff;font-size:15px;letter-spacing:.04em}
+@keyframes hbBreath{0%,100%{transform:scale(.82)}45%,55%{transform:scale(1.08)}}
+
+/* ---------- İŞ · Mercedes havası ---------- */
+.hb-is{background:#000;color:#e9ebee}
+.hb-precision{position:absolute;inset:0;z-index:-1;background-image:linear-gradient(#ffffff0a 1px,transparent 1px),linear-gradient(90deg,#ffffff0a 1px,transparent 1px);background-size:64px 64px;mask-image:radial-gradient(ellipse at 60% 40%,#000 30%,transparent 75%)}
+.hb-precision i{position:absolute;inset:0;background:linear-gradient(105deg,transparent 35%,#ffffff1f 48%,transparent 60%);transform:translateX(-100%);animation:hbSweep 6s ease-in-out infinite}
+@keyframes hbSweep{0%,30%{transform:translateX(-100%)}70%,100%{transform:translateX(100%)}}
+.hb-is h1{font-weight:300;letter-spacing:-.04em}
+.hb-is h1 .hb-split{background:linear-gradient(100deg,#6b7078 0,#f5f7fa 22%,#9aa0a8 40%,#ffffff 52%,#7c828b 70%,#dfe3e8 90%);background-size:220% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:hbMetal 7s ease-in-out infinite}
+.hb-is .hb-split span{color:transparent}
+@keyframes hbMetal{50%{background-position:100% 0}}
+.hb-is .hb-eye{letter-spacing:.32em}
+.hb-is .hb-card{background:linear-gradient(180deg,#121316,#060607);border:1px solid transparent;background-clip:padding-box;box-shadow:inset 0 1px 0 #ffffff14}
+.hb-is .hb-card::after{content:"";position:absolute;inset:0;border-radius:inherit;padding:1px;background:linear-gradient(135deg,#ffffff55,#ffffff08 40%,#ffffff33);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none}
+.hb-is .hb-card h2{font-weight:300;letter-spacing:-.03em;text-transform:uppercase;font-size:clamp(26px,3.4vw,46px)}
+.hb-is .hb-card p{letter-spacing:.02em}
+.hb-dial{width:220px;height:220px}
+.hb-hand{transform-origin:110px 110px;animation:hbTick 60s steps(60) infinite}
+.hb-hand2{transform-origin:110px 110px;animation:hbTick 720s linear infinite}
+@keyframes hbTick{to{transform:rotate(360deg)}}
+.hb-board{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;width:min(100%,360px)}
+.hb-board div{display:grid;gap:8px;align-content:start;padding:12px;border-radius:14px;background:#ffffff08;border:1px solid #ffffff12;min-height:170px}
+.hb-board i{height:26px;border-radius:7px;background:linear-gradient(90deg,#ffffff24,#ffffff0d);animation:hbSlide 5s ease-in-out infinite;animation-delay:calc(var(--i)*-.7s)}
+.hb-board .c i:first-child{background:linear-gradient(90deg,#c9ced4,#7c828b)}
+@keyframes hbSlide{50%{transform:translateX(4px);opacity:.75}}
+
+/* ---------- mobil ---------- */
+@media (max-width:860px){
+  .hb-bento{grid-template-columns:1fr;gap:14px}
+  .hb-bento .hb-card{grid-column:auto!important;min-height:380px!important}
+  .hb-hero{min-height:min(84svh,720px)}
+  .hb-scroll{display:none}
+  .hb h1{font-size:clamp(62px,19vw,140px)}
+}
+@media (max-width:420px){.hb h1{font-size:clamp(54px,18vw,90px)}.hb-card h2{font-size:32px}}
+@media (prefers-reduced-motion:reduce){.hb *,.hb *::before,.hb *::after{animation:none!important;transition:none!important}.hb-split span,.hb-card{opacity:1!important;transform:none!important}}
+
+/* ---------- CBN kısayolları (değişmedi) ---------- */
 .bb-cbn-shortcuts{display:flex;flex-wrap:wrap;gap:8px;padding:10px 14px;background:#0f172a;color:white;position:relative;z-index:3}
 .bb-cbn-shortcuts a,.bb-work-shortcut{display:inline-flex;padding:9px 13px;border:1px solid #ffffff55;border-radius:100px;color:inherit;text-decoration:none;font:700 12px/1.4 system-ui}
 .bb-work-shortcut{margin:12px;background:#122b4b;color:white}
-@media(max-width:760px){.bb-group-grid{grid-template-columns:1fr}.bb-group-card{min-height:145px}.bb-cbn-shortcuts{padding:8px;gap:5px}.bb-cbn-shortcuts a{font-size:11px;padding:8px 9px}}
-@media(prefers-reduced-motion:reduce){.bb-group-card{transition:none}.bb-group-card:hover{transform:none}}
+@media(max-width:760px){.bb-cbn-shortcuts{padding:8px;gap:5px}.bb-cbn-shortcuts a{font-size:11px;padding:8px 9px}}
+
+/* ---------- ana sayfa kartları: başlık ve alt başlık sığsın ---------- */
+.hub-card h2{overflow-wrap:anywhere;hyphens:auto}
+.hub-card h2 i{display:block;font-size:.42em!important;line-height:1.15;margin:.28em 0 0!important;letter-spacing:-.01em;white-space:normal;overflow-wrap:anywhere}
+/* gradyanlı başlıklarda harf üstü işaretler (Ü, Ş, İ) kesilmesin */
+.hb h1 .hb-split{padding:.14em .04em .06em 0;margin-top:-.14em}
+@media (max-width:860px){.hb-bubbles{opacity:.45}.hb-bubbles span{width:44px;height:44px;font-size:20px;border-radius:16px 16px 16px 5px;left:calc(52% + var(--i)*5.8%)}}

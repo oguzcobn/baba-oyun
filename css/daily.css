@@ -20,3 +20,40 @@
 .baba-shared-menu{position:absolute;bottom:58px;right:0;min-width:170px;padding:7px;background:#fff;color:#181818;border:1px solid #ddd;border-radius:14px;box-shadow:0 15px 35px #0003}
 .baba-shared-menu button{display:block;width:100%;padding:12px;text-align:left;border:0;background:transparent;border-radius:8px;color:inherit;font:600 13px system-ui;cursor:pointer}.baba-shared-menu button:hover{background:#f1f2f5}
 @media(max-width:760px){.baba-shared-actions{bottom:calc(91px + env(safe-area-inset-bottom));right:13px}body.cbn-mode .baba-shared-actions{display:none}}
+
+/* ---------- BUGÜN. · Tesla havası: sade, büyük rakamlar, gösterge paneli ---------- */
+.hb-today{position:relative;max-width:none!important;min-height:100svh;margin:0!important;padding:clamp(28px,5vw,80px) clamp(18px,5vw,80px) 120px!important;background:radial-gradient(120% 80% at 50% 0,#1b1f2a 0,#0b0c10 60%,#050507);color:#f4f5f7!important;overflow:hidden;isolation:isolate;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Inter","Segoe UI",system-ui,sans-serif}
+.hb-today>*{max-width:1240px;margin-left:auto;margin-right:auto}
+.hbt-road{position:absolute;left:-20%;right:-20%;bottom:-10%;height:55%;z-index:-1;max-width:none;background:repeating-linear-gradient(90deg,#ffffff10 0 1px,transparent 1px 90px),repeating-linear-gradient(0deg,#ffffff0c 0 1px,transparent 1px 60px);transform:perspective(600px) rotateX(62deg);transform-origin:bottom;mask-image:linear-gradient(0deg,#000,transparent 85%);animation:hbtRoad 3s linear infinite}
+@keyframes hbtRoad{to{background-position:0 0,0 60px}}
+.hb-today .hbt-head{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:24px;border-bottom:1px solid #ffffff1f!important;padding-bottom:32px!important;margin-bottom:28px!important}
+.hb-today .eyebrow{color:#9aa1ad;letter-spacing:.2em;font-size:12px;text-transform:uppercase}
+.hb-today h1{font-size:clamp(70px,14vw,200px)!important;letter-spacing:-.07em!important;line-height:.85!important;margin:0 0 8px!important;padding:.16em .04em .04em 0;font-weight:600!important;background:linear-gradient(180deg,#fff 30%,#9aa1ad);-webkit-background-clip:text;background-clip:text;color:transparent}
+.hbt-greet{margin:0;font-size:clamp(18px,2.2vw,26px);color:#c7ccd4}
+.hbt-clock{text-align:right}
+.hbt-clock b{display:block;font-size:clamp(56px,9vw,120px);font-weight:200;letter-spacing:-.04em;line-height:1;font-variant-numeric:tabular-nums}
+.hbt-clock span{font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:#8a919c}
+.hbt-stats{display:grid;grid-template-columns:1.3fr repeat(3,1fr);gap:14px;margin-bottom:18px}
+.hbt-stats>div{border-radius:24px;padding:22px;background:#ffffff08;border:1px solid #ffffff14;backdrop-filter:blur(14px)}
+.hbt-ring{display:flex;align-items:center;gap:18px}
+.hbt-ring svg{width:112px;height:112px;transform:rotate(-90deg);flex:none}
+.hbt-ring circle{fill:none;stroke-width:9}.hbt-ring .bg{stroke:#ffffff14}.hbt-ring .fg{stroke:#3e6ae1;stroke-linecap:round;transition:stroke-dashoffset 1.4s cubic-bezier(.2,.9,.1,1)}
+.hbt-ring b{display:block;font-size:46px;font-weight:300;line-height:1}.hbt-ring small{font-size:20px;color:#8a919c}
+.hbt-ring span,.hbt-stat span{font-size:13px;color:#9aa1ad;letter-spacing:.02em}
+.hbt-stat b{display:block;font-size:clamp(44px,5vw,64px);font-weight:200;line-height:1;margin-bottom:8px;font-variant-numeric:tabular-nums}
+.hbt-stat.warn b{color:#ff6b5b}
+.hb-today .bb-today-grid{gap:14px!important}
+.hb-today .bb-today-grid article{background:#ffffff08!important;border:1px solid #ffffff14!important;border-radius:24px!important;color:inherit}
+.hb-today .bb-today-grid h2{display:flex;justify-content:space-between;align-items:baseline;font-weight:500;letter-spacing:-.01em}
+.hb-today .bb-today-grid h2 a{font-size:13px;color:#9aa1ad;text-decoration:none}.hb-today .bb-today-grid h2 a:hover{color:#fff}
+.hb-today .bb-today-item{border-bottom:1px solid #ffffff12!important;transition:padding .25s}
+.hb-today .bb-today-item:hover{padding-left:6px}
+.hb-today .bb-today-item small{font-variant-numeric:tabular-nums;padding:4px 10px;border-radius:999px;background:#ffffff10;opacity:1!important;color:#c7ccd4}
+.hb-today .bb-today-item.late small{background:#ff6b5b22;color:#ff8a7d}
+.hbt-empty{color:#9aa1ad}
+.hb-today .bb-today-shortcuts{gap:10px!important}
+.hb-today .bb-today-shortcuts a{min-width:160px;justify-content:center;padding:14px 22px!important;border-radius:6px!important;font:600 14px/1 inherit!important;background:#ffffff1a!important;color:#fff!important;backdrop-filter:blur(10px)}
+.hb-today .bb-today-shortcuts a.pri{background:#3e6ae1!important}
+.hb-today .bb-today-shortcuts a:hover{filter:brightness(1.15)}
+@media (max-width:860px){.hbt-stats{grid-template-columns:1fr 1fr}.hbt-ring{grid-column:1/-1}.hbt-clock{text-align:left}.hb-today .bb-today-grid{grid-template-columns:1fr!important}.hb-today .bb-today-shortcuts a{flex:1;min-width:0}}
+@media (prefers-reduced-motion:reduce){.hbt-road{animation:none}}
