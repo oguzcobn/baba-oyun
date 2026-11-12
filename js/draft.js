@@ -62,7 +62,7 @@ const Draft = (() => {
       <section class="dr-grid">
         <div class="dr-left">
           <div class="draw-box">
-            <div class="draw-head"><span class="eyebrow">${T('Torba', 'The draw')}</span><span class="muted sm">${T(`${S.drawn.length}/18 kulüp çekildi · her kulübün şansı eşit`, `${S.drawn.length}/18 clubs drawn · every club has an equal chance`)}</span></div>
+            <div class="draw-head"><span class="eyebrow">${T('Torba', 'The draw')}</span><span class="muted sm">${T(`${S.drawn.length}/18 kulüp çekildi · 4 büyüklerin şansı daha yüksek`, `${S.drawn.length}/18 clubs drawn · the Big Four come up more often`)}</span></div>
             <div class="club-grid">${DRAFT_CLUBS.map(tileHtml).join('')}</div>
             <button class="pill big draw-btn" data-a="spin" ${n >= 13 || S.club ? 'disabled' : ''}>${n >= 13 ? T('Kadro tamam ✓', 'Squad complete ✓') : S.club ? T('Oyuncunu seç ↓', 'Pick your player ↓') : T('TAKIM ÇEK', 'DRAW A CLUB')}</button>
           </div>
@@ -70,7 +70,7 @@ const Draft = (() => {
         </div>
         <div class="dr-right">
           <div class="pitch">${DRAFT_SLOTS.map(slotHtml).join('')}<div class="pitch-lines"></div></div>
-          <div class="bench"><span class="eyebrow">${T('Yedekler', 'Substitutes')}</span>${S.bench.map((p, i) => `<div class="bslot ${p ? 'full' : ''}">${p ? cardInner(p) : '<span>' + T('Yedek ', 'Sub ') + (i + 1) + '</span>'}</div>`).join('')}</div>
+          <div class="bench"><span class="eyebrow">${T('Yedekler', 'Substitutes')}</span>${S.bench.map((p, i) => `<div class="bslot ${p ? 'full' : ''}${swapCls('b', i)}" ${p ? `data-b="${i}" role="button" tabindex="0"` : ''}>${p ? cardInner(p) : '<span>' + T('Yedek ', 'Sub ') + (i + 1) + '</span>'}</div>`).join('')}${S.bench.some(Boolean) && xi.length ? `<p class="muted sm swap-help">${swapSel ? T('Şimdi yer değiştireceği oyuncuya dokun (parlayanlar uygun) · iptal için tekrar dokun', 'Now tap the player to swap with (highlighted ones fit) · tap again to cancel') : T('🔁 Yedekle ilk 11’i değiştirmek için oyuncuya dokun', '🔁 Tap a player to swap a sub with the starting XI')}</p>` : ''}</div>
           <div class="dr-actions"><p class="muted sm chem-help">${T(`Kimya: aynı kulüpten ya da aynı ülkeden gelen her takım arkadaşı bir bağ kurar (●○○ → ●●●). Maç gücü = ortalama reyting + kimya (en çok +${CHEM_MAX}); her maçta form ve sakatlık şansı var.`, `Chemistry: every teammate from the same club or the same country forms a link (●○○ → ●●●). Match strength = average rating + chemistry (up to +${CHEM_MAX}); every match carries a chance of form swings and injuries.`)}</p><button class="pill ghost" data-a="reset">${T('Sıfırla', 'Reset')}</button><button class="pill" data-a="next" ${n < 13 ? 'disabled' : ''}>${T('Teknik direktör ve taktik', 'Manager and tactics')} →</button></div>
         </div>
       </section>`;
@@ -85,9 +85,37 @@ const Draft = (() => {
   let CHM = null; // render sırasında hesaplanan oyuncu kimyaları
   function cardInner(p) { const c = CLUB(p.club), k = CHM ? CHM.get(p) : null, n = nation(p) || '–';
     return `<i style="background:${c.c1}"></i><b>${esc(p.name)}</b><small>${PZ(p.pos)} · ${hide() ? '??' : p.r} · ${n}</small>${k == null ? '' : `<span class="chem c${k}">${'●'.repeat(k)}${'○'.repeat(3 - k)}</span>`}`; }
-  function slotHtml(s) { const p = S.picks[s.id]; return `<div class="slot ${p ? 'full' : ''}" style="left:${s.x}%;top:${s.y}%">${p ? cardInner(p) : `<span>${PZ(s.pos)}</span>`}</div>`; }
+  function slotHtml(s) { const p = S.picks[s.id]; return `<div class="slot ${p ? 'full' : ''}${swapCls('s', s.id)}" style="left:${s.x}%;top:${s.y}%" ${p ? `data-slot="${s.id}" role="button" tabindex="0"` : ''}>${p ? cardInner(p) : `<span>${PZ(s.pos)}</span>`}</div>`; }
+  /* yedek ↔ ilk 11 yer değiştirme (lig simüle edilmeden). Aynı bölgedeki mevkiler: kaleci · savunma · orta saha · hücum */
+  const ZONE = { KL: 'g', ST: 'd', BK: 'd', OS: 'm', KN: 'a', FV: 'a' };
+  let swapSel = null;   // { t: 'b', i } | { t: 's', id }
+  const slotPos = id => (DRAFT_SLOTS.find(x => x.id === id) || {}).pos;
+  function swapOk(sel, t, key) {
+    if (!sel || sel.t === t) return false;
+    const b = sel.t === 'b' ? S.bench[sel.i] : S.bench[key], sid = sel.t === 's' ? sel.id : key;
+    return !!b && !!S.picks[sid] && ZONE[b.pos] === ZONE[slotPos(sid)];
+  }
+  function swapCls(t, key) {
+    if (!swapSel) return '';
+    if (swapSel.t === t && (t === 'b' ? swapSel.i === key : swapSel.id === key)) return ' swap-src';
+    return swapOk(swapSel, t, key) ? ' swap-ok' : '';
+  }
+  function onSwap(t, key) {
+    if (S.phase !== 'draft') return;
+    if (swapSel && swapSel.t === t && (t === 'b' ? swapSel.i === key : swapSel.id === key)) { swapSel = null; return render(); }
+    if (swapSel && swapSel.t !== t) {
+      if (!swapOk(swapSel, t, key)) { swapSel = null; flash(T('Bu iki oyuncu aynı bölgede oynamıyor (kaleci · savunma · orta saha · hücum)', 'These two don’t play in the same area (keeper · defence · midfield · attack)')); return render(); }
+      const bi = swapSel.t === 'b' ? swapSel.i : key, sid = swapSel.t === 's' ? swapSel.id : key, tmp = S.picks[sid];
+      S.picks[sid] = S.bench[bi]; S.bench[bi] = tmp; swapSel = null; save();
+      if (typeof AdvAudio !== 'undefined') AdvAudio.note(880, .08, 'triangle', .04);
+      flash(T(`🔁 ${S.picks[sid].name} ilk 11’de, ${tmp.name} yedekte`, `🔁 ${S.picks[sid].name} starts, ${tmp.name} to the bench`));
+      return render();
+    }
+    swapSel = t === 'b' ? { t, i: key } : { t, id: key }; render();
+  }
+  function flash(msg) { const d = document.createElement('div'); d.className = 'dr-flash'; d.textContent = msg; document.body.appendChild(d); setTimeout(() => d.remove(), 2600); }
   function pickPanel() {
-    if (!S.club) return `<p class="muted">${T('“Takım çek”e bas: 18 kulüp karıştırılmış bir torbada, her biri bir kez çıkar. Gelen kulübün güncel FC 27 kadrosundan ya da son 10 yılın yıldızlarından bir oyuncu seç. Mevkisi boşsa sahaya, değilse yedeğe geçer.', 'Press “Draw a club”: the 18 clubs are shuffled in a bag and each comes out once. Pick a player from that club’s current FC 27 squad or from the stars of the last 10 years. If their position is free they go on the pitch, otherwise onto the bench.')}</p>`;
+    if (!S.club) return `<p class="muted">${T('“Takım çek”e bas: 18 kulüp bir torbada, her biri bir kez çıkar; 4 büyüklerin çıkma şansı daha yüksek. Gelen kulübün güncel FC 27 kadrosundan ya da son 10 yılın yıldızlarından bir oyuncu seç. Mevkisi boşsa sahaya, değilse yedeğe geçer. Yedekle ilk 11’i istediğin zaman dokunarak değiştirebilirsin.', 'Press “Draw a club”: the 18 clubs are in a bag and each comes out once; the Big Four come up more often. Pick a player from that club’s current FC 27 squad or from the stars of the last 10 years. If their position is free they go on the pitch, otherwise onto the bench. You can swap a sub with a starter at any time by tapping them.')}</p>`;
     const c = CLUB(S.club), need = new Set(DRAFT_SLOTS.filter(s => !S.picks[s.id]).map(s => s.pos));
     const list = c.players.map((p, i) => ({ p, i })).filter(x => !S.pf || x.p[1] === S.pf).sort((a, b) => b.p[2] - a.p[2]);
     return `<div class="club-head">${crest(c, 'lg')}<div><h3>${esc(c.name)}</h3><small class="muted">${c.players.length} ${T('oyuncu', 'players')}</small></div>${S.jokers > 0 ? `<button class="pill ghost sm" data-a="joker">↻ ${T('Joker', 'Joker')} (${S.jokers})</button>` : ''}</div>
@@ -103,14 +131,21 @@ const Draft = (() => {
     q('[data-a=next]').onclick = () => { S.phase = 'tactics'; render(); };
     el.querySelectorAll('.pos-filter button').forEach(b => b.onclick = () => { S.pf = b.dataset.pf || null; render(); });
     el.querySelectorAll('.pl:not(.no)').forEach(b => b.onclick = () => take(+b.dataset.i));
+    const sw = (node, t, key) => { node.onclick = () => onSwap(t, key); node.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSwap(t, key); } }; };
+    el.querySelectorAll('[data-b]').forEach(b => sw(b, 'b', +b.dataset.b));
+    el.querySelectorAll('[data-slot]').forEach(b => sw(b, 's', b.dataset.slot));
   }
 
-  /* eşit şans: 18 kulüp karıştırılmış bir torbada; torba bitince yeniden dolar */
+  /* torba: her kulüp bir kez çıkar; 4 büyüklerin (GS, FB, BJK, TS) çıkma şansı daha yüksek. Kriptografik rastgelelik. */
+  const BIG4 = new Set(['gs', 'fb', 'bjk', 'ts']), W_BIG = 2.2;
+  const rand01 = () => { try { return crypto.getRandomValues(new Uint32Array(1))[0] / 4294967296; } catch (e) { return Math.random(); } };
   function drawClub() {
     if (!Array.isArray(S.bag)) S.bag = [];
     for (let tries = 0; tries < DRAFT_CLUBS.length * 2; tries++) {
       if (!S.bag.length) { S.bag = shuffle(DRAFT_CLUBS.map((c, i) => i)); S.drawn = []; }
-      const k = S.bag.shift();
+      const w = S.bag.map(k => BIG4.has(DRAFT_CLUBS[k].id) ? W_BIG : 1), tot = w.reduce((a, b) => a + b, 0);
+      let r = rand01() * tot, j = 0; for (; j < w.length - 1; j++) { r -= w[j]; if (r <= 0) break; }
+      const k = S.bag.splice(j, 1)[0];
       if (DRAFT_CLUBS[k].players.some(canTake)) return k;
     }
     return -1;
@@ -136,6 +171,7 @@ const Draft = (() => {
     later(() => { S.club = target; S.pf = null; if (!S.drawn.includes(target)) S.drawn.push(target); render(); el.querySelector('.pick-panel').scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }, t + 280);
   }
   function take(i) {
+    swapSel = null;
     const c = CLUB(S.club), p = c.players[i];
     const o = { name: p[0], pos: p[1], r: p[2], club: c.id, era: p[3] };
     const s = openSlotsFor(p[1])[0];
