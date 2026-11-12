@@ -133,3 +133,14 @@ test.describe('Draft career history',()=>{
   await expect(page.locator('.dr-career')).toContainText('82');
  });
 });
+
+test.describe('Draft manager mode',()=>{
+ test.use({viewport:{width:390,height:844}});
+ test.beforeEach(async({page})=>page.addInitScript(()=>sessionStorage.setItem('baba_ok','1')));
+ test('manager assets load on mobile',async({page})=>{
+  await page.goto(BASE+'#draft');
+  expect(await page.evaluate(()=>typeof Draft!=='undefined'&&typeof Draft.open==='function')).toBeTruthy();
+  expect(await page.evaluate(()=>[...document.styleSheets].some(s=>s.href?.includes('draft-manager.css')))).toBeTruthy();
+  await expect(page.locator('#draftRoot')).toBeVisible();
+ });
+});
