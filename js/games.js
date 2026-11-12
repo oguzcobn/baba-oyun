@@ -17,7 +17,7 @@ const App = (() => {
   let guest = ls.get('baba_guest', null);
   if (guest && inviteCode(guest.name) !== guest.code) guest = null;
   const isOwner = () => unlocked, isGuest = () => !unlocked && !!guest, canIn = () => unlocked || !!guest;
-  const OWNER_ONLY = ['is', 'erisim', 'cbn'];
+  const OWNER_ONLY = ['is', 'erisim'];
   const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const root = () => document.getElementById('view');
   let cleanup = [];
@@ -90,14 +90,14 @@ const App = (() => {
       { id: 'seyahat', n: '04', t: 'Seyahat', d: 'Booking · Airbnb · Skyscanner · Gezilerim 3D dünya', cls: 'c-sey' },
       { id: 'foto', n: '05', t: 'Fotoğraf', d: 'Pexels · günün fotoğrafçısı · 3D sokak galerisi', cls: 'c-foto' },
       { id: 'ts', n: '06', t: 'Trabzonspor', d: 'Sıradaki maç · son 5 maç · kadro · TS Club', cls: 'c-ts' },
-      ...(isOwner() ? [{ id: 'cbn', n: '07', t: 'CBN<i>Personal OS</i>', d: 'Notlar · görevler · takvim · projeler · aile · finans · hedefler — ikinci beynin', cls: 'c-cbn' }] : [])
+      { id: 'cbn', n: '07', t: 'CBN<i>Personal OS</i>', d: 'Notlar · görevler · takvim · projeler · aile · finans · hedefler — kişisel asistanın, yalnızca sana özel', cls: 'c-cbn' }
     ];
     root().innerHTML = `
       <section class="hero hub-hero"><p class="eyebrow">${esc(name || '')} · ${d.toLocaleDateString('tr-TR', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
         <h1 class="display xl">BABA<em>.</em></h1>
         <p class="lead">İş, dinlenme, oyun ve yolculuk — hepsi tek yerde, sadece davetlilere açık.</p></section>
       <section class="hub">${CATS.map(c => `<a class="hub-card ${c.cls}" href="#${c.id}"><span class="hub-n">${c.n}</span><h2>${c.t}</h2><p>${c.d}</p><span class="arrow">↗</span></a>`).join('')}</section>
-      <footer class="foot"><div class="foot-word">BABA<span>.</span></div><div class="foot-row">${isOwner() ? '<button class="link" data-a="pin">Şifreyi değiştir</button><a class="link" href="#erisim">Davetler &amp; erişim</a><button class="link" data-a="lock">Kilitle</button>' : '<button class="link" data-a="gout">Bu cihazdan çık</button>'}<span class="muted">Yalnızca davetliler için · sürüm 19</span></div></footer>`;
+      <footer class="foot"><div class="foot-word">BABA<span>.</span></div><div class="foot-row">${isOwner() ? '<button class="link" data-a="pin">Şifreyi değiştir</button><a class="link" href="#erisim">Davetler &amp; erişim</a><button class="link" data-a="lock">Kilitle</button>' : '<button class="link" data-a="gout">Bu cihazdan çık</button>'}<span class="muted">Yalnızca davetliler için · sürüm 20</span></div></footer>`;
     const q = s => root().querySelector(s);
     if (q('[data-a=pin]')) q('[data-a=pin]').onclick = () => { click(); changePin(); };
     if (q('[data-a=lock]')) q('[data-a=lock]').onclick = () => { click(); lock(); };
@@ -439,7 +439,8 @@ const App = (() => {
     document.body.classList.remove('locked');
     let r = location.hash.slice(1); if (r.startsWith('davet=')) { r = ''; history.replaceState(null, '', location.pathname); }
     const isCbn = r === 'cbn' || r.startsWith('cbn/');
-    if ((OWNER_ONLY.includes(r) || isCbn) && !isOwner()) r = '';
+    if (OWNER_ONLY.includes(r) && !isOwner()) r = '';
+    if (isCbn && !canIn()) r = '';
     const cbnOn = isCbn && r !== '' && typeof CBN !== 'undefined';
     document.body.classList.toggle('cbn-mode', cbnOn); if (!cbnOn) document.body.classList.remove('cbn-dark');
     document.body.classList.toggle('guest', isGuest());
@@ -463,5 +464,5 @@ const App = (() => {
     else hub();
   }
   addEventListener('hashchange', render);
-  return { render, leave, askOpen, lock: () => { if (isOwner()) lock(); else if (confirm('Davetli erişimi bu cihazdan kaldırılsın mı?')) guestOut(); }, isOwner, get unlocked() { return unlocked; } };
+  return { render, leave, askOpen, lock: () => { if (isOwner()) lock(); else if (confirm('Davetli erişimi bu cihazdan kaldırılsın mı?')) guestOut(); }, isOwner, user: () => isOwner() ? { name: 'Oğuzhan', key: '' } : guest ? { name: guest.name, key: 'g-' + String(guest.code).toLowerCase().replace(/[^a-z0-9-]/g, '') } : null, get unlocked() { return unlocked; } };
 })();

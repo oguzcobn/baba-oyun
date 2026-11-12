@@ -6,7 +6,11 @@
    Modüller CBN.register(id, { render }) ile eklenir; yönlendirme #cbn/<modül>/<alt>.
    ===================================================================== */
 const CBN = (() => {
-  const SCHEMA = 2, DB_NAME = 'cbn';
+  const SCHEMA = 2;
+  /* her kullanıcının kendi veritabanı: sahibi "cbn", davetliler "cbn-g-<davet kodu>" (aynı cihazı paylaşsalar bile kayıtlar karışmaz) */
+  const me = () => (typeof App !== 'undefined' && App.user && App.user()) || null;
+  const dbName = () => { const u = me(); return 'cbn' + (u && u.key ? '-' + u.key : ''); };
+  let dbKey = null;
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
   const pad = n => String(n).padStart(2, '0');
@@ -63,7 +67,7 @@ const CBN = (() => {
   /* ---------- IndexedDB ---------- */
   function openDb() {
     return new Promise((res, rej) => {
-      let r; try { r = indexedDB.open(DB_NAME, SCHEMA); } catch (e) { return rej(e); }
+      let r; try { r = indexedDB.open(dbKey = dbName(), SCHEMA); } catch (e) { return rej(e); }
       r.onupgradeneeded = () => {        // yalnızca ekleme yapar; mevcut kayıtları silen migrasyon yok
         const d = r.result, mk = (n, o) => d.objectStoreNames.contains(n) ? null : d.createObjectStore(n, o);
         mk('notes', { keyPath: 'id' }); mk('folders', { keyPath: 'id' }); mk('tasks', { keyPath: 'id' }); mk('events', { keyPath: 'id' });
@@ -98,19 +102,25 @@ const CBN = (() => {
     Object.assign(S, { notes, folders, tasks, events, items });
     const m = {}; meta.forEach(x => m[x.key] = x.value);
     S.settings = normSettings(m.settings);
+    const own = !(me() && me().key);      // örnek projeler, aile profilleri ve kişisel klasörler yalnızca sahibine
     if (!m.seeded2) {      // şema 2 başlangıç kayıtları: örnek projeler ve aile profilleri (düzenlenebilir), bir kez
       const mkI = (kind, p, i) => put('items', Object.assign({ id: uid() + kind[0] + i, kind, createdAt: Date.now() + i, updatedAt: Date.now() }, p));
-      if (!items.some(x => x.kind === 'project')) { const P = ['Lale & Ela Adventure Game', 'Empires of the Valley', 'BABA. App', 'Scotland Relocation Plan', 'Photography Portfolio']; for (let i = 0; i < P.length; i++) await mkI('project', { name: P[i], desc: '', status: 'active', goals: '', links: '', phases: [], ideas: [], decisions: [], noteIds: [] }, i); }
-      if (!items.some(x => x.kind === 'member')) { const M = ['Oğuzhan', 'Nicole', 'Lale', 'Ela']; for (let i = 0; i < M.length; i++) await mkI('member', { name: M[i], role: '', birthday: '' }, i); }
+      if (!items.some(x => x.kind === 'project')) { const P = own ? ['Lale & Ela Adventure Game', 'Empires of the Valley', 'BABA. App', 'Scotland Relocation Plan', 'Photography Portfolio'] : []; for (let i = 0; i < P.length; i++) await mkI('project', { name: P[i], desc: '', status: 'active', goals: '', links: '', phases: [], ideas: [], decisions: [], noteIds: [] }, i); }
+      if (!items.some(x => x.kind === 'member')) { const M = own ? ['Oğuzhan', 'Nicole', 'Lale', 'Ela'] : [me().name]; for (let i = 0; i < M.length; i++) await mkI('member', { name: M[i], role: '', birthday: '' }, i); }
       await idb.put('meta', { key: 'seeded2', value: Date.now() }); await idb.put('meta', { key: 'schema', value: SCHEMA });
     }
     if (!m.seeded) {       // başlangıç klasörleri yalnızca ilk açılışta, bir kez
-      if (!folders.length) for (let i = 0; i < SEED_FOLDERS.length; i++) await put('folders', { id: uid() + i, name: SEED_FOLDERS[i], order: i, createdAt: Date.now() });
+      const SF = own ? SEED_FOLDERS : ['Personal', 'Family', 'Work', 'Ideas', 'Travel', 'Important'];
+      if (!folders.length) for (let i = 0; i < SF.length; i++) await put('folders', { id: uid() + i, name: SF[i], order: i, createdAt: Date.now() });
       await idb.put('meta', { key: 'seeded', value: Date.now() });
       await idb.put('meta', { key: 'schema', value: SCHEMA });
     }
   }
-  const ready = () => readyP || (readyP = init().catch(e => { readyP = null; throw e; }));
+  const ready = () => {
+    if (!me()) return Promise.reject(new Error('nouser'));
+    if (readyP && dbKey !== dbName()) { readyP = null; S.settings = null; if (db) { try { db.close(); } catch (e) {} db = null; } }      // kullanıcı değişti
+    return readyP || (readyP = init().catch(e => { readyP = null; throw e; }));
+  };
   async function reload() { readyP = null; if (db) { try { db.close(); } catch (e) {} db = null; } await ready(); }
 
   /* ---------- içerik temizleyici (not HTML'i ve içe aktarılan yedekler için) ---------- */
@@ -277,7 +287,7 @@ const CBN = (() => {
     try { if (typeof Snd !== 'undefined') { Snd.note(880, .15, 'triangle', .06); Snd.note(1320, .2, 'triangle', .06, .18); } } catch (e) {}
   }
   function check() {
-    if (!S.settings || !S.settings.notif) return;
+    if (!S.settings || !S.settings.notif || !me() || dbKey !== dbName()) return;
     const now = Date.now(), fresh = at => now - at < 12 * 3600e3; let ch = false;
     S.tasks.forEach(t => {
       if (!t.remindAt || t.remindAt > now || t.remFired === t.remindAt || t.status === 'completed' || t.status === 'cancelled') return;
@@ -300,5 +310,5 @@ const CBN = (() => {
     ready().then(check).catch(() => {});
   }
 
-  return { SCHEMA, S, L, loc, low, esc, uid, pad, ymd, today, pd, addDays, nowHM, fmtDate, fmtTime, fmtStamp, fmtDay, idb, put, del, saveSettings, normSettings, defaults, reload, sanitize, toText, icon, toast, modal, confirmBox, promptBox, download, empty, applyTheme, isDark, toggleTheme, COLORS, go, refresh, redraw, open, leave, onLeave, register, start, modName, MODS, MOD_NAME, get cur() { return cur; } };
+  return { SCHEMA, S, L, loc, low, esc, uid, pad, ymd, today, pd, addDays, nowHM, fmtDate, fmtTime, fmtStamp, fmtDay, idb, put, del, saveSettings, normSettings, defaults, reload, sanitize, toText, icon, toast, modal, confirmBox, promptBox, download, empty, me, applyTheme, isDark, toggleTheme, COLORS, go, refresh, redraw, open, leave, onLeave, register, start, modName, MODS, MOD_NAME, get cur() { return cur; } };
 })();

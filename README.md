@@ -38,3 +38,6 @@ Oyuncu puanları oyun içi tahmini değerlerdir. Şifre yalnızca çocukların y
 
 ### Trabzonspor sayfası (sürüm 17)
 `#ts` — en yakın maç (tarih, Türkiye saati, geri sayım), son 5 maç, kadro, TS Club ve resmî site bağlantıları. Veri tarayıcıda ücretsiz, anahtarsız kaynaklardan çekilir (maçlar: TheSportsDB herkese açık API; kadro: Wikipedia, olmazsa TheSportsDB) ve 30 dk önbelleklenir. Dosyalar: `js/ts.js`, `css/ts.css`.
+
+### CBN herkese özel (sürüm 20)
+CBN artık sahibine ve davetli herkese açık. Her kullanıcı kendi adıyla karşılanır ve kendi veritabanını kullanır (sahibi `cbn`, davetli `cbn-g-<davet kodu>`); veriler kişinin kendi cihazında durur, sahibi dahil kimse başkasının kayıtlarını göremez. Örnek projeler ve aile profilleri yalnızca sahibine eklenir.
