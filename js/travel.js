@@ -59,11 +59,12 @@ const Travel = (() => {
         <nav class="tv-tabs"><a href="#seyahat" class="${tab === 'seyahat' ? 'on' : ''}">${T('Rezervasyon', 'Bookings')}</a><a href="#gezilerim" class="${tab === 'gezilerim' ? 'on' : ''}">🌍 ${T('Gezilerim', 'My Travels')}</a></nav></header>
       ${tab === 'seyahat' ? bookingHtml() : globeHtml()}
     </div>`;
-    if (tab === 'gezilerim') mountGlobe();
+    if (tab === 'gezilerim') mountGlobe(); else if (typeof Flights !== 'undefined') Flights.mount(el);
   }
   function bookingHtml() {
     const t = trips(), c = new Set(t.map(x => x.country).filter(Boolean));
     return `<section class="tv-sites">${SITES.map(s => `<a class="tv-site ${s.c}" href="${s.u}" target="_blank" rel="noopener"><span class="tv-e">${s.e}</span><h2>${s.t}</h2><p>${T(s.d[0], s.d[1])}</p><span class="tv-go">${T('Siteye git', 'Visit site')} ↗</span></a>`).join('')}</section>
+      ${typeof Flights !== 'undefined' ? Flights.html() : ''}
       <a class="tv-promo" href="#gezilerim"><div><span class="tv-eye">${T('GEZİLERİM', 'MY TRAVELS')}</span><h2>${t.length} ${T('şehir', 'cities')} · ${c.size} ${T('ülke', 'countries')}</h2><p>${T('Gezdiğin şehirleri 3D dünyada pinle, 360° döndür.', 'Pin the cities you have visited on a 3D globe and spin it 360°.')}</p></div><span class="tv-orb">🌍</span></a>`;
   }
   function globeHtml() {

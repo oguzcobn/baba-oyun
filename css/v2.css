@@ -239,3 +239,34 @@ body.locked .nav-links,body.locked #lockBtn{display:none}
 .vd-frame iframe{position:absolute;inset:0;width:100%;height:100%;border:0;display:block}
 .vd-frame:fullscreen,.vd-frame:-webkit-full-screen{border-radius:0;border:0;height:100%}
 @media(max-width:700px){.vd-frame{height:max(480px,calc(100dvh - 120px))}}
+
+/* ---------- Seyahat › Antalya kalkışlı en ucuz uçuşlar ---------- */
+.fl{margin:18px 0;border-radius:28px;padding:clamp(20px,3vw,32px);background:linear-gradient(160deg,#0f1a3a,#0a1224 70%);border:1px solid #1f2843;color:#e8ecf5}
+.fl-head{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:18px}
+.fl-head h2{margin:6px 0 0;font-size:clamp(32px,5vw,56px);letter-spacing:-.04em;line-height:.95}
+.fl-head h2 em{font-family:Georgia,serif;font-style:italic;font-weight:600;color:#ceff00}
+.fl-months{display:flex;gap:6px;flex-wrap:wrap}
+.fl-months button{border:1px solid #2a3558;background:transparent;color:#c9d2ea;font:inherit;font-weight:700;font-size:13px;padding:8px 14px;border-radius:999px;cursor:pointer;text-transform:capitalize}
+.fl-months button.on{background:#ceff00;color:#0a1224;border-color:#ceff00}
+.fl-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px}
+.fl-card{display:flex;flex-direction:column;gap:4px;border-radius:22px;padding:18px;background:#111c3d;border:1px solid #223061;min-height:200px;transition:transform .3s,border-color .3s}
+.fl-card:hover{transform:translateY(-3px);border-color:#3a4f94}
+.fl-top{display:flex;align-items:center;justify-content:space-between}
+.fl-flag{font-size:22px}.fl-code{font-size:12px;font-weight:800;letter-spacing:.08em;color:#8ea0cf}
+.fl-card h3{margin:8px 0 2px;font-size:24px;letter-spacing:-.02em}
+.fl-price{margin:2px 0 0;font-size:28px;font-weight:900;color:#ceff00;letter-spacing:-.02em}.fl-price small{font-size:13px;font-weight:600;color:#c9d2ea;margin-left:4px}
+.fl-price.sk{color:#3a4f94;animation:flPulse 1.2s ease-in-out infinite}@keyframes flPulse{50%{opacity:.4}}
+.fl-meta{margin:0;font-size:13px;color:#a8b3d4;line-height:1.4}
+.fl-go{display:flex;flex-wrap:wrap;gap:6px;margin-top:auto;padding-top:12px}
+.fl-go a{font-size:12.5px;font-weight:700;color:#e8ecf5;text-decoration:none;padding:7px 10px;border-radius:999px;background:#1b2852}
+.fl-go a:hover{background:#2a3b77}.fl-go a.hot{background:#ceff00;color:#0a1224}
+.fl-any{margin-top:18px;border-radius:22px;padding:18px;background:#0d1631;border:1px solid #1f2843}
+.fl-any-h{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}.fl-any-h h3{margin:0;font-size:22px}
+.fl-btn{font-weight:800;font-size:14px;color:#0a1224;background:#5ec8f2;padding:10px 16px;border-radius:999px;text-decoration:none}
+.fl-list{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:6px}
+.fl-list a{display:grid;grid-template-columns:auto auto 1fr auto;grid-template-rows:auto auto;column-gap:10px;align-items:center;padding:10px 12px;border-radius:14px;text-decoration:none;color:#e8ecf5;background:#111c3d}
+.fl-list a:hover{background:#18264f}
+.fl-list .fl-n{grid-row:span 2;font-weight:900;color:#5ec8f2;font-size:13px}.fl-list .fl-flag{grid-row:span 2}
+.fl-list b{font-size:15px}.fl-list small{grid-column:3;font-size:12px;color:#8ea0cf}.fl-list em{grid-row:1/span 2;grid-column:4;font-style:normal;font-weight:900;color:#ceff00}
+.fl-note{margin:14px 2px 0;font-size:12.5px;color:#8ea0cf;line-height:1.5}
+@media(max-width:600px){.fl-grid{grid-template-columns:1fr 1fr;gap:8px}.fl-card{padding:14px;min-height:0;border-radius:18px}.fl-card h3{font-size:18px;margin-top:6px}.fl-price{font-size:21px}.fl-meta{font-size:12px}.fl-go{gap:4px}.fl-go a{font-size:11.5px;padding:6px 8px}.fl-flag{font-size:18px}.fl-code{font-size:10.5px}}
