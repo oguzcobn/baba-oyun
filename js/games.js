@@ -5,11 +5,11 @@
    Not: Şifre çocukların yanlışlıkla girmesini önlemek içindir; gerçek bir güvenlik değildir.
    ===================================================================== */
 const App = (() => {
-  const DEFAULT_HASH = '257vpztko8o';            // başlangıç şifresi: 1967
+  const DEFAULT_HASH = '2d5een7ghm3', PIN_LEN = 6;      // 6 haneli şifre; eski 4 haneli şifreler geçersiz
   const cyrb = (str, seed = 0) => { let h1 = 0xdeadbeef ^ seed, h2 = 0x41c6ce57 ^ seed; for (let i = 0, ch; i < str.length; i++) { ch = str.charCodeAt(i); h1 = Math.imul(h1 ^ ch, 2654435761); h2 = Math.imul(h2 ^ ch, 1597334677); } h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507); h1 ^= Math.imul(h2 ^ (h2 >>> 13), 3266489909); h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507); h2 ^= Math.imul(h1 ^ (h1 >>> 13), 3266489909); return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(36); };
   const hash = pin => cyrb('lale-ela:' + pin);
   const ls = { get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } }, set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} } };
-  const storedHash = () => ls.get('baba_pin_hash', null) || DEFAULT_HASH;
+  const storedHash = () => ls.get('baba_pin6_hash', null) || DEFAULT_HASH;
   let unlocked = false; try { unlocked = sessionStorage.getItem('baba_ok') === '1'; } catch (e) {}
   // misafir: sahibinin verdiği davet koduyla bu cihazda açılır
   const norm = n => String(n || '').trim().toLocaleLowerCase('tr-TR').replace(/\s+/g, ' ');
@@ -53,7 +53,7 @@ const App = (() => {
   /* ---------------- PIN kilidi ---------------- */
   function pinPad(title, onOk, opts = {}) {
     const ov = document.createElement('div'); ov.className = 'bb-pin-ov';
-    ov.innerHTML = `<div class="bb-pin"><div class="bb-lock">🔒</div><h3>${title}</h3><div class="bb-dots"><i></i><i></i><i></i><i></i></div><p class="bb-msg">${opts.msg || '4 haneli şifreyi gir'}</p>
+    ov.innerHTML = `<div class="bb-pin"><div class="bb-lock">🔒</div><h3>${title}</h3><div class="bb-dots">${'<i></i>'.repeat(PIN_LEN)}</div><p class="bb-msg">${opts.msg || '6 haneli şifreyi gir'}</p>
       <div class="bb-keys">${[1, 2, 3, 4, 5, 6, 7, 8, 9, '✖', 0, '⌫'].map(k => `<button data-k="${k}">${k}</button>`).join('')}</div></div>`;
     document.body.appendChild(ov);
     let v = ''; const dots = ov.querySelectorAll('.bb-dots i'), msg = ov.querySelector('.bb-msg');
@@ -63,8 +63,8 @@ const App = (() => {
       const k = b.dataset.k; click();
       if (k === '✖') { close(); if (opts.onCancel) opts.onCancel(); return; }
       if (k === '⌫') { v = v.slice(0, -1); paint(); return; }
-      if (v.length >= 4) return; v += k; paint();
-      if (v.length === 4) setTimeout(() => {
+      if (v.length >= PIN_LEN) return; v += k; paint();
+      if (v.length === PIN_LEN) setTimeout(() => {
         const r = onOk(v);
         if (r === true) { close(); }
         else { ov.querySelector('.bb-pin').classList.add('bad'); msg.textContent = r || 'Şifre yanlış, tekrar dene'; setTimeout(() => ov.querySelector('.bb-pin').classList.remove('bad'), 450); v = ''; paint(); }
@@ -82,9 +82,9 @@ const App = (() => {
   }
   function changePin() {
     pinPad('Yeni şifre', p1 => {
-      setTimeout(() => pinPad('Yeni şifreyi tekrar gir', p2 => { if (p1 !== p2) return 'İki şifre aynı değil'; ls.set('baba_pin_hash', hash(p1)); toast('🔐 Şifre değiştirildi'); return true; }), 50);
+      setTimeout(() => pinPad('Yeni şifreyi tekrar gir', p2 => { if (p1 !== p2) return 'İki şifre aynı değil'; ls.set('baba_pin6_hash', hash(p1)); toast('🔐 Şifre değiştirildi'); return true; }), 50);
       return true;
-    }, { msg: 'Bu cihazda kullanılacak yeni 4 haneli şifre' });
+    }, { msg: 'Bu cihazda kullanılacak yeni 6 haneli şifre' });
   }
   function lock() { unlocked = false; try { sessionStorage.removeItem('baba_ok'); } catch (e) {} if (location.hash) location.hash = ''; else render(); }
   function guestOut() { guest = null; try { localStorage.removeItem('baba_guest'); } catch (e) {} history.replaceState(null, '', location.pathname); manFor = 'x'; guestUrl(); render(); }
@@ -121,7 +121,7 @@ const App = (() => {
         <h1 class="display xl">BABA<em>.</em></h1>
         <p class="lead">İş, dinlenme, oyun ve yolculuk — hepsi tek yerde, sadece davetlilere açık.</p></section>
       <section class="hub">${CATS.map(c => `<a class="hub-card ${c.cls}" href="#${c.id}"><span class="hub-n">${c.n}</span><h2>${c.t}</h2><p>${c.d}</p><span class="arrow">↗</span></a>`).join('')}</section>
-      <footer class="foot"><div class="foot-word">BABA<span>.</span></div><div class="foot-row">${isOwner() ? '<button class="link" data-a="pin">Şifreyi değiştir</button><a class="link" href="#erisim">Davetler &amp; erişim</a><button class="link" data-a="lock">Kilitle</button>' : '<button class="link" data-a="gout">Bu cihazdan çık</button>'}<span class="muted">Yalnızca davetliler için · sürüm 25</span></div></footer>`;
+      <footer class="foot"><div class="foot-word">BABA<span>.</span></div><div class="foot-row">${isOwner() ? '<button class="link" data-a="pin">Şifreyi değiştir</button><a class="link" href="#erisim">Davetler &amp; erişim</a><button class="link" data-a="lock">Kilitle</button>' : '<button class="link" data-a="gout">Bu cihazdan çık</button>'}<span class="muted">Yalnızca davetliler için · sürüm 26</span></div></footer>`;
     const q = s => root().querySelector(s);
     if (q('[data-a=pin]')) q('[data-a=pin]').onclick = () => { click(); changePin(); };
     if (q('[data-a=lock]')) q('[data-a=lock]').onclick = () => { click(); lock(); };
