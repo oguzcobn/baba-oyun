@@ -126,5 +126,6 @@
     if (!wired) { wired = true; document.addEventListener('visibilitychange', () => { if (!document.hidden && auth) sync(); }); addEventListener('online', () => { if (auth) sync(); }); setInterval(() => { if (auth && !document.hidden) sync(); }, 60000); }
     if (auth) sync();
   }
-  CBN.sync = { attach, mark, markAllDeleted, afterRestore, signIn, signUp, signOut, now: sync, label, get user() { return auth && auth.user; }, get state() { return st; }, get pending() { return Object.keys(out).length; } };
+  const token = async () => { await fresh(); return auth.access_token; };   // Messenger aynı oturumu kullanır
+  CBN.sync = { token, attach, mark, markAllDeleted, afterRestore, signIn, signUp, signOut, now: sync, label, get user() { return auth && auth.user; }, get state() { return st; }, get pending() { return Object.keys(out).length; } };
 })();

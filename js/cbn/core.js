@@ -313,5 +313,5 @@ const CBN = (() => {
     ready().then(check).catch(() => {});
   }
 
-  return { SCHEMA, S, L, loc, low, esc, uid, pad, ymd, today, pd, addDays, nowHM, fmtDate, fmtTime, fmtStamp, fmtDay, idb, put, del, saveSettings, normSettings, defaults, reload, sanitize, toText, icon, toast, modal, confirmBox, promptBox, download, empty, me, dbName, applyTheme, isDark, toggleTheme, COLORS, go, refresh, redraw, open, leave, onLeave, register, start, modName, MODS, MOD_NAME, get cur() { return cur; } };
+  return { ready, SCHEMA, S, L, loc, low, esc, uid, pad, ymd, today, pd, addDays, nowHM, fmtDate, fmtTime, fmtStamp, fmtDay, idb, put, del, saveSettings, normSettings, defaults, reload, sanitize, toText, icon, toast, modal, confirmBox, promptBox, download, empty, me, dbName, applyTheme, isDark, toggleTheme, COLORS, go, refresh, redraw, open, leave, onLeave, register, start, modName, MODS, MOD_NAME, get cur() { return cur; } };
 })();

@@ -1,0 +1,213 @@
+/* BABA Messenger — daren&curtis'in tasarım mantığı: tam ekran giriş, dev başlık, dalgalı geçişler,
+   renk renk bölümler, yuvarlak kartlar ve yuvarlak ok düğmeleri. Video yerine animasyonlu yelkenli. */
+.ms{--cream:#fef1e2;--blue:#0b2a8f;--sky:#beebfd;--ink:#151010;--lime:#ceff00;--claret:#7b1e3b;--tsb:#5ec8f2;
+  --r:28px;margin:0;color:var(--ink);font-family:ui-rounded,"SF Pro Rounded","Nunito","Segoe UI",system-ui,sans-serif}
+.ms *{box-sizing:border-box}
+body.msn-mode main{max-width:none;padding:0}
+.ms em{font-style:normal}
+
+/* ---------- giriş (hero) ---------- */
+.ms-hero{position:relative;min-height:min(100svh,940px);display:flex;align-items:center;overflow:hidden;background:#0a1a4a;isolation:isolate}
+.ms-hero.in{min-height:min(62svh,620px)}
+.ms-sea{position:absolute;inset:0;width:100%;height:100%;z-index:-1}
+.ms-hero::after{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(90deg,rgba(6,16,52,.62),rgba(6,16,52,.15) 55%,transparent);pointer-events:none}
+.ms-hero-txt{position:relative;padding:clamp(90px,14vh,150px) clamp(20px,6vw,90px) 120px;max-width:980px}
+.ms-eye{display:flex;flex-wrap:wrap;align-items:center;gap:14px;margin:0 0 22px;color:#fff;font-size:14px;letter-spacing:.02em}
+.ms-eye span:first-child{border:2px solid #fff;border-radius:12px;padding:6px 12px;font-weight:800}
+.ms-eye span:first-child em{color:var(--lime)}
+.ms-eye span:last-child{border-left:1px solid rgba(255,255,255,.5);padding-left:14px;opacity:.9}
+.ms-h1{margin:0;line-height:.95}
+.ms-h1 .a{display:block;color:var(--lime);font-size:clamp(64px,13vw,190px);font-weight:900;letter-spacing:-.045em;font-style:italic;font-family:Georgia,"Times New Roman",serif;text-shadow:0 6px 40px rgba(0,0,0,.25)}
+.ms-h1 .b{display:block;margin-top:14px;color:#fff;font-size:clamp(26px,3.6vw,52px);font-weight:800;letter-spacing:-.02em;line-height:1.05}
+.ms-cta{display:inline-flex;align-items:center;gap:12px;margin-top:34px;background:var(--lime);color:var(--ink);font-weight:800;font-size:17px;padding:16px 16px 16px 26px;border-radius:999px;text-decoration:none;box-shadow:0 10px 30px rgba(206,255,0,.25);transition:transform .2s}
+.ms-cta i{display:grid;place-items:center;width:34px;height:34px;border-radius:50%;background:var(--ink);color:var(--lime);font-style:normal;transition:transform .25s}
+.ms-cta:hover{transform:translateY(-2px)}.ms-cta:hover i{transform:translateX(4px) rotate(-12deg)}
+.ms-sticker{position:absolute;z-index:2;pointer-events:none;user-select:none}
+.ms-sticker.s1{right:9%;top:16%;color:var(--lime);font-size:clamp(40px,6vw,80px);animation:msSpin 14s linear infinite;text-shadow:0 0 30px rgba(206,255,0,.5)}
+.ms-sticker.s2{right:clamp(16px,5vw,70px);bottom:96px;display:grid;place-items:center;width:clamp(92px,10vw,130px);aspect-ratio:1;border-radius:50%;background:var(--claret);color:#fff;transform:rotate(-12deg);box-shadow:0 0 0 6px var(--tsb);animation:msBob 6s ease-in-out infinite}
+.ms-sticker.s2 svg{width:52%;height:auto;margin-top:6%}.ms-sticker.s2 small{font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;margin-top:-26%}
+.ms-hero.in .ms-sticker.s2{display:none}
+.ms-edge{position:absolute;left:0;right:0;bottom:-1px;width:100%;height:60px;display:block}
+.ms-edge.top{bottom:auto;top:-59px;transform:none}
+
+/* ---------- deniz animasyonu (yavaş, sakin) ---------- */
+.ms-w use{animation:msWave 26s linear infinite}
+.ms-w.w2 use{animation-duration:18s;animation-direction:reverse}
+.ms-w.w3 use{animation-duration:13s}
+.ms-boat-wrap{transform:translate(1060px,640px);animation:msSail 34s ease-in-out infinite}
+.ms-boat{animation:msRock 7s ease-in-out infinite;transform-origin:0 20px}
+.ms-sail.main{animation:msBillow 5s ease-in-out infinite;transform-origin:-8px -30px}
+.ms-sail.jib{animation:msBillow 5s ease-in-out infinite .6s;transform-origin:6px -36px}
+.ms-flag{animation:msFlag 1.6s ease-in-out infinite;transform-origin:1px -317px}
+.ms-wake{animation:msWake 3.5s ease-in-out infinite}
+.ms-cl.a{animation:msCloud 80s linear infinite}.ms-cl.b{animation:msCloud 110s linear infinite reverse}
+.ms-stars circle{animation:msTwinkle 4s ease-in-out infinite;animation-delay:var(--d)}
+.ms-shine rect{animation:msShine 5s ease-in-out infinite;animation-delay:var(--d)}
+.ms-foam path{animation:msFoam 6s ease-in-out infinite;animation-delay:var(--d)}
+.ms-birds{transform:translate(-120px,240px);animation:msBirds 46s linear infinite}
+.ms-glow{animation:msGlow 8s ease-in-out infinite;transform-origin:1240px 330px}
+@keyframes msWave{from{transform:translateX(0)}to{transform:translateX(-400px)}}
+@keyframes msSail{0%,100%{transform:translate(1000px,640px)}50%{transform:translate(1130px,646px)}}
+@keyframes msSailM{0%,100%{transform:translate(790px,650px) scale(.68)}50%{transform:translate(860px,655px) scale(.68)}}
+@keyframes msRock{0%,100%{transform:rotate(-2.4deg) translateY(0)}50%{transform:rotate(2.2deg) translateY(9px)}}
+@keyframes msBillow{0%,100%{transform:scaleX(1)}50%{transform:scaleX(1.05)}}
+@keyframes msFlag{0%,100%{transform:skewY(0)}50%{transform:skewY(-9deg)}}
+@keyframes msWake{0%,100%{opacity:.2;transform:translateX(10px)}50%{opacity:.6;transform:translateX(-10px)}}
+@keyframes msCloud{from{transform:translateX(-300px)}to{transform:translateX(1700px)}}
+@keyframes msTwinkle{0%,100%{opacity:.25}50%{opacity:.95}}
+@keyframes msShine{0%,100%{opacity:.15;transform:translateX(0)}50%{opacity:.7;transform:translateX(14px)}}
+@keyframes msFoam{0%,100%{opacity:0;transform:translateX(0)}50%{opacity:.55;transform:translateX(-30px)}}
+@keyframes msBirds{from{transform:translate(-160px,240px)}to{transform:translate(1760px,170px)}}
+@keyframes msGlow{0%,100%{transform:scale(1);opacity:.9}50%{transform:scale(1.08);opacity:1}}
+@keyframes msSpin{to{transform:rotate(360deg)}}
+@keyframes msBob{0%,100%{transform:rotate(-12deg) translateY(0)}50%{transform:rotate(-6deg) translateY(-10px)}}
+@media (prefers-reduced-motion:reduce){.ms *,.ms-sea *{animation:none!important}.ms-boat-wrap{transform:translate(1060px,640px)}}
+@media (max-width:700px){
+  .ms-hero{align-items:flex-start}.ms-hero::after{background:linear-gradient(180deg,rgba(6,16,52,.7),rgba(6,16,52,.1) 55%,transparent)}
+  .ms-hero-txt{padding-top:56px}.ms-sticker.s1{top:auto;bottom:34%;right:7%}.ms-sticker.s2{display:none}
+  .ms-boat-wrap{animation-name:msSailM}
+}
+
+/* ---------- bölümler ---------- */
+.ms-sec{position:relative;padding:clamp(56px,9vw,120px) clamp(18px,6vw,90px)}
+.ms-sec.cream{background:var(--cream)}
+.ms-sec.blue{background:var(--blue);color:#fff}
+.ms-sec.sky{background:var(--sky)}
+.ms-sec.ink{background:var(--ink);color:#fff;text-align:center}
+.ms-h2{margin:0 0 40px;font-size:clamp(36px,6vw,78px);font-weight:900;letter-spacing:-.035em;line-height:1}
+.ms-h2 em{color:var(--lime);font-family:Georgia,serif;font-style:italic;font-weight:700}
+.ms-h2.dark em{color:var(--claret)}
+.ms-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:18px}
+.ms-tile{position:relative;background:#fff;color:var(--ink);border-radius:var(--r);padding:28px 26px 80px;min-height:250px;transition:transform .25s}
+.ms-tile:hover{transform:translateY(-4px) rotate(-.6deg)}
+.ms-tile h3{margin:14px 0 10px;font-size:26px;letter-spacing:-.02em}.ms-tile p{margin:0;line-height:1.5;opacity:.8}
+.ms-n{font-weight:900;color:var(--blue);font-size:15px}
+.ms-arr{position:absolute;right:20px;bottom:20px;display:grid;place-items:center;width:46px;height:46px;border-radius:50%;background:var(--lime);font-weight:900}
+.ms-tile:nth-child(2) .ms-arr{background:var(--tsb)}.ms-tile:nth-child(3) .ms-arr{background:var(--claret);color:#fff}
+.ms-steps{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:18px;counter-reset:s}
+.ms-steps li{background:var(--cream);border-radius:var(--r);padding:26px}
+.ms-steps b{display:inline-grid;place-items:center;width:52px;height:52px;border-radius:50%;background:var(--ink);color:var(--lime);font-size:16px}
+.ms-steps h3{margin:16px 0 8px;font-size:22px}.ms-steps p{margin:0;opacity:.8;line-height:1.5}
+.ms-sec.ink .ms-cta{margin-top:0}
+
+/* ---------- kartlar, formlar ---------- */
+.ms-card{background:#fff;border-radius:var(--r);padding:clamp(24px,4vw,44px);box-shadow:0 20px 60px rgba(21,16,16,.08)}
+.ms-gate{max-width:560px;margin:0 auto}
+.ms-gate h2,.ms-modal h2{margin:4px 0 12px;font-size:clamp(28px,4vw,40px);letter-spacing:-.03em;line-height:1.05}
+.ms-gate p{line-height:1.55;opacity:.85}
+.ms-k{margin:0;font-size:13px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--claret)}
+.ms-form{display:grid;gap:14px;margin-top:18px}
+.ms-form label{display:grid;gap:6px;font-weight:700;font-size:14px}
+.ms-form input,.ms-form select,.ms-dd select{font:inherit;font-weight:500;padding:13px 16px;border-radius:16px;border:2px solid #e9ddd0;background:var(--cream);color:var(--ink);min-width:0}
+.ms-form input:focus,.ms-form select:focus{outline:none;border-color:var(--blue)}
+.ms-row{display:flex;flex-wrap:wrap;gap:10px}
+.ms-msg{min-height:1.2em;margin:0;font-size:14px;color:var(--claret);font-weight:600}
+.ms-small{font-size:13px;opacity:.7;margin:0}
+.ms-btn{display:inline-flex;align-items:center;gap:10px;border:0;cursor:pointer;font:inherit;font-weight:800;background:var(--ink);color:#fff;padding:12px 12px 12px 20px;border-radius:999px;transition:transform .15s}
+.ms-btn i{display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--lime);color:var(--ink);font-style:normal}
+.ms-btn.ghost{background:transparent;color:var(--ink);box-shadow:inset 0 0 0 2px var(--ink);padding:12px 20px}
+.ms-btn.sm{padding:8px 14px;font-size:14px}
+.ms-btn:hover{transform:translateY(-1px)}.ms-btn:disabled{opacity:.5;cursor:default}
+.ms-link{border:0;background:none;font:inherit;font-weight:700;color:var(--blue);cursor:pointer;padding:6px 4px;font-size:14px}
+.ms-link.sm{font-size:18px;line-height:1;padding:2px 8px}
+
+/* ---------- uygulama ---------- */
+.ms-app{display:grid;grid-template-columns:minmax(290px,370px) 1fr;gap:18px;max-width:1240px;margin:0 auto;min-height:620px}
+.ms-list,.ms-chat{background:#fff;border-radius:var(--r);box-shadow:0 20px 60px rgba(21,16,16,.08);min-width:0}
+.ms-list{display:flex;flex-direction:column;overflow:hidden}
+.ms-me{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;padding:18px;background:linear-gradient(135deg,var(--blue),#1d55d6);color:#fff}
+.ms-me-t{display:grid;gap:4px;min-width:0}.ms-me-t b{font-size:18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ms-status{font:inherit;font-size:13px;font-weight:700;border:0;border-radius:999px;padding:4px 10px;background:rgba(255,255,255,.16);color:#fff;max-width:100%}
+.ms-status option{color:var(--ink)}
+.ms-psm{font:inherit;font-size:13px;border:0;border-bottom:1px dashed rgba(255,255,255,.45);background:transparent;color:#fff;padding:3px 0;min-width:0}
+.ms-psm::placeholder{color:rgba(255,255,255,.65)}.ms-psm:focus{outline:none;border-bottom-color:var(--lime)}
+.ms-code{align-self:start;border:0;border-radius:10px;background:var(--lime);color:var(--ink);font:inherit;font-weight:900;font-size:12px;padding:6px 8px;cursor:pointer;letter-spacing:.03em}
+.ms-tools{display:flex;gap:8px;padding:14px 14px 6px}
+.ms-search{flex:1;min-width:0;font:inherit;padding:10px 14px;border-radius:999px;border:2px solid #efe4d8;background:var(--cream)}
+.ms-search:focus{outline:none;border-color:var(--blue)}
+.ms-groups{flex:1;overflow:auto;padding:6px 8px 10px;max-height:640px}
+.ms-gh{display:flex;align-items:center;justify-content:space-between;margin:10px 8px 4px;font-size:13px;font-weight:800;color:var(--blue)}
+.ms-gh span{opacity:.6;font-weight:600}
+.ms-gt{border:0;background:none;font:inherit;font-weight:800;color:var(--blue);cursor:pointer;padding:4px 0;display:flex;align-items:center;gap:6px}
+.ms-gt i{font-style:normal;transition:transform .2s;display:inline-block}.ms-g.closed .ms-gt i{transform:rotate(-90deg)}
+.ms-c,.ms-rq{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;width:100%;padding:8px 10px;border:0;background:none;border-radius:16px;text-align:left;font:inherit;color:inherit;cursor:pointer}
+.ms-rq{grid-template-columns:auto 1fr auto auto;cursor:default}
+.ms-c:hover{background:var(--cream)}.ms-c.on{background:var(--sky)}
+.ms-c.off .ms-c-t b{opacity:.55}
+.ms-c-t{display:grid;min-width:0}.ms-c-t b{font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ms-c-t small{font-size:12.5px;opacity:.65;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ms-ub{min-width:22px;height:22px;border-radius:11px;background:var(--claret);color:#fff;font-size:12px;font-weight:800;display:grid;place-items:center;padding:0 6px;font-style:normal}
+.ms-req{background:#fff8d6;border-radius:18px;margin:4px 4px 10px;padding:2px 2px 6px}
+.ms-empty{margin:6px 12px;font-size:13px;opacity:.55}
+.ms-hello{margin:12px;padding:16px;border-radius:18px;background:var(--cream);font-size:14px;line-height:1.5}.ms-hello p{margin:6px 0 0}
+.ms-hello code,.ms-mycode b{font-weight:900;letter-spacing:.04em;color:var(--claret)}
+.ms-list-foot{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;padding:10px 14px;border-top:1px solid #f2e9df}
+.ms-live{margin-left:auto;font-size:12px;font-weight:700;color:#2a9d55}
+.ms-av{position:relative;display:inline-grid;place-items:center;border-radius:50%;flex:none}
+.ms-av svg{border-radius:50%;display:block;background:var(--cream)}
+.ms-av .ms-ini{border-radius:50%}
+.ms-av::after{content:"";position:absolute;right:-1px;bottom:-1px;width:13px;height:13px;border-radius:50%;border:2.5px solid #fff;background:#b9b1a8}
+.ms-av.lg::after{width:16px;height:16px;border-color:var(--blue)}
+.ms-av.st-online::after{background:#33c25e}.ms-av.st-busy::after{background:#e0344b}.ms-av.st-away::after{background:#f3a712}.ms-av.st-invisible::after{background:#fff;box-shadow:inset 0 0 0 2px #b9b1a8}
+.ms-rq .ms-av::after{display:none}
+.ms-ini{display:grid;place-items:center;font-weight:900;color:#fff}.ms-ini.c0{background:var(--claret)!important}.ms-ini.c1{background:var(--blue)!important}.ms-ini.c2{background:#2a9d8f!important}.ms-ini.c3{background:#e76f51!important}
+
+.ms-chat{display:flex;flex-direction:column;overflow:hidden;position:relative}
+.ms-blank{margin:auto;text-align:center;padding:40px;max-width:380px}.ms-blank svg{width:120px;animation:msRock 7s ease-in-out infinite}
+.ms-blank h3{margin:12px 0 6px;font-size:26px;letter-spacing:-.02em}.ms-blank p{margin:0;opacity:.7;line-height:1.5}
+.ms-ch{display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid #f2e9df}
+.ms-ch-t{display:grid;min-width:0;flex:1}.ms-ch-t b{font-size:18px}.ms-ch-t small{font-size:13px;opacity:.65;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ms-back{display:none;border:0;background:var(--cream);width:38px;height:38px;border-radius:50%;font-size:18px;cursor:pointer}
+.ms-menu{position:relative}
+.ms-dd{position:absolute;right:0;top:calc(100% + 6px);z-index:5;background:#fff;border-radius:18px;box-shadow:0 18px 50px rgba(21,16,16,.18);padding:10px;display:grid;gap:4px;min-width:220px}
+.ms-dd label{display:grid;gap:4px;font-size:12px;font-weight:800;padding:4px 6px 8px}
+.ms-dd button{border:0;background:none;text-align:left;font:inherit;font-weight:700;padding:10px;border-radius:12px;cursor:pointer}.ms-dd button:hover{background:var(--cream)}.ms-dd .danger{color:#c62839}
+.ms-ic{border:0;background:var(--cream);width:42px;height:42px;border-radius:50%;font-size:19px;cursor:pointer;flex:none}
+.ms-msgs{flex:1;overflow:auto;padding:18px clamp(12px,3vw,26px);display:flex;flex-direction:column;gap:6px;background:radial-gradient(circle at 100% 0,#eef9ff,transparent 40%),#fffdf9;max-height:560px;min-height:340px}
+.ms-day{text-align:center;margin:12px 0 4px;font-size:12px;font-weight:700;opacity:.55}.ms-day span{background:var(--cream);padding:4px 12px;border-radius:999px}
+.ms-b{max-width:min(78%,520px);padding:10px 14px 6px;border-radius:20px;line-height:1.45;word-wrap:break-word;overflow-wrap:anywhere}
+.ms-b p{margin:0}.ms-b small{display:block;text-align:right;font-size:11px;opacity:.6;margin-top:2px}
+.ms-b.them{align-self:flex-start;background:#fff;box-shadow:0 2px 10px rgba(21,16,16,.06);border-bottom-left-radius:6px}
+.ms-b.me{align-self:flex-end;background:var(--claret);color:#fff;border-bottom-right-radius:6px}
+.ms-b.me a{color:var(--lime)}.ms-b.tmp{opacity:.7}.ms-b.fail{background:#c62839}
+.ms-sys{align-self:center;margin:6px 0;font-size:13px;font-weight:700;color:var(--blue);background:var(--sky);padding:6px 14px;border-radius:999px}
+.ms-typing{margin:0;padding:0 22px;min-height:20px;font-size:13px;font-style:italic;opacity:.65}
+.ms-blocked{margin:0;padding:16px 20px;background:#fff1f1;color:#a3192c;font-weight:600;font-size:14px}
+.ms-comp{position:relative;display:flex;align-items:flex-end;gap:8px;padding:12px;border-top:1px solid #f2e9df}
+.ms-in{flex:1;min-width:0;resize:none;font:inherit;font-size:16px;line-height:1.4;padding:11px 16px;border-radius:22px;border:2px solid #efe4d8;background:var(--cream);max-height:140px}
+.ms-in:focus{outline:none;border-color:var(--blue)}
+.ms-send{flex:none;width:46px;height:46px;border:0;border-radius:50%;background:var(--lime);font-size:20px;font-weight:900;cursor:pointer}
+.ms-pick{position:absolute;left:12px;bottom:calc(100% + 6px);display:grid;grid-template-columns:repeat(5,1fr);gap:4px;padding:10px;background:#fff;border-radius:20px;box-shadow:0 18px 50px rgba(21,16,16,.18);z-index:4}
+.ms-pick[hidden],.ms-dd[hidden]{display:none}
+.ms-pick button{border:0;background:none;font-size:24px;width:44px;height:44px;border-radius:12px;cursor:pointer}.ms-pick button:hover{background:var(--cream)}
+.ms-shake{animation:msShake .7s cubic-bezier(.36,.07,.19,.97)}
+@keyframes msShake{10%,90%{transform:translate(-2px,0)}20%,80%{transform:translate(5px,-2px)}30%,50%,70%{transform:translate(-9px,2px)}40%,60%{transform:translate(9px,-2px)}}
+
+/* ---------- açılır pencere, bildirim, rozet ---------- */
+.ms-ov{position:fixed;inset:0;z-index:120;background:rgba(10,20,60,.45);backdrop-filter:blur(4px);display:grid;place-items:center;padding:16px}
+.ms-modal{position:relative;width:min(460px,100%);max-height:90vh;overflow:auto;background:#fff;border-radius:var(--r);padding:30px 26px;color:var(--ink);font-family:ui-rounded,"SF Pro Rounded","Nunito","Segoe UI",system-ui,sans-serif}
+.ms-x{position:absolute;right:14px;top:14px;width:38px;height:38px;border:0;border-radius:50%;background:var(--cream);font-size:22px;cursor:pointer}
+.ms-mycode{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--cream);border-radius:18px;padding:14px 16px;font-size:24px}
+.ms-toasts{position:fixed;right:16px;bottom:calc(16px + env(safe-area-inset-bottom));z-index:130;display:grid;gap:8px;max-width:min(360px,calc(100vw - 32px))}
+.ms-toast{display:flex;align-items:center;gap:10px;text-align:left;border:0;font:inherit;font-weight:700;font-size:14px;background:var(--ink);color:#fff;padding:12px 16px;border-radius:18px;box-shadow:0 14px 40px rgba(0,0,0,.25);cursor:pointer;animation:msIn .35s ease both;transition:opacity .35s,transform .35s}
+.ms-toast i{font-style:normal;font-size:18px}.ms-toast.out{opacity:0;transform:translateY(10px)}
+@keyframes msIn{from{opacity:0;transform:translateY(14px)}}
+.nav a[data-r=msn]{position:relative}
+.ms-nb{position:absolute;top:0;right:-2px;min-width:17px;height:17px;padding:0 4px;border-radius:9px;background:var(--claret,#7b1e3b);color:#fff;font-size:10px;font-weight:800;display:grid;place-items:center;line-height:1}
+.hub-card.c-msn{background:linear-gradient(160deg,#0b2a8f,#1d55d6);color:#fff}
+.hub-card.c-msn h2 i{color:#ceff00}
+
+@media (max-width:899px){
+  .ms-app{grid-template-columns:1fr;min-height:0}
+  .ms-app .ms-chat{display:none}.ms-app.chatting .ms-list{display:none}.ms-app.chatting .ms-chat{display:flex}
+  .ms-back{display:grid;place-items:center}
+  .ms-msgs{max-height:none;height:calc(100svh - 300px);min-height:300px}
+  .ms-groups{max-height:none}
+  .ms-sec.cream:has(.ms-app){padding:18px 10px 30px}
+}
+/* oturum açıkken giriş bölümü kısalır, uygulama öne çıkar */
+.ms-hero.in .ms-hero-txt{padding-top:70px;padding-bottom:90px}
+.ms-hero.in .ms-h1 .a{font-size:clamp(54px,8vw,124px)}
+.ms-hero.in .ms-h1 .b{font-size:clamp(20px,2.4vw,34px)}
+.ms-sec.cream:has(.ms-app){padding-top:34px}
+@media (max-width:700px){.ms-hero.in{min-height:300px}.ms-hero.in .ms-hero-txt{padding:34px 20px 70px}.ms-hero.in .ms-eye{display:none}.ms-hero.in .ms-sticker{display:none}}

@@ -110,6 +110,7 @@ const App = (() => {
     const d = new Date(), name = isOwner() ? 'Oğuzhan' : (guest && guest.name);
     const CATS = [
       { id: 'cbn', n: '01', t: 'CBN<i>Personal OS</i>', d: T('Notlar · görevler · takvim · projeler · aile · finans · hedefler — kişisel asistanın, yalnızca sana özel', 'Notes · tasks · calendar · projects · family · finance · goals — your personal assistant, just for you'), cls: 'c-cbn' },
+      { id: 'msn', n: '02', t: 'Messenger<i>' + T('sohbet', 'chat') + '</i>', d: T('Aile, arkadaşlar, iş — durumlar, titreşim, gruplar; MSN usulü anlık mesajlaşma', 'Family, friends, work — statuses, nudges, groups; instant messaging the MSN way'), cls: 'c-msn' },
       ...(isOwner() ? [{ id: 'is', n: '02', t: T('İş', 'Work'), d: T('DSAn kısayolları, hatırlatmalar, notlar, LinkedIn', 'DSAn shortcuts, reminders, notes, LinkedIn'), cls: 'c-is' }] : []),
       { id: 'dost', n: '03', t: 'Dost', d: T('Psikoloji okuma alanı · nefes molası', 'Psychology reading room · breathing break'), cls: 'c-dost' },
       { id: 'oyunlar', n: '04', t: T('Oyunlar', 'Games'), d: T('Süper Lig Draft · Empires of the Valley · 2048 · Sudoku · Mayın · Blok', 'Süper Lig Draft · Empires of the Valley · 2048 · Sudoku · Minesweeper · Blocks'), cls: 'c-oyun' },
@@ -122,7 +123,7 @@ const App = (() => {
         <h1 class="display xl">BABA<em>.</em></h1>
         <p class="lead">${T('İş, dinlenme, oyun ve yolculuk — hepsi tek yerde, sadece davetlilere açık.', 'Work, rest, play and travel — all in one place, open by invitation only.')}</p></section>
       <section class="hub">${CATS.map((c, i) => `<a class="hub-card ${c.cls}" href="#${c.id}"><span class="hub-n">${String(i + 1).padStart(2, '0')}</span><h2>${c.t}</h2><p>${c.d}</p><span class="arrow">↗</span></a>`).join('')}</section>
-      <footer class="foot"><div class="foot-word">BABA<span>.</span></div><div class="foot-row">${isOwner() ? `<button class="link" data-a="pin">${T('Şifreyi değiştir', 'Change PIN')}</button><a class="link" href="#erisim">${T('Davetler &amp; erişim', 'Invitations &amp; access')}</a><button class="link" data-a="lock">${T('Kilitle', 'Lock')}</button>` : `<button class="link" data-a="gout">${T('Bu cihazdan çık', 'Sign out on this device')}</button>`}<span class="muted">${T('Yalnızca davetliler için', 'Invitation only')} · ${T('sürüm', 'version')} 28</span></div></footer>`;
+      <footer class="foot"><div class="foot-word">BABA<span>.</span></div><div class="foot-row">${isOwner() ? `<button class="link" data-a="pin">${T('Şifreyi değiştir', 'Change PIN')}</button><a class="link" href="#erisim">${T('Davetler &amp; erişim', 'Invitations &amp; access')}</a><button class="link" data-a="lock">${T('Kilitle', 'Lock')}</button>` : `<button class="link" data-a="gout">${T('Bu cihazdan çık', 'Sign out on this device')}</button>`}<span class="muted">${T('Yalnızca davetliler için', 'Invitation only')} · ${T('sürüm', 'version')} 29</span></div></footer>`;
     const q = s => root().querySelector(s);
     if (q('[data-a=pin]')) q('[data-a=pin]').onclick = () => { click(); changePin(); };
     if (q('[data-a=lock]')) q('[data-a=lock]').onclick = () => { click(); lock(); };
@@ -471,6 +472,7 @@ const App = (() => {
     document.body.classList.toggle('cbn-mode', cbnOn); if (!cbnOn) document.body.classList.remove('cbn-dark');
     document.body.classList.toggle('guest', isGuest());
     document.body.classList.toggle('work-mode', r === 'is');
+    document.body.classList.toggle('msn-mode', r === 'msn');
     document.body.classList.toggle('dark-mode', ['seyahat', 'gezilerim', 'foto'].includes(r));
     document.querySelectorAll('.nav a[data-r]').forEach(a => a.classList.toggle('on', a.dataset.r === r || (a.dataset.r === 'cbn' && cbnOn) || (a.dataset.r === 'dost' && r.startsWith('dost/')) || (a.dataset.r === 'oyunlar' && GAMES.some(g => g.id === r))));
     if (r === 'ts' && typeof TS !== 'undefined') { root().innerHTML = '<div id="tsRoot"></div>'; window.scrollTo(0, 0); TS.open(root().querySelector('#tsRoot')); }
@@ -478,6 +480,7 @@ const App = (() => {
     else if (r === 'draft') { root().innerHTML = '<section class="game-page"><div class="gp-head"><a class="back" href="#oyunlar">← ' + T('Oyunlar', 'Games') + '</a></div><div id="draftRoot"></div></section>'; window.scrollTo(0, 0); Draft.open(root().querySelector('#draftRoot')); }
     else if (r === 'is' && typeof Is !== 'undefined') { root().innerHTML = '<div id="isRoot"></div>'; window.scrollTo(0, 0); Is.open(root().querySelector('#isRoot')); }
     else if ((r === 'dost' || r.startsWith('dost/')) && typeof Dost !== 'undefined') { root().innerHTML = '<div id="dostRoot"></div>'; window.scrollTo(0, 0); Dost.open(root().querySelector('#dostRoot'), r); }
+    else if (r === 'msn' && typeof Msn !== 'undefined') { root().innerHTML = '<div id="msnRoot"></div>'; window.scrollTo(0, 0); Msn.mount(root().querySelector('#msnRoot')); }
     else if (r === 'vadi') vadi();
     else if (r === '2048') g2048();
     else if (r === 'sudoku') sudoku();
