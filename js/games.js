@@ -115,6 +115,8 @@ const App = (() => {
       { id: 'dost', n: '03', t: 'Dost', d: T('Psikoloji okuma alanı · nefes molası', 'Psychology reading room · breathing break'), cls: 'c-dost' },
       { id: 'oyunlar', n: '04', t: T('Oyunlar', 'Games'), d: T('Süper Lig Draft · Empires of the Valley · 2048 · Sudoku · Mayın · Blok', 'Süper Lig Draft · Empires of the Valley · 2048 · Sudoku · Minesweeper · Blocks'), cls: 'c-oyun' },
       { id: 'seyahat', n: '05', t: T('Seyahat', 'Travel'), d: T('Booking · Airbnb · Skyscanner · Gezilerim 3D dünya', 'Booking · Airbnb · Skyscanner · My Travels 3D globe'), cls: 'c-sey' },
+      { id: 'gundem', n: '08', t: 'GÜNDEM.', d: T('Haber kaynakları · ilgi alanları · sonra oku', 'News sources · topics · read later'), cls: 'c-gundem' },
+      { id: 'lab', n: '09', t: 'LAB.', d: T('Komut oluşturucu · metin araçları · taslaklar', 'Prompt builder · text tools · drafts'), cls: 'c-lab' },
       { id: 'foto', n: '06', t: T('Fotoğraf', 'Photography'), d: T('Pexels · günün fotoğrafçısı · 3D sokak galerisi', 'Pexels · photographer of the day · 3D street gallery'), cls: 'c-foto' },
       ...(isOwner() ? [{ id: 'ts', n: '07', t: 'Trabzonspor', d: T('Sıradaki maç · son 5 maç · kadro · TS Club', 'Next match · last 5 matches · squad · TS Club'), cls: 'c-ts' }] : [])
     ];
@@ -478,6 +480,8 @@ const App = (() => {
     document.querySelectorAll('.nav a[data-r]').forEach(a => a.classList.toggle('on', a.dataset.r === r || (a.dataset.r === 'cbn' && cbnOn) || (a.dataset.r === 'dost' && r.startsWith('dost/')) || (a.dataset.r === 'oyunlar' && GAMES.some(g => g.id === r))));
     if (r === 'ts' && typeof TS !== 'undefined') { root().innerHTML = '<div id="tsRoot"></div>'; window.scrollTo(0, 0); TS.open(root().querySelector('#tsRoot')); }
     else if (cbnOn) { root().innerHTML = '<div id="cbnRoot"></div>'; window.scrollTo(0, 0); CBN.open(root().querySelector('#cbnRoot'), r); }
+    else if (r === 'gundem' && typeof Gundem !== 'undefined') { root().innerHTML = '<div id="gundemRoot"></div>'; window.scrollTo(0,0); Gundem.open(root().querySelector('#gundemRoot')); }
+    else if (r === 'lab' && typeof Lab !== 'undefined') { root().innerHTML = '<div id="labRoot"></div>'; window.scrollTo(0,0); Lab.open(root().querySelector('#labRoot')); }
     else if (r === 'draft') { root().innerHTML = '<section class="game-page"><div class="gp-head"><a class="back" href="#oyunlar">← ' + T('Oyunlar', 'Games') + '</a></div><div id="draftRoot"></div></section>'; window.scrollTo(0, 0); Draft.open(root().querySelector('#draftRoot')); }
     else if (r === 'is' && typeof Is !== 'undefined') { root().innerHTML = '<div id="isRoot"></div>'; window.scrollTo(0, 0); Is.open(root().querySelector('#isRoot')); }
     else if ((r === 'dost' || r.startsWith('dost/')) && typeof Dost !== 'undefined') { root().innerHTML = '<div id="dostRoot"></div>'; window.scrollTo(0, 0); Dost.open(root().querySelector('#dostRoot'), r); }
