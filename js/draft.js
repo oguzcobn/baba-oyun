@@ -209,12 +209,13 @@ const Draft = (() => {
       <section class="tac">
         <div class="tac-block"><span class="eyebrow">${T('Teknik direktör', 'Manager')}</span><div class="coaches">${DRAFT_COACHES.map((c, i) => `<button class="coach ${S.coach === i ? 'on' : ''}" data-c="${i}"><b>${c.name}</b><small>${I18N.lang === 'en' ? (COACH_EN[c.note] || c.note) : c.note}</small><span>${T('H', 'A')} ${c.att >= 0 ? '+' : ''}${c.att} · ${T('S', 'D')} ${c.def >= 0 ? '+' : ''}${c.def}</span></button>`).join('')}</div></div>
         ${Object.entries(TACF()).map(([k, [lbl, opts]]) => `<div class="tac-block"><span class="eyebrow">${lbl}</span><div class="seg2">${opts.map(([v, t]) => `<button data-k="${k}" data-v="${v}" class="${S.tac[k] === v ? 'on' : ''}">${t}</button>`).join('')}</div></div>`).join('')}
-        <div class="dr-actions"><button class="pill ghost" data-a="back">← ${T('Kadroya dön', 'Back to squad')}</button><button class="pill big" data-a="play" ${S.coach === null ? 'disabled' : ''}>${T('OYNA · 34 maç', 'PLAY · 34 matches')}</button></div>
+        <div class="dr-actions"><button class="pill ghost" data-a="back">← ${T('Kadroya dön', 'Back to squad')}</button><button class="pill big" data-a="play" ${S.coach === null ? 'disabled' : ''}>${T('SEZONU BAŞLAT', 'START SEASON')}</button></div><div class="dr-mode-switch"><label><input type="checkbox" data-a="weekly" ${S.managerMode === 'weekly' ? 'checked' : ''}> ${T('🎮 Menajer modu: haftalık maç, transfer, form ve taktik','🎮 Manager mode: weekly matches, transfers, form and tactics')}</label></div>
       </section>`;
+    const weeklyToggle = el.querySelector('[data-a=weekly]'); if (weeklyToggle) weeklyToggle.onchange = e => { S.managerMode = e.target.checked ? 'weekly' : 'auto'; save(); };
     el.querySelectorAll('.coach').forEach(b => b.onclick = () => { S.coach = +b.dataset.c; renderTactics(); });
     el.querySelectorAll('.seg2 button').forEach(b => b.onclick = () => { S.tac[b.dataset.k] = b.dataset.v; renderTactics(); });
     el.querySelector('[data-a=back]').onclick = () => { S.phase = 'draft'; render(); };
-    el.querySelector('[data-a=play]').onclick = () => { if (S.coach !== null) season(); };
+    el.querySelector('[data-a=play]').onclick = () => { if (S.coach !== null) season(S.managerMode === 'weekly'); };
     const ls2 = el.querySelector('[data-a=laststats]'); if (ls2) ls2.onclick = () => { S.phase = 'stats'; render(); };
   }
   function baseAD(xi) {
@@ -253,9 +254,9 @@ const Draft = (() => {
   const SC_W = { FV: 2.6, KN: 2.2, OS: 1.5, ST: .55, BK: .55, KL: 0 }, AS_W = { FV: 2, KN: 4.5, OS: 3, ST: .4, BK: 1.8, KL: .05 };
 
   /* ---------------- sezon ---------------- */
-  function season() {
+  function season(weekly = false) {
     stop(); S.phase = 'season'; save();
-    const st = strength(), m = mods(st.xi);
+    const st = strength(); let m = mods(st.xi);
     const taken = new Set(picked().map(p => p.name));
     const out = DRAFT_CLUBS[rnd(DRAFT_CLUBS.length)];
     const teams = [{ name: ME, short: 'SEN', id: 'me', me: true, xi: st.xi, c1: '#ff4d00' }];
@@ -270,6 +271,8 @@ const Draft = (() => {
     const lam = (att, def) => Math.max(.12, Math.min(4.2, CFG.base * Math.exp((att - def) / CFG.K)));
     // sakatlıklar (yalnızca senin takımında görünür): yerine en iyi yedek, mevki dışıysa -4
     const inj = {}, bench = S.bench.filter(Boolean);
+    const form = Object.fromEntries(st.xi.map(p => [p.name, 0]));
+    let budget = 25, transfers = 0;
     function injPenalty() {
       let pen = 0; const used = new Set();
       Object.entries(inj).forEach(([name, wks]) => { if (wks <= 0) return; const p = st.xi.find(x => x.name === name); if (!p) return;
@@ -288,7 +291,7 @@ const Draft = (() => {
     function play(h, a) {
       const H = teams[h], A = teams[a];
       let lh, la;
-      const fh = gauss() * CFG.noise, fa = gauss() * CFG.noise, pen = (H.me || A.me) ? injPenalty() : 0;
+      const fh = gauss() * CFG.noise, fa = gauss() * CFG.noise, pen = (H.me || A.me) ? injPenalty() + (weekly ? avg(st.xi.map(p => form[p.name] || 0)) * .6 : 0) : 0;
       const ha = (H.me ? st.att + pen : H.att) + fh, hd = (H.me ? st.def + pen : H.def) + fh, aa = (A.me ? st.att + pen : A.att) + fa, ad2 = (A.me ? st.def + pen : A.def) + fa;
       lh = lam(ha, ad2) * CFG.home; la = lam(aa, hd) * CFG.away;
       if (H.me) { lh *= m.a; la /= m.d; } else if (A.me) { la *= m.a; lh /= m.d; }
@@ -305,7 +308,39 @@ const Draft = (() => {
         <div class="bar"><i></i></div><div class="mini-kings"></div></div>
         <div class="table-wrap"><table class="tbl"><thead><tr><th>#</th><th>${T('Takım', 'Team')}</th><th>${T('O', 'P')}</th><th>${T('G', 'W')}</th><th>${T('B', 'D')}</th><th>${T('M', 'L')}</th><th>${T('A', 'GD')}</th><th>${T('P', 'Pts')}</th></tr></thead><tbody></tbody></table></div></section>`;
     const q = s => el.querySelector(s), me = teams[0];
+    if(weekly){
+      const panel=document.createElement('section');panel.className='dr-manager';
+      panel.innerHTML='<div class="dr-manager-top"><h2>'+T('Menajer masası','Manager desk')+'</h2><span>💰 <b class="dr-budget">25</b> M€</span></div><p>'+T('Her hafta taktik seç, formu takip et ve transfer yap.','Choose tactics, track form and make transfers each week.')+'</p><div class="dr-manager-form" aria-label="Player form and injuries"></div><div class="dr-manager-grid"><div><h3>'+T('Taktikler','Tactics')+'</h3><div class="dr-manager-tactics"></div></div><div><h3>'+T('Transfer pazarı','Transfer market')+'</h3><div class="dr-manager-market"></div></div></div><p class="dr-manager-status" role="status"></p><button class="pill big dr-next-week">'+T('1. haftayı oyna ▶','Play week 1 ▶')+'</button>';
+      q('.season').before(panel);
+    }
     let wk = 0, speed = 700;
+    function managerRender(){
+      if(!weekly||!el.isConnected)return;
+      const tactics=q('.dr-manager-tactics'),market=q('.dr-manager-market');
+      tactics.innerHTML=Object.entries(TACF()).map(([k,v])=>'<label class="dr-manager-label">'+v[0]+'<select data-tac="'+k+'">'+v[1].map(o=>'<option value="'+o[0]+'" '+(S.tac[k]===o[0]?'selected':'')+'>'+o[1]+'</option>').join('')+'</select></label>').join('');
+      tactics.querySelectorAll('select').forEach(x=>x.onchange=()=>{S.tac[x.dataset.tac]=x.value;m=mods(st.xi);save();q('.dr-manager-status').textContent=T('Taktik güncellendi.','Tactics updated.');});
+      const owned=new Set([...st.xi,...bench].map(p=>p.name));
+      const pool=DRAFT_CLUBS.flatMap(c=>c.players.filter(p=>p[3]==='FC27'&&!owned.has(p[0])).map(p=>({name:p[0],pos:p[1],r:p[2],club:c.id}))).sort((a,b)=>b.r-a.r);
+      const price=p=>Math.max(3,Math.ceil((p.r-68)*.75));
+      const options=pool.filter(p=>st.xi.some(x=>x.pos===p.pos)&&price(p)<=budget).slice(0,8);
+      market.innerHTML=options.map((p,i)=>'<button class="dr-market-player" data-player="'+i+'"><span>'+esc(p.name)+' · '+PZ(p.pos)+' · '+p.r+'</span><b>'+price(p)+' M€</b></button>').join('')||'<p>'+T('Bütçene uygun oyuncu yok.','No affordable players.')+'</p>';
+      market.querySelectorAll('[data-player]').forEach(btn=>btn.onclick=()=>{
+        const p=options[Number(btn.dataset.player)];if(!p||price(p)>budget)return;
+        const slot=DRAFT_SLOTS.find(x=>S.picks[x.id]&&S.picks[x.id].pos===p.pos);if(!slot)return;
+        const old=S.picks[slot.id];budget-=price(p);transfers++;
+        S.picks[slot.id]=p;const ix=st.xi.findIndex(x=>x.name===old.name);if(ix>=0)st.xi[ix]=p;
+        me.xi=st.xi;form[p.name]=0;delete form[old.name];delete inj[old.name];
+        stats[key(me,p)]={name:p.name,team:me.name,tid:'me',c1:me.c1,pos:p.pos,r:p.r,g:0,a:0,cs:0,apps:0};
+        const power=baseAD(st.xi),chem=chemOf(st.xi).pct/100*CHEM_MAX;
+        st.att=power.att+chem;st.def=power.def+chem;m=mods(st.xi);save();
+        q('.dr-manager-status').textContent=T('Transfer tamamlandı: ','Signed: ')+p.name;
+        managerRender();
+      });
+      q('.dr-manager-form').innerHTML='<h3>'+T('Oyuncu formu ve sakatlıklar','Player form and injuries')+'</h3><div class="dr-form-list">'+st.xi.map(p=>'<span class="dr-form-player">'+esc(p.name)+' <b>'+(inj[p.name]?'🚑 '+inj[p.name]+T(' hafta',' weeks'):(form[p.name]>0?'↗ +':'↘ ')+(form[p.name]||0))+'</b></span>').join('')+'</div>';
+      q('.dr-budget').textContent=budget;
+    }
+    if(weekly){managerRender();q('.dr-next-week').onclick=()=>week();}
+
     q('[data-a=fast]').onclick = e => { speed = speed > 100 ? 60 : 700; e.target.classList.toggle('on', speed < 100); e.target.textContent = speed < 100 ? T('▶ Normal hız', '▶ Normal speed') : T('⏩ Hızlandır', '⏩ Speed up'); };
     const sorted = () => teams.slice().sort((x, y) => y.p - x.p || (y.gf - y.ga) - (x.gf - x.ga) || y.gf - x.gf);
     function table() {
@@ -325,6 +360,12 @@ const Draft = (() => {
       let injMsg = '';
       st.xi.forEach(p => { if (!inj[p.name] && Math.random() < CFG.inj) { const w = 1 + Math.floor(Math.random() * Math.random() * 7); inj[p.name] = w; injMsg = T(`🚑 ${p.name} sakatlandı (${w} hafta)`, `🚑 ${p.name} injured (${w} ${w > 1 ? 'weeks' : 'week'})`); } });
       wk++;
+      if(weekly){
+        st.xi.forEach(p=>{form[p.name]=Math.max(-3,Math.min(3,(form[p.name]||0)+(Math.random()<.5?-1:1)));});
+        const b=q('.dr-next-week');if(b)b.textContent=wk>=34?T('Sezonu tamamla ▶','Finish season ▶'):(wk+1)+'. '+T('haftayı oyna ▶','Play week ▶');
+        q('.dr-manager-status').textContent=injMsg||T('Hafta tamamlandı.','Week complete.');
+        managerRender();
+      }
       q('.wk').textContent = wk; q('.pts').textContent = me.p; q('.wdl').textContent = `${me.w}-${me.d}-${me.l}`; q('.gl').textContent = `${me.gf}:${me.ga}`;
       q('.bar i').style.width = (wk / 34 * 100) + '%';
       const home = teams[mine.h].me, opp = teams[home ? mine.a : mine.h];
@@ -336,7 +377,7 @@ const Draft = (() => {
       q('.goals-ev').innerHTML = mine.ev.map(e => `<span class="${e.t === 'me' ? 'mine' : ''}">⚽ ${e.min}' ${esc(e.sc)}${e.as ? ` <small>(${esc(e.as)})</small>` : ''}</span>`).join('');
       const f = q('.feed'); f.insertAdjacentHTML('afterbegin', `<div class="fr ${r}"><span>${wk}</span><b>${FL(r)}</b> ${home ? '' : '@ '}${esc(TN(opp.name))} <em>${myG}–${opG}</em></div>${injMsg ? `<div class="fr inj">${esc(injMsg)}</div>` : ''}`); while (f.children.length > 5) f.lastChild.remove();
       if (typeof AdvAudio !== 'undefined' && speed > 100) AdvAudio.note(r === 'G' ? 784 : r === 'B' ? 523 : 330, .12, 'triangle', .04);
-      table(); kings(); later(week, speed);
+      table(); kings(); if(!weekly) later(week, speed);
     }
     function finish() {
       const rank = table(), best = ls.get('draft_best', 0); if (me.p > best) ls.set('draft_best', me.p);
@@ -354,12 +395,13 @@ const Draft = (() => {
         poy: top(list, (a, b) => b.score - a.score, 5),
         mine: list.filter(s => s.tid === 'me').sort((a, b) => b.g + b.a - (a.g + a.a) || b.r - a.r)
       };
+      S.last.manager=weekly?{transfers,budget}:null;
       recordSeason(S.last);
       S.phase = 'stats'; S.tab = 'awards'; save();
       if (rank === 1 && typeof confetti === 'function') confetti();
       renderStats();
     }
-    later(week, 400);
+    if(!weekly) later(week, 400);
     window.__draftSeason = { fast: () => { speed = 1; } };
   }
 
