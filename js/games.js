@@ -16,8 +16,32 @@ const App = (() => {
   const inviteCode = name => 'B-' + cyrb('baba-davet:' + norm(name)).slice(0, 6).toUpperCase();
   let guest = ls.get('baba_guest', null);
   if (guest && inviteCode(guest.name) !== guest.code) guest = null;
+  /* davet bağlantısı (?davet=KOD&ad=AD ya da eski #davet=…): geçerliyse doğrudan davetli olarak açılır.
+     Ana ekrana eklenen uygulama Safari'den ayrı hafıza kullandığı için davet adreste ve manifestte taşınır. */
+  const fromUrl = () => { try { const s = new URLSearchParams(location.search), h = location.hash.match(/davet=([^&]+)&ad=([^&]+)/), c = s.get('davet') || (h && decodeURIComponent(h[1])), n = s.get('ad') || (h && decodeURIComponent(h[2])); return c && n ? { c: String(c).trim().toUpperCase(), n: String(n).trim().slice(0, 40) } : null; } catch (e) { return null; } };
+  { const u = fromUrl(); if (u && !unlocked && inviteCode(u.n) === u.c && (!guest || guest.code !== u.c)) { guest = { name: u.n, code: u.c, at: Date.now() }; ls.set('baba_guest', guest); } }
+  let manBase = null, manUrl = null;
+  async function setManifest(start) {
+    const link = document.querySelector('link[rel=manifest]'); if (!link) return;
+    if (manUrl) { URL.revokeObjectURL(manUrl); manUrl = null; }
+    if (!start) { link.setAttribute('href', 'manifest.webmanifest'); return; }
+    try {
+      if (!manBase) manBase = await (await fetch('manifest.webmanifest', { cache: 'no-cache' })).json();
+      const dir = location.origin + location.pathname.replace(/[^/]*$/, ''), m = JSON.parse(JSON.stringify(manBase));
+      m.start_url = start; m.scope = dir; (m.icons || []).forEach(i => { i.src = new URL(i.src, dir).href; });
+      manUrl = URL.createObjectURL(new Blob([JSON.stringify(m)], { type: 'application/manifest+json' })); link.setAttribute('href', manUrl);
+    } catch (e) {}
+  }
+  let manFor = '';
+  function guestUrl() {
+    if (guest && !unlocked) {
+      const q = '?davet=' + encodeURIComponent(guest.code) + '&ad=' + encodeURIComponent(guest.name);
+      if (location.search !== q) history.replaceState(null, '', location.pathname + q + location.hash);
+      if (manFor !== q) { manFor = q; setManifest(location.origin + location.pathname + q); }
+    } else if (manFor) { manFor = ''; setManifest(null); }
+  }
   const isOwner = () => unlocked, isGuest = () => !unlocked && !!guest, canIn = () => unlocked || !!guest;
-  const OWNER_ONLY = ['is', 'erisim'];
+  const OWNER_ONLY = ['is', 'erisim', 'ts'];
   const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const root = () => document.getElementById('view');
   let cleanup = [];
@@ -63,7 +87,7 @@ const App = (() => {
     }, { msg: 'Bu cihazda kullanılacak yeni 4 haneli şifre' });
   }
   function lock() { unlocked = false; try { sessionStorage.removeItem('baba_ok'); } catch (e) {} if (location.hash) location.hash = ''; else render(); }
-  function guestOut() { guest = null; try { localStorage.removeItem('baba_guest'); } catch (e) {} location.hash = ''; render(); }
+  function guestOut() { guest = null; try { localStorage.removeItem('baba_guest'); } catch (e) {} history.replaceState(null, '', location.pathname); manFor = 'x'; guestUrl(); render(); }
   function toast(t) { const d = document.createElement('div'); d.className = 'bb-toast'; d.textContent = t; document.body.appendChild(d); setTimeout(() => d.remove(), 1800); }
 
   /* ---------------- menü ---------------- */
@@ -89,7 +113,7 @@ const App = (() => {
       { id: 'oyunlar', n: '03', t: 'Oyunlar', d: 'Süper Lig Draft · Empires of the Valley · 2048 · Sudoku · Mayın · Blok', cls: 'c-oyun' },
       { id: 'seyahat', n: '04', t: 'Seyahat', d: 'Booking · Airbnb · Skyscanner · Gezilerim 3D dünya', cls: 'c-sey' },
       { id: 'foto', n: '05', t: 'Fotoğraf', d: 'Pexels · günün fotoğrafçısı · 3D sokak galerisi', cls: 'c-foto' },
-      { id: 'ts', n: '06', t: 'Trabzonspor', d: 'Sıradaki maç · son 5 maç · kadro · TS Club', cls: 'c-ts' },
+      ...(isOwner() ? [{ id: 'ts', n: '06', t: 'Trabzonspor', d: 'Sıradaki maç · son 5 maç · kadro · TS Club', cls: 'c-ts' }] : []),
       { id: 'cbn', n: '07', t: 'CBN<i>Personal OS</i>', d: 'Notlar · görevler · takvim · projeler · aile · finans · hedefler — kişisel asistanın, yalnızca sana özel', cls: 'c-cbn' }
     ];
     root().innerHTML = `
@@ -97,7 +121,7 @@ const App = (() => {
         <h1 class="display xl">BABA<em>.</em></h1>
         <p class="lead">İş, dinlenme, oyun ve yolculuk — hepsi tek yerde, sadece davetlilere açık.</p></section>
       <section class="hub">${CATS.map(c => `<a class="hub-card ${c.cls}" href="#${c.id}"><span class="hub-n">${c.n}</span><h2>${c.t}</h2><p>${c.d}</p><span class="arrow">↗</span></a>`).join('')}</section>
-      <footer class="foot"><div class="foot-word">BABA<span>.</span></div><div class="foot-row">${isOwner() ? '<button class="link" data-a="pin">Şifreyi değiştir</button><a class="link" href="#erisim">Davetler &amp; erişim</a><button class="link" data-a="lock">Kilitle</button>' : '<button class="link" data-a="gout">Bu cihazdan çık</button>'}<span class="muted">Yalnızca davetliler için · sürüm 24</span></div></footer>`;
+      <footer class="foot"><div class="foot-word">BABA<span>.</span></div><div class="foot-row">${isOwner() ? '<button class="link" data-a="pin">Şifreyi değiştir</button><a class="link" href="#erisim">Davetler &amp; erişim</a><button class="link" data-a="lock">Kilitle</button>' : '<button class="link" data-a="gout">Bu cihazdan çık</button>'}<span class="muted">Yalnızca davetliler için · sürüm 25</span></div></footer>`;
     const q = s => root().querySelector(s);
     if (q('[data-a=pin]')) q('[data-a=pin]').onclick = () => { click(); changePin(); };
     if (q('[data-a=lock]')) q('[data-a=lock]').onclick = () => { click(); lock(); };
@@ -107,12 +131,12 @@ const App = (() => {
   /* ---------------- davetler (yalnızca sahibi) ---------------- */
   function access() {
     const list = ls.get('baba_invites', []);
-    const link = (n, c) => location.href.split('#')[0] + '#davet=' + encodeURIComponent(c) + '&ad=' + encodeURIComponent(n);
+    const link = (n, c) => location.origin + location.pathname + '?davet=' + encodeURIComponent(c) + '&ad=' + encodeURIComponent(n);
     root().innerHTML = `<section class="game-page"><div class="gp-head"><a class="back" href="#">← Ana sayfa</a><p class="eyebrow">Yalnızca sahibi görür</p><h1 class="display sm">Davetler &amp; erişim</h1></div>
       <div class="acc">
         <form class="acc-form"><input name="n" placeholder="Davet edeceğin kişinin adı (ör. Nicole)" required maxlength="40"><button class="pill">Davet kodu oluştur</button></form>
         <div class="acc-list">${list.length ? list.slice().reverse().map(x => `<div class="acc-item"><div><b>${esc(x.name)}</b><code>${x.code}</code><small class="muted">${new Date(x.at).toLocaleDateString('tr-TR')}</small></div><div class="acc-acts"><button class="pill ghost sm" data-share="${esc(x.name)}">Paylaş</button><button class="pill ghost sm" data-del="${esc(x.code)}">Listeden sil</button></div></div>`).join('') : '<p class="muted">Henüz davet yok.</p>'}</div>
-        <div class="acc-note"><h3>Nasıl çalışır?</h3><p>Uygulamaya yalnızca senin şifrenle ya da senin verdiğin davet koduyla girilir. Katılmak isteyen biri giriş ekranından sana istek mesajı gönderir; uygun görürsen buradan ona özel bir kod oluşturup paylaşırsın. Davetliler İş sayfasını göremez; notları, hatırlatmaları ve gezileri yalnızca kendi cihazlarında tutulur.</p>
+        <div class="acc-note"><h3>Nasıl çalışır?</h3><p><b>Ana ekrana eklemek için:</b> davetli, gönderdiğin bağlantıyı açıp giriş yaptıktan sonra “Ana Ekrana Ekle”yi kullanmalı. Uygulama simgesi daveti hatırlar ve PIN sormadan yalnızca davetlilere açık bölümlerle açılır.</p><p>Uygulamaya yalnızca senin şifrenle ya da senin verdiğin davet koduyla girilir. Katılmak isteyen biri giriş ekranından sana istek mesajı gönderir; uygun görürsen buradan ona özel bir kod oluşturup paylaşırsın. Davetliler İş sayfasını göremez; notları, hatırlatmaları ve gezileri yalnızca kendi cihazlarında tutulur.</p>
         <p class="muted sm">Not: Site GitHub Pages'te durduğu için bu bir “kapı kilidi”dir, banka kasası değil — kişisel verilerin zaten hiçbir sunucuda değil, yalnızca senin cihazında. Gerçek sunucu tarafı onay istersen Cloudflare Access ile e-postayla giriş kurabiliriz.</p></div>
       </div></section>`;
     const f = root().querySelector('.acc-form');
@@ -415,7 +439,7 @@ const App = (() => {
   /* ---------------- yönlendirme ---------------- */
   function lockScreen() {
     document.body.classList.add('locked'); document.body.classList.remove('work-mode', 'dark-mode', 'cbn-mode', 'cbn-dark');
-    const m = location.hash.match(/davet=([^&]+)&ad=([^&]+)/), pc = m ? decodeURIComponent(m[1]) : '', pn = m ? decodeURIComponent(m[2]) : '';
+    const m = fromUrl(), pc = m ? m.c : '', pn = m ? m.n : '';
     root().innerHTML = `<section class="hero lockhero"><p class="eyebrow">Özel alan · yalnızca davetliler</p><h1 class="display xl">BABA<em>.</em></h1>
       <div class="lock-opts">
         <button class="pill big" data-a="open">🔒 Sahibi olarak gir</button>
@@ -426,7 +450,7 @@ const App = (() => {
     q('[data-a=open]').onclick = askOpen;
     q('[data-f=inv]').onsubmit = e => { e.preventDefault(); const f = e.target, n = f.n.value.trim(), c = f.c.value.trim().toUpperCase();
       if (inviteCode(n) !== c) { f.querySelector('.lock-msg').textContent = 'Kod bu isimle eşleşmiyor. Adını davetteki gibi yaz.'; return; }
-      guest = { name: n, code: c, at: Date.now() }; ls.set('baba_guest', guest); location.hash = ''; render(); };
+      guest = { name: n, code: c, at: Date.now() }; ls.set('baba_guest', guest); location.hash = ''; guestUrl(); render(); };
     q('[data-f=req]').onsubmit = e => { e.preventDefault(); const f = e.target, t = `Merhaba Oğuzhan, BABA. uygulamasına katılmak istiyorum.\nAdım: ${f.n.value.trim()}${f.m.value.trim() ? '\nNot: ' + f.m.value.trim() : ''}`;
       if (navigator.share) navigator.share({ title: 'BABA. katılma isteği', text: t }).catch(() => {}); else window.open('https://wa.me/?text=' + encodeURIComponent(t), '_blank', 'noopener'); };
     if (!m) askOpen();
@@ -437,7 +461,8 @@ const App = (() => {
     document.querySelectorAll('.bb-pin-ov').forEach(e => e.remove());
     if (!canIn()) return lockScreen();
     document.body.classList.remove('locked');
-    let r = location.hash.slice(1); if (r.startsWith('davet=')) { r = ''; history.replaceState(null, '', location.pathname); }
+    let r = location.hash.slice(1); if (r.startsWith('davet=')) { r = ''; history.replaceState(null, '', location.pathname + location.search); }
+    guestUrl();
     const isCbn = r === 'cbn' || r.startsWith('cbn/');
     if (OWNER_ONLY.includes(r) && !isOwner()) r = '';
     if (isCbn && !canIn()) r = '';
