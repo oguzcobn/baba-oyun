@@ -12,3 +12,11 @@
  .bb-today-grid{grid-template-columns:1fr}.bb-today-grid article{padding:18px}.bb-today-item small{font-size:11px}
 }
 @media(prefers-reduced-motion:reduce){#bbMobileNav *, .bb-today *{animation:none!important}}
+
+/* Shared page actions: one global menu, not four repeated buttons */
+.baba-shared-actions{position:fixed;z-index:9050;right:18px;bottom:calc(20px + env(safe-area-inset-bottom))}
+.baba-shared-actions[hidden],.baba-shared-menu[hidden]{display:none!important}
+.baba-shared-trigger{display:grid;place-items:center;width:48px;height:48px;border-radius:50%;border:1px solid #777;background:#171717;color:#fff;box-shadow:0 6px 25px #0003;font-size:27px;cursor:pointer}
+.baba-shared-menu{position:absolute;bottom:58px;right:0;min-width:170px;padding:7px;background:#fff;color:#181818;border:1px solid #ddd;border-radius:14px;box-shadow:0 15px 35px #0003}
+.baba-shared-menu button{display:block;width:100%;padding:12px;text-align:left;border:0;background:transparent;border-radius:8px;color:inherit;font:600 13px system-ui;cursor:pointer}.baba-shared-menu button:hover{background:#f1f2f5}
+@media(max-width:760px){.baba-shared-actions{bottom:calc(91px + env(safe-area-inset-bottom));right:13px}body.cbn-mode .baba-shared-actions{display:none}}
