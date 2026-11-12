@@ -1,0 +1,22 @@
+/* BABA. daily dashboard and mobile bottom navigation */
+.bb-today,.bb-backup{max-width:1200px;margin:0 auto;padding:clamp(25px,5vw,72px) clamp(18px,4vw,50px);color:var(--ink,#181818)}
+.bb-today-head{border-bottom:1px solid currentColor;padding-bottom:24px;margin-bottom:24px}.bb-today-head h1,.bb-backup h1{font-size:clamp(54px,12vw,130px);letter-spacing:-.09em;line-height:.9;margin:12px 0;font-weight:900}.bb-today-head>p:last-child{font-size:18px}
+.bb-today-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}.bb-today-grid article{border:1px solid var(--line,#ddd);padding:24px;border-radius:18px;background:var(--paper,#fff)}.bb-today-grid h2{font-size:21px;margin:0 0 20px}.bb-today-item{display:flex;justify-content:space-between;gap:15px;align-items:center;padding:13px 0;border-bottom:1px solid var(--line,#ddd);color:inherit;text-decoration:none}.bb-today-item span{overflow-wrap:anywhere}.bb-today-item small{white-space:nowrap;opacity:.65}.bb-today-shortcuts,.bb-backup-actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:25px}.bb-today-shortcuts a,.bb-backup-actions button,.bb-backup-actions label{display:inline-flex;align-items:center;border-radius:99px;background:#1b1b1b;color:white;padding:12px 18px;font:700 13px system-ui;cursor:pointer;text-decoration:none;border:0}.bb-backup-actions input{display:block;max-width:200px;font-size:12px;margin-top:6px}.bb-backup-actions label{display:block;border-radius:12px}.bb-backup-warn{margin-top:25px;font-size:13px;color:#9b422c}
+.bb-related{margin:25px 0 5px;padding:18px;border-top:1px solid currentColor;opacity:.9}.bb-related>strong{display:block;margin-bottom:12px;font-size:12px;text-transform:uppercase;letter-spacing:.1em}.bb-related>div{display:flex;flex-wrap:wrap;gap:10px}.bb-related a{padding:9px 13px;border:1px solid currentColor;border-radius:99px;color:inherit;text-decoration:none;font-size:13px}
+#bbMobileNav{display:none}
+@media(max-width:760px){
+ body:not(.locked):not(.cbn-mode) #bbMobileNav{display:flex;position:fixed;z-index:9000;bottom:0;left:0;right:0;justify-content:space-around;align-items:center;background:var(--paper,#fff);color:var(--ink,#161616);border-top:1px solid var(--line,#ddd);padding:8px 4px calc(8px + env(safe-area-inset-bottom));box-shadow:0 -8px 25px #0001}
+ #bbMobileNav a{flex:1;min-width:0;text-decoration:none;color:inherit;text-align:center;display:grid;gap:2px;justify-items:center;padding:5px 0;border-radius:10px}
+ #bbMobileNav a span{font-size:22px;line-height:1.1}#bbMobileNav a small{font:600 10px/1.3 system-ui}#bbMobileNav a[aria-current]{color:#d65d2d;background:color-mix(in srgb,currentColor 8%,transparent)}
+ body:not(.locked):not(.cbn-mode) #view{padding-bottom:calc(90px + env(safe-area-inset-bottom))}
+ .bb-today-grid{grid-template-columns:1fr}.bb-today-grid article{padding:18px}.bb-today-item small{font-size:11px}
+}
+@media(prefers-reduced-motion:reduce){#bbMobileNav *, .bb-today *{animation:none!important}}
+
+/* Shared page actions: one global menu, not four repeated buttons */
+.baba-shared-actions{position:fixed;z-index:9050;right:18px;bottom:calc(20px + env(safe-area-inset-bottom))}
+.baba-shared-actions[hidden],.baba-shared-menu[hidden]{display:none!important}
+.baba-shared-trigger{display:grid;place-items:center;width:48px;height:48px;border-radius:50%;border:1px solid #777;background:#171717;color:#fff;box-shadow:0 6px 25px #0003;font-size:27px;cursor:pointer}
+.baba-shared-menu{position:absolute;bottom:58px;right:0;min-width:170px;padding:7px;background:#fff;color:#181818;border:1px solid #ddd;border-radius:14px;box-shadow:0 15px 35px #0003}
+.baba-shared-menu button{display:block;width:100%;padding:12px;text-align:left;border:0;background:transparent;border-radius:8px;color:inherit;font:600 13px system-ui;cursor:pointer}.baba-shared-menu button:hover{background:#f1f2f5}
+@media(max-width:760px){.baba-shared-actions{bottom:calc(91px + env(safe-area-inset-bottom));right:13px}body.cbn-mode .baba-shared-actions{display:none}}

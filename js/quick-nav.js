@@ -1,7 +1,7 @@
 "use strict";
 /* Fast category navigation. Ctrl/Cmd+K, accessible dialog, no remote services. */
 const BABAQuick=(()=>{
- const routes=[['cbn','CBN'],['msn','Messenger'],['is','İş / Work'],['dost','Dost'],['oyunlar','Oyunlar / Games'],['seyahat','Seyahat / Travel'],['foto','Fotoğraf / Photography'],['ts','Trabzonspor'],['gundem','GÜNDEM.'],['lab','LAB.'],['play','PLAY.'],['akis','AKIŞ.']];
+ const routes=[['today','BUGÜN. / TODAY.'],['backup','YEDEK. / BACKUP.'],['cbn','CBN'],['msn','Messenger'],['is','İş / Work'],['dost','Dost'],['oyunlar','Oyunlar / Games'],['seyahat','Seyahat / Travel'],['foto','Fotoğraf / Photography'],['ts','Trabzonspor'],['gundem','GÜNDEM.'],['lab','LAB.'],['play','PLAY.'],['akis','AKIŞ.']];
  const T=(a,b)=>typeof I18N!=='undefined'&&I18N.lang==='en'?b:a;
  const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','"':'&quot;',"'":'&#39;'}[c]));
  let overlay=null,lastFocus=null;
