@@ -571,3 +571,16 @@ body.cbn-mode{min-height:100dvh}
 .pf .cbn-actions{width:100%}.pf .st-sw{margin:0 8px}
 @media(max-width:700px){.hm-av,.hm-av .cbn-av,.hm-av>span{width:84px;height:84px}.hm-side{width:100%}}
 .st-acc{grid-column:1/-1}.st-msg{margin:0;font-weight:600;font-size:14px;min-height:1.2em}.st-sync-state{font-weight:700}
+
+/* CBN notification center */
+.cbn-notifications{gap:10px;cursor:pointer}
+.cbn-notifications-count{margin-left:auto;min-width:24px;text-align:center;font-size:12px;font-weight:800;padding:2px 6px;border-radius:99px;background:var(--c-soft);color:var(--c-ink)}
+.cbn-notification-intro{color:var(--c-mute);margin:0 0 14px;font-size:13px;line-height:1.55}
+.cbn-notification-list{display:grid;gap:8px;max-height:min(56vh,520px);overflow:auto;padding:1px}
+.cbn-notification-row{width:100%;display:flex;align-items:center;text-align:left;gap:12px;background:var(--c-card);color:var(--c-ink);border:1px solid var(--c-line);border-radius:14px;padding:12px;cursor:pointer;font:inherit}
+.cbn-notification-row:hover,.cbn-notification-row:focus-visible{border-color:var(--c-acc);outline-offset:2px}
+.cbn-notification-kind{display:grid;place-items:center;width:36px;height:36px;flex:none;border-radius:10px;background:var(--c-soft)}
+.cbn-notification-info{min-width:0;flex:1;display:flex;flex-direction:column;gap:3px}
+.cbn-notification-info strong{font-size:14px;overflow-wrap:anywhere}
+.cbn-notification-info small{font-size:12px;color:var(--c-mute)}
+.cbn-notification-row.late .cbn-notification-info small{color:var(--c-err)}
