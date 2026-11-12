@@ -9,15 +9,23 @@ const BABAEnhance=(()=>{
  async function share(id){const p=pages[id];if(!p)return;const url=new URL(location.href);url.hash=id;const data={title:'BABA. · '+p.title,text:p.description,url:url.href};try{if(navigator.share){await navigator.share(data);return}if(navigator.clipboard&&window.isSecureContext){await navigator.clipboard.writeText(url.href);announce(T('Bağlantı kopyalandı.','Link copied.'));return}const field=document.createElement('textarea');field.value=url.href;field.style.position='fixed';field.style.opacity='0';document.body.appendChild(field);field.select();const ok=document.execCommand('copy');field.remove();if(ok){announce(T('Bağlantı kopyalandı.','Link copied.'));return}throw Error('copy failed')}catch(e){if(e.name!=='AbortError')announce(T('Bağlantı kopyalanamadı.','Could not copy the link.'))}}
  function install(){if(!deferred){announce(T('Tarayıcı menüsünden “Ana ekrana ekle” seçeneğini kullanabilirsin.','Use “Add to Home Screen” in your browser menu.'));return}const p=deferred;deferred=null;p.prompt();Promise.resolve(p.userChoice).catch(()=>{});}
  function enhance(){
+  // One shared actions menu for all pages, instead of repeating controls on four pages.
+  let holder=document.getElementById('babaSharedActions');
+  if(!holder){
+   holder=document.createElement('div');holder.id='babaSharedActions';holder.className='baba-shared-actions';
+   const btn=document.createElement('button');btn.type='button';btn.className='baba-shared-trigger';btn.setAttribute('aria-label',T('Sayfa işlemleri','Page actions'));btn.textContent='⋯';btn.setAttribute('aria-expanded','false');
+   const menu=document.createElement('div');menu.className='baba-shared-menu';menu.hidden=true;
+   const shareBtn=document.createElement('button');shareBtn.type='button';shareBtn.textContent=T('Paylaş','Share');shareBtn.onclick=()=>{const id=location.hash.slice(1).split('/')[0];menu.hidden=true;btn.setAttribute('aria-expanded','false');share(id)};
+   const installBtn=document.createElement('button');installBtn.type='button';installBtn.textContent=T('Ana ekrana ekle','Install app');installBtn.onclick=()=>{menu.hidden=true;btn.setAttribute('aria-expanded','false');install()};
+   menu.append(shareBtn,installBtn);btn.onclick=()=>{menu.hidden=!menu.hidden;btn.setAttribute('aria-expanded',String(!menu.hidden))};
+   holder.append(btn,menu);document.body.appendChild(holder);
+   document.addEventListener('click',e=>{if(!holder.contains(e.target)){menu.hidden=true;btn.setAttribute('aria-expanded','false')}});
+   document.addEventListener('keydown',e=>{if(e.key==='Escape'){menu.hidden=true;btn.setAttribute('aria-expanded','false')}});
+  }
+  const active=!!App.user()&&!document.body.classList.contains('locked');
+  holder.hidden=!active;
   const page=document.querySelector('.bb-feature.bb-gundem,.bb-feature.bb-lab,.bb-feature.bb-play,.bb-feature.bb-akis');
   if(!page)return;
-  const id=['gundem','lab','play','akis'].find(n=>page.classList.contains('bb-'+n));
-  const top=page.querySelector('.bb-feature-top');
-  if(!id||!top||top.querySelector('.baba-actions'))return;
-  const actions=document.createElement('div');actions.className='baba-actions';
-  const shareBtn=document.createElement('button');shareBtn.type='button';shareBtn.className='baba-action';shareBtn.innerHTML=icon+' <span>'+T('Paylaş','Share')+'</span>';shareBtn.setAttribute('aria-label',T('Bu sayfanın bağlantısını paylaş','Share a link to this page'));shareBtn.addEventListener('click',()=>share(id));
-  const installBtn=document.createElement('button');installBtn.type='button';installBtn.className='baba-action baba-install';installBtn.textContent=T('＋ Ana ekrana ekle','＋ Install app');installBtn.addEventListener('click',install);
-  actions.append(shareBtn,installBtn);top.appendChild(actions);
   page.classList.add('baba-enter');
   page.addEventListener('animationend',()=>page.classList.remove('baba-enter'),{once:true});
  }
