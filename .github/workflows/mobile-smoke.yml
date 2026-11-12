@@ -1,0 +1,29 @@
+name: Mobile browser smoke tests
+on:
+  workflow_dispatch:
+  push:
+    branches: [test/mobile-playwright-smoke-20261112, main]
+    paths:
+      - '.github/workflows/mobile-smoke.yml'
+      - 'tests/mobile.spec.cjs'
+      - 'js/**'
+      - 'css/**'
+      - 'index.html'
+      - 'sw.js'
+jobs:
+  mobile-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --no-save --package-lock=false @playwright/test@1.58.2
+      - run: npx playwright install --with-deps chromium
+      - run: npx playwright test tests/mobile.spec.cjs --reporter=line --workers=2
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-test-results
+          path: test-results/
