@@ -502,6 +502,14 @@ const App = (() => {
     else if (r === 'foto' && typeof Foto !== 'undefined') { root().innerHTML = '<div id="ftRoot"></div>'; window.scrollTo(0, 0); Foto.open(root().querySelector('#ftRoot')); onLeave(() => Foto.leave()); }
     else hub();
     if(typeof BABAEnhance!=='undefined') BABAEnhance.enhance();
+    // Animate each route once on entry; don't interrupt inputs or long-running widgets.
+    const appRoot=root();
+    appRoot.classList.remove('bb-route-enter');
+    if(!window.matchMedia('(prefers-reduced-motion: reduce)').matches){
+      void appRoot.offsetWidth;
+      appRoot.classList.add('bb-route-enter');
+      appRoot.addEventListener('animationend',e=>{if(e.target===appRoot)appRoot.classList.remove('bb-route-enter')},{once:true});
+    }
   }
   addEventListener('hashchange', render);
   return { render, leave, askOpen, lock: () => { if (isOwner()) lock(); else if (confirm(T('Davetli erişimi bu cihazdan kaldırılsın mı?', 'Remove guest access from this device?'))) guestOut(); }, isOwner, user: () => isOwner() ? { name: 'Oğuzhan', key: '' } : guest ? { name: guest.name, key: 'g-' + String(guest.code).toLowerCase().replace(/[^a-z0-9-]/g, '') } : null, get unlocked() { return unlocked; } };
