@@ -4,13 +4,13 @@
 @keyframes bb-route-card{from{opacity:0;transform:translate3d(0,14px,0) scale(.985)}to{opacity:1;transform:translate3d(0,0,0) scale(1)}}
 @keyframes bb-route-nav{from{opacity:.5;transform:translateY(-3px)}to{opacity:1;transform:translateY(0)}}
 @media(prefers-reduced-motion:no-preference){
-  #app.bb-route-enter{animation:bb-route-reveal .4s cubic-bezier(.2,.7,.2,1) both}
-  #app.bb-route-enter .hero .display,#app.bb-route-enter .gp-head h1,#app.bb-route-enter .game-page>.hero h1{animation:bb-route-head .5s cubic-bezier(.18,.8,.2,1) both}
-  #app.bb-route-enter .hub-grid>.hub-card,#app.bb-route-enter .hub-grid>.cat-card,#app.bb-route-enter .games-grid>.card{animation:bb-route-card .45s cubic-bezier(.2,.7,.2,1) both}
-  #app.bb-route-enter .hub-grid>:nth-child(2),#app.bb-route-enter .games-grid>:nth-child(2){animation-delay:45ms}
-  #app.bb-route-enter .hub-grid>:nth-child(3),#app.bb-route-enter .games-grid>:nth-child(3){animation-delay:90ms}
-  #app.bb-route-enter .hub-grid>:nth-child(4),#app.bb-route-enter .games-grid>:nth-child(4){animation-delay:135ms}
-  #app.bb-route-enter .hub-grid>:nth-child(5),#app.bb-route-enter .games-grid>:nth-child(5){animation-delay:180ms}
+  #view.bb-route-enter{animation:bb-route-reveal .4s cubic-bezier(.2,.7,.2,1) both}
+  #view.bb-route-enter .hero .display,#view.bb-route-enter .gp-head h1,#view.bb-route-enter .game-page>.hero h1{animation:bb-route-head .5s cubic-bezier(.18,.8,.2,1) both}
+  #view.bb-route-enter .hub-grid>.hub-card,#view.bb-route-enter .hub-grid>.cat-card,#view.bb-route-enter .games-grid>.card{animation:bb-route-card .45s cubic-bezier(.2,.7,.2,1) both}
+  #view.bb-route-enter .hub-grid>:nth-child(2),#view.bb-route-enter .games-grid>:nth-child(2){animation-delay:45ms}
+  #view.bb-route-enter .hub-grid>:nth-child(3),#view.bb-route-enter .games-grid>:nth-child(3){animation-delay:90ms}
+  #view.bb-route-enter .hub-grid>:nth-child(4),#view.bb-route-enter .games-grid>:nth-child(4){animation-delay:135ms}
+  #view.bb-route-enter .hub-grid>:nth-child(5),#view.bb-route-enter .games-grid>:nth-child(5){animation-delay:180ms}
   .nav a[data-r].on{animation:bb-route-nav .3s ease-out}
 }
-@media(prefers-reduced-motion:reduce){#app.bb-route-enter,#app.bb-route-enter *, .nav a[data-r].on{animation:none!important;transition:none!important}}
+@media(prefers-reduced-motion:reduce){#view.bb-route-enter,#view.bb-route-enter *, .nav a[data-r].on{animation:none!important;transition:none!important}}
