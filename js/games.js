@@ -109,18 +109,14 @@ const App = (() => {
   function hub() {
     const d = new Date(), pn = (typeof CBN !== 'undefined' && CBN.S && CBN.S.settings && CBN.S.settings.profile && CBN.S.settings.profile.name) || '', name = pn || (isOwner() ? 'Oğuzhan' : (guest && guest.name));
     const CATS = [
-      { id: 'cbn', n: '01', t: 'CBN<i>Personal OS</i>', d: T('Notlar · görevler · takvim · projeler · aile · finans · hedefler — kişisel asistanın, yalnızca sana özel', 'Notes · tasks · calendar · projects · family · finance · goals — your personal assistant, just for you'), cls: 'c-cbn' },
-      { id: 'msn', n: '02', t: 'Messenger<i>' + T('sohbet', 'chat') + '</i>', d: T('Aile, arkadaşlar, iş — durumlar, titreşim, gruplar; MSN usulü anlık mesajlaşma', 'Family, friends, work — statuses, nudges, groups; instant messaging the MSN way'), cls: 'c-msn' },
-      ...(isOwner() ? [{ id: 'is', n: '02', t: T('İş', 'Work'), d: T('DSAn kısayolları, hatırlatmalar, notlar, LinkedIn', 'DSAn shortcuts, reminders, notes, LinkedIn'), cls: 'c-is' }] : []),
-      { id: 'dost', n: '03', t: 'Dost', d: T('Psikoloji okuma alanı · nefes molası', 'Psychology reading room · breathing break'), cls: 'c-dost' },
-      { id: 'oyunlar', n: '04', t: T('Oyunlar', 'Games'), d: T('Süper Lig Draft · Empires of the Valley · 2048 · Sudoku · Mayın · Blok', 'Süper Lig Draft · Empires of the Valley · 2048 · Sudoku · Minesweeper · Blocks'), cls: 'c-oyun' },
-      { id: 'seyahat', n: '05', t: T('Seyahat', 'Travel'), d: T('Booking · Airbnb · Skyscanner · Gezilerim 3D dünya', 'Booking · Airbnb · Skyscanner · My Travels 3D globe'), cls: 'c-sey' },
-      { id: 'play', n: '10', t: 'PLAY.', d: T('Müzik · video · podcast · izleme listesi', 'Music · video · podcasts · watchlist'), cls: 'c-play' },
-      { id: 'akis', n: '11', t: 'AKIŞ.', d: T('Kişisel paylaşımlar · anılar · kaydedilenler', 'Personal posts · memories · saved items'), cls: 'c-akis' },
-      { id: 'gundem', n: '08', t: 'GÜNDEM.', d: T('Haber kaynakları · ilgi alanları · sonra oku', 'News sources · topics · read later'), cls: 'c-gundem' },
-      { id: 'lab', n: '09', t: 'LAB.', d: T('Komut oluşturucu · metin araçları · taslaklar', 'Prompt builder · text tools · drafts'), cls: 'c-lab' },
-      { id: 'foto', n: '06', t: T('Fotoğraf', 'Photography'), d: T('Pexels · günün fotoğrafçısı · 3D sokak galerisi', 'Pexels · photographer of the day · 3D street gallery'), cls: 'c-foto' },
-      ...(isOwner() ? [{ id: 'ts', n: '07', t: 'Trabzonspor', d: T('Sıradaki maç · son 5 maç · kadro · TS Club', 'Next match · last 5 matches · squad · TS Club'), cls: 'c-ts' }] : [])
+      {id:'today',t:'BUGÜN.<i>'+T('Günlük özet','Daily overview')+'</i>',d:T('CBN görevleri, takvim ve bildirimler','CBN tasks, calendar and notifications'),cls:'c-cbn'},
+      {id:'cbn',t:'CBN.<i>'+T('Kişisel asistan','Personal assistant')+'</i>',d:T('Notlar, görevler, AI araçları ve kişisel planlama','Notes, tasks, AI tools and planning'),cls:'c-cbn'},
+      {id:'kesfet',t:'KEŞFET.<i>GÜNDEM · AKIŞ · PLAY</i>',d:T('Haberler, kişisel akış ve medya','News, personal feed and media'),cls:'c-gundem'},
+      {id:'hayat',t:'HAYAT.<i>'+T('Seyahat · Fotoğraf','Travel · Photography')+'</i>',d:T('Yolculuklar, fotoğraflar ve anılar','Journeys, photos and memories'),cls:'c-foto'},
+      {id:'sosyal',t:'SOSYAL.<i>Messenger · Dost</i>',d:T('Mesajlaşma ve iyi hissetme','Chat and wellbeing'),cls:'c-msn'},
+      ...(isOwner()?[{id:'ismerkez',t:T('İŞ.','WORK.')+'<i>CBN Work</i>',d:T('DSAn ve CBN iş araçları','DSAn and CBN work tools'),cls:'c-is'}]:[]),
+      {id:'oyunlar',t:T('OYUNLAR.','GAMES.'),d:T('Mini oyunlar ve futbol','Mini games and football'),cls:'c-oyun'},
+      ...(isOwner()?[{id:'ts',t:'TRABZONSPOR.',d:T('Maçlar, kadro ve haberler','Matches, squad and news'),cls:'c-ts'}]:[])
     ];
     root().innerHTML = `
       <section class="hero hub-hero"><p class="eyebrow">${esc(name || '')} · ${d.toLocaleDateString(I18N.locale, { weekday: 'long', day: 'numeric', month: 'long' })}</p>
@@ -480,7 +476,8 @@ const App = (() => {
     document.body.classList.toggle('msn-mode', r === 'msn');
     document.body.classList.toggle('dark-mode', ['seyahat', 'gezilerim', 'foto'].includes(r));
     document.querySelectorAll('.nav a[data-r]').forEach(a => a.classList.toggle('on', a.dataset.r === r || (a.dataset.r === 'cbn' && cbnOn) || (a.dataset.r === 'dost' && r.startsWith('dost/')) || (a.dataset.r === 'oyunlar' && GAMES.some(g => g.id === r))));
-    if (r === 'today' && typeof BABADaily !== 'undefined') { root().innerHTML='<div id="dailyRoot"></div>'; BABADaily.openToday(root().querySelector('#dailyRoot')); }
+    if (['kesfet','hayat','sosyal','ismerkez'].includes(r) && typeof BABAGroups !== 'undefined' && (r!=='ismerkez'||isOwner())) { root().innerHTML='<div id="groupRoot"></div>'; BABAGroups.open(root().querySelector('#groupRoot'),r); }
+    else if (r === 'today' && typeof BABADaily !== 'undefined') { root().innerHTML='<div id="dailyRoot"></div>'; BABADaily.openToday(root().querySelector('#dailyRoot')); }
     else if (r === 'backup' && typeof BABADaily !== 'undefined') { root().innerHTML='<div id="backupRoot"></div>'; BABADaily.openBackup(root().querySelector('#backupRoot')); }
     else if (r === 'ts' && typeof TS !== 'undefined') { root().innerHTML = '<div id="tsRoot"></div>'; window.scrollTo(0, 0); TS.open(root().querySelector('#tsRoot')); }
     else if (cbnOn) { root().innerHTML = '<div id="cbnRoot"></div>'; window.scrollTo(0, 0); CBN.open(root().querySelector('#cbnRoot'), r); }
@@ -505,6 +502,7 @@ const App = (() => {
     else hub();
     if(typeof BABAEnhance!=='undefined') BABAEnhance.enhance();
     if(typeof BABADaily!=='undefined') BABADaily.refresh();
+    if(typeof BABAGroups!=='undefined') BABAGroups.refresh();
     // Animate each route once on entry; don't interrupt inputs or long-running widgets.
     const appRoot=root();
     appRoot.classList.remove('bb-route-enter');
