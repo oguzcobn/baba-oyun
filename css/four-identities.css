@@ -1,0 +1,109 @@
+/* Four independent editorial identities, influenced by Awwwards design directions.
+   Scoped to each page. All BABA. routes and saved records stay unchanged. */
+.bb-feature{isolation:isolate}
+.bb-feature a:focus-visible,.bb-feature button:focus-visible,.bb-feature input:focus-visible,.bb-feature textarea:focus-visible,.bb-feature select:focus-visible{outline:3px solid #e98535;outline-offset:3px}
+.bb-feature .bb-feature-card{transition:transform .22s ease,box-shadow .22s ease}
+@media(hover:hover) and (prefers-reduced-motion:no-preference){.bb-feature .bb-feature-card:hover{transform:translateY(-2px)}}
+
+/* 01 — GÜNDEM. Newspaper / Swiss editorial. Ivory paper, red issue markers, newspaper columns. */
+.bb-gundem{--news-ink:#17232a;--news-red:#b83125;--news-paper:#f7f3e9;color:var(--news-ink);background:var(--news-paper);font-family:Georgia,'Times New Roman',serif;max-width:1440px;border-top:6px solid var(--news-ink)}
+.bb-gundem .bb-feature-top{border-bottom:3px double var(--news-ink);margin-bottom:22px;padding:12px 0 22px}
+.bb-gundem .bb-feature-top .display{font-family:Georgia,'Times New Roman',serif;font-weight:900;letter-spacing:-.09em;font-size:clamp(65px,13vw,170px);line-height:.82;margin:26px 0 20px}
+.bb-gundem .bb-feature-top .display em{color:var(--news-red)}
+.bb-gundem .eyebrow{font-family:Arial,sans-serif;letter-spacing:.19em;text-transform:uppercase;font-size:11px;color:var(--news-red);font-weight:800}
+.bb-gundem .bb-feature-top .lead{font-size:clamp(17px,2vw,23px);font-style:italic;line-height:1.45;max-width:790px}
+.bb-gundem .bb-feature-grid{grid-template-columns:1.25fr .75fr;gap:0;border-top:1px solid var(--news-ink);border-left:1px solid var(--news-ink)}
+.bb-gundem .bb-feature-card{border:0;border-right:1px solid var(--news-ink);border-bottom:1px solid var(--news-ink);border-radius:0;background:transparent;padding:clamp(20px,3vw,38px);box-shadow:none}
+.bb-gundem .bb-feature-card h2{font-family:Georgia,serif;font-weight:800;letter-spacing:-.055em}
+.bb-gundem .bb-feature-tabs button{font-family:Arial,sans-serif;text-transform:uppercase;letter-spacing:.08em;font-size:11px;border-radius:0;border-color:var(--news-ink);background:transparent;color:var(--news-ink)}
+.bb-gundem .bb-feature-tabs button.on{background:var(--news-red);border-color:var(--news-red);color:white}
+.bb-gundem .bb-feature-links a{background:transparent;border-bottom:1px solid #c9c3b7;border-radius:0;padding:17px 2px;font-family:Arial,sans-serif}
+.bb-gundem .bb-feature-muted,.bb-gundem .bb-feature-links small{color:#666c69}
+.bb-gundem .pill{background:var(--news-red);color:#fff;border-radius:0;border:1px solid var(--news-red)}
+.bb-gundem .bb-feature-form input,.bb-gundem .bb-feature-search{border-radius:0;background:#fffdf7;color:var(--news-ink);border-color:#b8b1a4}
+
+/* 02 — LAB. Creative-tech / digital instrument. Electric violet, technical grid, luminous panels. */
+.bb-lab{--lab-bg:#0b0e20;--lab-card:#151a35;--lab-edge:#3a4166;--lab-ink:#f5f3ff;--lab-lime:#c9ff69;max-width:1440px;color:var(--lab-ink);background:radial-gradient(ellipse at 82% 4%,#38327b 0%,transparent 37%),linear-gradient(90deg,transparent 97%,#24294b 98%),var(--lab-bg);background-size:auto,36px 36px,auto;border-radius:24px;padding:clamp(22px,4vw,55px)}
+.bb-lab .bb-feature-top{position:relative;border-bottom:1px solid var(--lab-edge)}
+.bb-lab .bb-feature-top .display{font-family:Arial,sans-serif;font-weight:900;font-size:clamp(84px,17vw,210px);letter-spacing:-.11em;line-height:.82;text-shadow:0 12px 80px #8e79ff55}
+.bb-lab .bb-feature-top .display em{color:var(--lab-lime)}
+.bb-lab .eyebrow{font:700 11px/1.5 monospace;letter-spacing:.16em;color:var(--lab-lime)}
+.bb-lab .bb-feature-top .lead,.bb-lab .bb-feature-muted{color:#c1c4db}
+.bb-lab .bb-feature-grid{grid-template-columns:1.55fr .8fr;gap:12px}
+.bb-lab .bb-feature-card{background:linear-gradient(140deg,#1b2143,#101429);border:1px solid var(--lab-edge);border-radius:16px;box-shadow:inset 0 1px 0 #ffffff10}
+.bb-lab .bb-feature-card h2{font-family:Arial,sans-serif;font-weight:800;letter-spacing:-.055em;color:var(--lab-ink)}
+.bb-lab .bb-feature-tabs button{border-radius:8px;background:#171b36;border:1px solid var(--lab-edge);color:#e0e0f0;font-family:monospace}
+.bb-lab .bb-feature-tabs button.on{background:var(--lab-lime);border-color:var(--lab-lime);color:#10151e}
+.bb-lab .bb-feature-label,.bb-lab .bb-feature-form label{color:#d9ddfa}
+.bb-lab .bb-feature-label textarea,.bb-lab .bb-feature-label select,.bb-lab .bb-feature-form input{background:#080c1d;color:#f4f5ff;border:1px solid #48507a;border-radius:9px;font-family:monospace}
+.bb-lab .bb-feature-links a,.bb-lab .bb-feature-draft{background:#242a4a;color:#fff;border:1px solid #343d69;border-radius:9px}
+.bb-lab .bb-feature-links small{color:var(--lab-lime)}
+.bb-lab .pill{background:var(--lab-lime);color:#111827;border:1px solid var(--lab-lime);border-radius:8px;font-weight:800}
+.bb-lab .pill.ghost{background:transparent;color:var(--lab-lime)}
+.bb-lab .bb-feature-message{color:var(--lab-lime)}
+.bb-lab .bb-feature-saved>button:not(.bb-feature-draft){background:#252a4d;color:white;border-color:#48507a}
+
+/* 03 — PLAY. Music label / record sleeves. Dark aubergine, coral and oversized album graphics. */
+.bb-play{--play-bg:#16101e;--play-panel:#24192e;--play-accent:#ff785f;--play-text:#fff3e8;max-width:1440px;background:radial-gradient(circle at 85% 10%,#532b59,transparent 44%),var(--play-bg);color:var(--play-text);padding:clamp(24px,4vw,52px);border-radius:32px}
+.bb-play .bb-feature-top{position:relative;min-height:230px;padding:25px 0 40px;overflow:hidden}
+.bb-play .bb-feature-top:after{content:'';position:absolute;right:4%;top:10px;width:clamp(105px,19vw,235px);aspect-ratio:1;border-radius:50%;background:repeating-radial-gradient(circle at center,#261528 0 3px,#4c2a48 4px 5px,#1d1422 6px 10px);border:8px solid #5e355b;box-shadow:0 18px 50px #0009;opacity:.7;pointer-events:none}
+.bb-play .bb-feature-top .display{position:relative;z-index:1;font-family:Arial,sans-serif;font-size:clamp(88px,18vw,210px);font-weight:950;letter-spacing:-.11em;line-height:.82;font-style:italic}
+.bb-play .bb-feature-top .display em{color:var(--play-accent)}
+.bb-play .eyebrow{font-family:Arial,sans-serif;font-size:11px;letter-spacing:.22em;color:var(--play-accent);font-weight:900}
+.bb-play .bb-feature-top .lead,.bb-play .bb-feature-muted{color:#d7bdce}
+.bb-play .bb-feature-grid{grid-template-columns:1fr 1fr;gap:18px}
+.bb-play .bb-feature-card{background:var(--play-panel);border:1px solid #5c3b60;border-radius:25px;box-shadow:0 14px 35px #0002}
+.bb-play .bb-feature-card h2{color:var(--play-text);font-weight:900}
+.bb-play .bb-feature-tabs button{background:#3d2948;color:#f9e4ee;border-color:#684969;border-radius:99px}
+.bb-play .bb-feature-tabs button.on{background:var(--play-accent);color:#1b101b;border-color:var(--play-accent)}
+.bb-play .bb-feature-form label{color:#ffdfd6}
+.bb-play .bb-feature-form input,.bb-play .bb-feature-form select,.bb-play .bb-feature-form textarea,.bb-play .bb-feature-search{background:#17101f;color:white;border-color:#644467}
+.bb-play .bb-feature-links a,.bb-play .bb-feed-post{background:#32213d;color:#fff3e8;border:1px solid #5a3d60}
+.bb-play .bb-feature-links small,.bb-play .bb-feed-post>a{color:#ffb3a5}
+.bb-play .bb-feed-meta small{color:#d7bdce}
+.bb-play .bb-feed-actions button{background:#523453;color:white;border-color:#79557a}
+.bb-play .pill{background:var(--play-accent);color:#221322;border:1px solid var(--play-accent);font-weight:800}
+.bb-play .bb-feature-message{color:#ffb3a5}
+
+/* 04 — AKIŞ. Playful social scrapbook. Butter yellow, cobalt, irregular sticker cards. */
+.bb-akis{--akis-yellow:#fbe78e;--akis-blue:#2747bd;--akis-ink:#242022;max-width:1440px;background:var(--akis-yellow);color:var(--akis-ink);border-radius:35px;padding:clamp(22px,4vw,50px);background-image:radial-gradient(#e0cb70 1px,transparent 1px);background-size:22px 22px}
+.bb-akis .bb-feature-top{padding:15px 0 38px}
+.bb-akis .bb-feature-top .display{font-family:Arial,sans-serif;font-size:clamp(86px,17vw,210px);font-weight:950;letter-spacing:-.11em;line-height:.85;transform:rotate(-2deg);transform-origin:left center;text-shadow:5px 6px 0 #fff7d3}
+.bb-akis .bb-feature-top .display em{color:var(--akis-blue)}
+.bb-akis .eyebrow{font-family:Arial,sans-serif;font-weight:900;letter-spacing:.14em;color:var(--akis-blue)}
+.bb-akis .bb-feature-top .lead{font-size:clamp(18px,2vw,24px);font-weight:650;max-width:720px}
+.bb-akis .bb-feature-grid{grid-template-columns:1fr .8fr;gap:22px}
+.bb-akis .bb-feature-card{background:#fffdf4;border:2px solid var(--akis-ink);border-radius:20px;box-shadow:7px 7px 0 var(--akis-ink)}
+.bb-akis .bb-feature-card:nth-child(2){background:#e3e9ff;transform:rotate(1deg)}
+.bb-akis .bb-feature-card h2{font-weight:900;letter-spacing:-.055em}
+.bb-akis .bb-feature-tabs button{background:#fffdf4;color:var(--akis-ink);border:2px solid var(--akis-ink);border-radius:12px;font-weight:900}
+.bb-akis .bb-feature-tabs button.on{background:var(--akis-blue);border-color:var(--akis-blue);color:white}
+.bb-akis .bb-feature-form input,.bb-akis .bb-feature-form textarea,.bb-akis .bb-feature-search{border:2px solid var(--akis-ink);border-radius:12px;background:white;color:var(--akis-ink)}
+.bb-akis .bb-feature-links a{background:#fffdf4;border:2px solid var(--akis-ink);color:var(--akis-ink)}
+.bb-akis .bb-feature-muted,.bb-akis .bb-feature-links small{color:#5c5850}
+.bb-akis .bb-feed-post{background:#fff;border:2px solid var(--akis-ink);border-radius:16px;box-shadow:4px 4px 0 #c5ccf5}
+.bb-akis .bb-feed-post:nth-child(even){background:#f1ecff}
+.bb-akis .bb-feed-post>a{color:var(--akis-blue)}
+.bb-akis .bb-feed-actions button{background:#e3e9ff;border:2px solid var(--akis-ink);color:var(--akis-ink)}
+.bb-akis .pill{background:var(--akis-blue);color:white;border:2px solid var(--akis-blue);border-radius:12px;font-weight:900}
+.bb-akis .bb-feature-message{color:var(--akis-blue)}
+
+/* Header identities — only these four links, preserve global navigation. */
+.nav-links a[data-r="gundem"]{font-family:Georgia,serif;font-weight:900;letter-spacing:-.04em}
+.nav-links a[data-r="lab"]{font-family:monospace;font-weight:900;letter-spacing:.01em}
+.nav-links a[data-r="play"]{font-style:italic;font-weight:900;letter-spacing:-.05em}
+.nav-links a[data-r="akis"]{font-weight:950;letter-spacing:-.05em}
+.nav-links a[data-r="gundem"]:hover{color:#b83125}
+.nav-links a[data-r="lab"]:hover{color:#7752cb}
+.nav-links a[data-r="play"]:hover{color:#c75476}
+.nav-links a[data-r="akis"]:hover{color:#2747bd}
+@media(max-width:750px){
+ .bb-gundem .bb-feature-grid,.bb-lab .bb-feature-grid,.bb-play .bb-feature-grid,.bb-akis .bb-feature-grid{grid-template-columns:1fr}
+ .bb-gundem .bb-feature-wide,.bb-lab .bb-feature-wide,.bb-play .bb-feature-wide,.bb-akis .bb-feature-wide{grid-column:auto}
+ .bb-gundem,.bb-lab,.bb-play,.bb-akis{padding:22px 15px 45px;border-radius:0}
+ .bb-play .bb-feature-top:after{right:-12%;opacity:.33}
+ .bb-akis .bb-feature-card:nth-child(2){transform:none}
+ .bb-gundem .bb-feature-card{padding:22px}
+ .bb-akis .bb-feature-card{box-shadow:4px 4px 0 var(--akis-ink)}
+}
+@media(prefers-reduced-motion:reduce){.bb-feature .bb-feature-card{transition:none!important}.bb-akis .bb-feature-top .display{transform:none}}
