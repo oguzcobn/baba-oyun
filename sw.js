@@ -1,8 +1,63 @@
-const CACHE='baba-v43';
+const CACHE='baba-v44';
 const FILES=['./','index.html','manifest.webmanifest','css/app.css','js/core.js','js/draft-data.js','js/draft-nat.js','js/draft.js','js/scores.js','js/dost-en.js','js/dost.js','js/is.js','js/flights.js','js/travel.js','js/foto.js','js/globe.js','js/vendor/three.module.min.js','js/vendor/OrbitControls.js','js/vendor/topojson-client.min.js','data/countries-50m.json','css/v2.css','css/features.css','css/social-media.css','css/four-identities.css','css/engagement.css','css/all-category-motion.css','css/quick-nav.css','css/cbn.css','css/ts.css','css/dost.css','css/msn.css','js/msn.js','js/ts.js','js/cbn/core.js','js/cbn/tasks.js','js/cbn/notes.js','js/cbn/calendar.js','js/cbn/kit.js','js/cbn/life.js','js/cbn/money.js','js/cbn/work.js','js/cbn/sync.js','js/cbn/profile.js','js/cbn/home.js','js/cbn/settings.js','js/gundem.js','js/lab.js','js/play.js','js/akis.js','js/engagement.js','js/quick-nav.js','js/games.js','img/icon-180.png','img/icon-192.png','img/icon-512.png'];
-self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>Promise.all(FILES.map(f=>c.add(f).catch(()=>{})))));self.skipWaiting()});
-self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x!==CACHE).map(x=>caches.delete(x)))));self.clients.claim()});
-self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWith(fetch(e.request,{cache:'no-cache'}).then(r=>{if(r.ok){const cp=r.clone();caches.open(CACHE).then(c=>c.put(e.request,cp))}return r}).catch(()=>caches.match(e.request,{ignoreSearch:true}).then(r=>r||caches.match('index.html'))))});
+// Keep startup light: cache the app shell first and warm the rest after activation.
+// Versioned caches are kept separate from user data (IndexedDB/localStorage).
+const CORE=['./','index.html','manifest.webmanifest','css/app.css','css/v2.css','js/core.js','js/games.js','img/icon-192.png'];
+const ASSETS=FILES.filter(f=>!CORE.includes(f));
+const sameOrigin=url=>url.origin===self.location.origin;
+async function warmAssets(){
+  const c=await caches.open(CACHE);
+  // Limit parallel downloads to avoid saturating mobile connections.
+  for(let i=0;i<ASSETS.length;i+=4){
+    await Promise.all(ASSETS.slice(i,i+4).map(async path=>{
+      try{const request=new Request(path,{cache:'reload'});const response=await fetch(request);if(response.ok)await c.put(request,response)}catch(_){}
+    }));
+  }
+}
+self.addEventListener('install',e=>{
+  e.waitUntil(caches.open(CACHE).then(async c=>{
+    await Promise.all(CORE.map(async f=>{try{await c.add(f)}catch(_){}}));
+    await self.skipWaiting();
+  }));
+});
+self.addEventListener('activate',e=>{
+  e.waitUntil((async()=>{
+    const keys=await caches.keys();
+    await Promise.all(keys.filter(k=>k.startsWith('baba-v')&&k!==CACHE).map(k=>caches.delete(k)));
+    await self.clients.claim();
+    // Noncritical offline assets are cached after the app becomes usable.
+    await warmAssets();
+  })());
+});
+self.addEventListener('fetch',e=>{
+  const req=e.request;
+  if(req.method!=='GET')return;
+  const url=new URL(req.url);
+  // Never intercept third-party APIs, analytics, streaming or cross-origin resources.
+  if(!sameOrigin(url))return;
+  const navigation=req.mode==='navigate';
+  e.respondWith((async()=>{
+    const cache=await caches.open(CACHE);
+    try{
+      const response=await fetch(req);
+      if(response.ok && response.type==='basic'){
+        // Only cache successful same-origin responses.
+        e.waitUntil(cache.put(req,response.clone()).catch(()=>{}));
+      }
+      return response;
+    }catch(_){
+      const stored=await cache.match(req,{ignoreSearch:true});
+      if(stored)return stored;
+      if(navigation){
+        const shell=await cache.match('index.html');
+        if(shell)return shell;
+        return new Response('Offline',{status:503,headers:{'Content-Type':'text/plain; charset=utf-8'}});
+      }
+      // Never serve index.html as a JS/CSS/image response.
+      return Response.error();
+    }
+  })());
+});
 
 /* Messenger: uygulama kapalıyken gelen bildirim (Web Push) */
 const isApple=/Safari/.test(navigator.userAgent)&&!/Chrome|Chromium|Android|CriOS|Edg/.test(navigator.userAgent);
