@@ -1,5 +1,5 @@
 const { test, expect, devices } = require('@playwright/test');
-const BASE='https://oguzcobn.github.io/baba./';
+const BASE=process.env.BABA_TEST_URL||'http://127.0.0.1:4173/';
 for(const [name,device] of [['iPhone 13',devices['iPhone 13']],['Pixel 7',devices['Pixel 7']],['iPad Mini',devices['iPad Mini']],['Desktop Chrome',{viewport:{width:1440,height:900}}]]){
  test.describe(name,()=>{
   const {defaultBrowserType, browserName, ...emulation}=device;
