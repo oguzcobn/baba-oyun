@@ -173,7 +173,7 @@ const CBN = (() => {
     settings: '<path d="M4 6h8M16 6h4M4 12h2M10 12h10M4 18h10M18 18h2"/><circle cx="14" cy="6" r="2"/><circle cx="8" cy="12" r="2"/><circle cx="16" cy="18" r="2"/>',
     sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
     moon: '<path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5z"/>',
-    bell: '<path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4/>'
+    bell: '<path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/>'
   };
   const icon = n => `<svg class="cbn-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[n] || ''}</svg>`;
 
@@ -237,7 +237,7 @@ const CBN = (() => {
   function notificationItems() {
     const td = today(), end = addDays(td, 7);
     const tasks = S.tasks.filter(t => t.due && t.due <= end && !['completed', 'cancelled'].includes(t.status))
-      .map(t => ({ type: 'task', id: t.id, title: t.title, date: t.due, time: t.dueTime || '', late: t.due < td }));
+      .map(t => ({ type: 'task', id: t.id, title: t.title, date: t.due, time: t.dueTime || '', late: t.due < td || (t.due === td && !!t.dueTime && t.dueTime < nowHM()) }));
     const events = S.events.filter(e => e.date && e.date >= td && e.date <= end)
       .map(e => ({ type: 'event', id: e.id, title: e.title, date: e.date, time: e.start || '', late: false }));
     return tasks.concat(events).sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time) || String(a.title || '').localeCompare(String(b.title || ''))).slice(0, 100);
