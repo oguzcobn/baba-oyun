@@ -386,3 +386,58 @@ do $$ begin
   begin alter publication supabase_realtime add table public.msn_room_members; exception when duplicate_object then null; end;
   begin alter publication supabase_realtime add table public.msn_rooms;        exception when duplicate_object then null; end;
 end $$;
+
+-- =====================================================================
+-- GRUP DAVET BAĞLANTISI. Bağlantıyı alan (Messenger hesabı olan) kişi, grup dolu değilse katılabilir.
+-- Bağlantı 7 gün geçerlidir; yenilenince ya da kapatılınca eskisi çalışmaz.
+-- =====================================================================
+alter table public.msn_rooms add column if not exists invite_token   text unique;
+alter table public.msn_rooms add column if not exists invite_expires timestamptz;
+
+create or replace function public.msn_room_invite(p_room uuid) returns table (token text, expires timestamptz)
+language plpgsql security definer set search_path = '' as $$
+declare t text := replace(gen_random_uuid()::text, '-', '');
+begin
+  if not public.msn_in_room(p_room, auth.uid()) then raise exception 'not a member'; end if;
+  update public.msn_rooms set invite_token = t, invite_expires = now() + interval '7 days' where id = p_room;
+  return query select r.invite_token, r.invite_expires from public.msn_rooms r where r.id = p_room;
+end $$;
+
+create or replace function public.msn_room_invite_off(p_room uuid) returns boolean
+language plpgsql security definer set search_path = '' as $$
+begin
+  if not public.msn_in_room(p_room, auth.uid()) then return false; end if;
+  update public.msn_rooms set invite_token = null, invite_expires = null where id = p_room;
+  return true;
+end $$;
+
+-- Katılmadan önce önizleme: yalnızca grup adı ve kişi sayısı.
+create or replace function public.msn_room_peek(p_token text) returns table (room uuid, name text, people int, state text)
+language sql stable security definer set search_path = '' as $$
+  select r.id, r.name, (select count(*)::int from public.msn_room_members m where m.room = r.id),
+         case when public.msn_in_room(r.id, auth.uid()) then 'member'
+              when r.invite_expires < now() then 'expired'
+              when (select count(*) from public.msn_room_members m where m.room = r.id) >= 6 then 'full'
+              else 'ok' end
+  from public.msn_rooms r where r.invite_token = p_token and auth.uid() is not null;
+$$;
+
+create or replace function public.msn_room_join(p_token text) returns text
+language plpgsql security definer set search_path = '' as $$
+declare me uuid := auth.uid(); r public.msn_rooms;
+begin
+  if me is null then return 'auth'; end if;
+  if not exists (select 1 from public.msn_profiles where id = me) then return 'noprofile'; end if;
+  select * into r from public.msn_rooms where invite_token = p_token for update;
+  if not found then return 'invalid'; end if;
+  if public.msn_in_room(r.id, me) then return 'member:' || r.id::text; end if;
+  if r.invite_expires < now() then return 'expired'; end if;
+  if (select count(*) from public.msn_room_members where room = r.id) >= 6 then return 'full'; end if;
+  if (select count(*) from public.msn_room_members where member = me) >= 50 then return 'limit'; end if;
+  insert into public.msn_room_members (room, member) values (r.id, me);
+  perform public.msn_room_sys(r.id, 'joined');
+  return 'ok:' || r.id::text;
+end $$;
+
+revoke all on function public.msn_room_invite(uuid), public.msn_room_invite_off(uuid), public.msn_room_peek(text), public.msn_room_join(text) from public, anon;
+grant execute on function public.msn_room_invite(uuid), public.msn_room_invite_off(uuid), public.msn_room_peek(text), public.msn_room_join(text) to authenticated;

@@ -1,8 +1,9 @@
 /* BABA Messenger — daren&curtis'in tasarım mantığı: tam ekran giriş, dev başlık, dalgalı geçişler,
    renk renk bölümler, yuvarlak kartlar ve yuvarlak ok düğmeleri. Video yerine animasyonlu yelkenli. */
-.ms{--cream:#fef1e2;--blue:#0b2a8f;--sky:#beebfd;--ink:#151010;--lime:#ceff00;--claret:#7b1e3b;--tsb:#5ec8f2;
-  --r:28px;margin:0;color:var(--ink);font-family:ui-rounded,"SF Pro Rounded","Nunito","Segoe UI",system-ui,sans-serif}
-.ms *{box-sizing:border-box}
+.ms,.ms-ov,.ms-dock,.ms-toasts{--cream:#fef1e2;--blue:#0b2a8f;--sky:#beebfd;--ink:#151010;--lime:#ceff00;--claret:#7b1e3b;--tsb:#5ec8f2;
+  --r:28px;color:var(--ink);font-family:ui-rounded,"SF Pro Rounded","Nunito","Segoe UI",system-ui,sans-serif}
+.ms{margin:0}
+.ms *,.ms-ov *,.ms-dock *{box-sizing:border-box}
 body.msn-mode main{max-width:none;padding:0}
 .ms em{font-style:normal}
 
@@ -278,3 +279,8 @@ body:has(.ms-dock.open) .ms-toasts{right:auto;left:16px}
 .ms-name{border:0;background:none;color:inherit;font:inherit;padding:0;text-align:left;cursor:pointer;display:flex;align-items:center;gap:6px;min-width:0}
 .ms-name b{font-size:18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ms-name i{font-style:normal;opacity:.7;font-size:14px}.ms-name:hover i{opacity:1;color:var(--lime)}
+
+.ms-link-box input{width:100%;font:inherit;font-size:14px;padding:12px 14px;border-radius:14px;border:2px dashed var(--claret);background:var(--cream);color:var(--ink)}
+.ms-inv{display:grid;gap:12px}.ms-inv p{margin:0;line-height:1.5}
+.ms-link.danger{color:#c62839}
+.ms-invite-note{background:#fff8d6;border-radius:16px;padding:12px 14px;font-weight:700}

@@ -8,6 +8,10 @@
    Rota: #msn
    ===================================================================== */
 const Msn = (() => {
+  /* grup davet bağlantısı: ...?grup=<anahtar>#msn — anahtarı sakla, adres çubuğundan temizle */
+  const JOIN_KEY = 'msn_join';
+  try { const u = new URL(location.href), t = u.searchParams.get('grup'); if (t && /^[a-f0-9]{32}$/.test(t)) { localStorage.setItem(JOIN_KEY, JSON.stringify({ t, at: Date.now() })); u.searchParams.delete('grup'); history.replaceState(null, '', u.pathname + u.search + (u.hash || '#msn')); } } catch (e) {}
+  const pendingJoin = () => { try { const j = JSON.parse(localStorage.getItem(JOIN_KEY) || 'null'); if (j && j.t && Date.now() - j.at < 7 * 864e5) return j.t; localStorage.removeItem(JOIN_KEY); } catch (e) {} return ''; };
   const BASE = 'https://zjzbpeiuhreyfdihzzzj.supabase.co', KEY = 'sb_publishable_LyV2L0UpIAPnuGEdfgNc2Q_hrY8uqgG';
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const DEF_GROUPS = ['family', 'friends', 'work'];
@@ -56,6 +60,7 @@ const Msn = (() => {
         try { await loadRooms(true); } catch (e) { if (!missing(e)) throw e; }
         ready = true; lastErr = '';
         connect(); startTimers(); beat();
+        setTimeout(checkJoin, 300);
       } catch (e) { if (missing(e)) setupMissing = true; else lastErr = e.message || String(e); ready = false; }
       finally { booting = null; draw(); badge(); }
     })();
@@ -102,7 +107,7 @@ const Msn = (() => {
   }
   /* ---------- grup sohbetleri ---------- */
   async function loadRooms(init) {
-    const [mm, rr] = await Promise.all([api('/rest/v1/msn_room_members?select=room,last_read&member=eq.' + uid), api('/rest/v1/msn_rooms?select=id,name,owner,created_at')]);
+    const [mm, rr] = await Promise.all([api('/rest/v1/msn_room_members?select=room,last_read&member=eq.' + uid), api('/rest/v1/msn_rooms?select=*')]);
     const lr = new Map((mm || []).map(m => [m.room, +m.last_read || 0])), old = rooms;
     rooms = new Map((rr || []).filter(r => lr.has(r.id)).map(r => [r.id, Object.assign({ people: (old.get(r.id) || {}).people || null }, r, { last_read: lr.get(r.id) })]));
     rUnread = new Map();
@@ -361,6 +366,7 @@ const Msn = (() => {
       <button type="button" class="ms-btn" data-a="retry">${T('Tekrar dene', 'Try again')} <i>↻</i></button></div>`;
     if (acc && lastErr) return `<div class="ms-card ms-gate"><p class="ms-k">${T('Bağlantı', 'Connection')}</p><h2>${T('Bağlanılamadı', 'Couldn’t connect')}</h2><p>${esc(lastErr)}</p><button type="button" class="ms-btn" data-a="retry">${T('Tekrar dene', 'Try again')} <i>↻</i></button></div>`;
     return `<div class="ms-card ms-gate"><p class="ms-k">${T('Hesap', 'Account')}</p><h2>${T('Giriş yap ya da hesap aç', 'Sign in or create an account')}</h2>
+      ${pendingJoin() ? `<p class="ms-invite-note">👥 ${T('Bir grup sohbetine davet edildin. Giriş yapınca ya da hesap açınca katılabileceksin.', 'You’ve been invited to a group chat. Sign in or create an account to join.')}</p>` : ''}
       <p>${T('Messenger, CBN hesabınla çalışır. Aynı e-posta ve şifreyle her cihazdan bağlanırsın.', 'Messenger uses your CBN account. Sign in from any device with the same email and password.')}</p>
       <form class="ms-form" data-f="login" autocomplete="on">
         <label><span>${T('E-posta', 'Email')}</span><input name="email" type="email" required autocomplete="email" inputmode="email"></label>
@@ -658,19 +664,21 @@ const Msn = (() => {
           <p class="ms-ddh">${T('Kişiler', 'People')} (${ppl.length}/6)</p>
           ${ppl.map(p => `<div class="ms-ddp"><span class="ms-av">${avatar(p, 28)}</span><span>${esc(p.id === uid ? T('Sen', 'You') : p.name || p.code)}${p.id === r.owner ? ' <small>★</small>' : ''}</span>${owner && p.id !== uid ? `<button type="button" class="ms-link sm" data-kick="${p.id}" aria-label="${T('Gruptan çıkar', 'Remove from group')}">×</button>` : ''}</div>`).join('')}
           ${full ? `<p class="ms-small">${T('Grup dolu (6 kişi)', 'The group is full (6 people)')}</p>` : addable.length ? `<label>${T('Kişi ekle', 'Add someone')}<select data-a="addp"><option value="">—</option>${addable.map(f => `<option value="${f}">${esc(name(f))}</option>`).join('')}</select></label>` : ''}
-          <button type="button" data-a="rename">${T('Adını değiştir', 'Rename')}</button><button type="button" data-a="leave" class="danger">${T('Gruptan ayrıl', 'Leave group')}</button></div></div>`;
+          <button type="button" data-a="invite">🔗 ${T('Davet bağlantısı', 'Invite link')}</button><button type="button" data-a="rename">${T('Adını değiştir', 'Rename')}</button><button type="button" data-a="leave" class="danger">${T('Gruptan ayrıl', 'Leave group')}</button></div></div>`;
     h.querySelector('[data-a=back]').onclick = closeChat;
     const dd = h.querySelector('.ms-dd'), mb = h.querySelector('[data-a=menu]');
     mb.onclick = () => { dd.hidden = !dd.hidden; mb.setAttribute('aria-expanded', String(!dd.hidden)); };
     const after = async () => { await loadPeople(id); drawRoomHead(); drawList(); };
     const sel = dd.querySelector('[data-a=addp]'); if (sel) sel.onchange = async () => { if (!sel.value) return; try { const res = await rpc('msn_room_add', { p_room: id, p_member: sel.value }); if (res !== 'ok') toast({ full: T('Grup dolu (6 kişi)', 'The group is full (6 people)'), notfriend: T('Yalnızca arkadaşlarını ekleyebilirsin', 'You can only add your friends'), exists: T('Zaten grupta', 'Already in the group') }[res] || res, '⚠️'); await after(); } catch (e) { toast(e.message, '⚠️'); } };
     dd.querySelectorAll('[data-kick]').forEach(b => b.onclick = async () => { if (!confirm(T(`${name(b.dataset.kick)} gruptan çıkarılsın mı?`, `Remove ${name(b.dataset.kick)} from the group?`))) return; try { await rpc('msn_room_kick', { p_room: id, p_member: b.dataset.kick }); await after(); } catch (e) { toast(e.message, '⚠️'); } });
+    dd.querySelector('[data-a=invite]').onclick = () => { dd.hidden = true; inviteLink(id); };
     dd.querySelector('[data-a=rename]').onclick = async () => { const n = (prompt(T('Grubun yeni adı:', 'New name for the group:'), r.name) || '').trim().slice(0, 40); if (!n || n === r.name) return; try { await rpc('msn_room_rename', { p_room: id, p_name: n }); r.name = n; drawRoomHead(); drawList(); } catch (e) { toast(e.message, '⚠️'); } };
     dd.querySelector('[data-a=leave]').onclick = async () => { if (!confirm(T('Bu grup sohbetinden ayrılmak istiyor musun? Mesajları artık göremezsin.', 'Leave this group chat? You won’t see its messages any more.'))) return; try { await rpc('msn_room_leave', { p_room: id }); rooms.delete(id); msgs.delete(open); closeChat(); badge(); } catch (e) { toast(e.message, '⚠️'); } };
   }
   function sysText(m) {
     const who = m.sender === uid ? T('Sen', 'You') : esc(names.get(m.sender) || T('Biri', 'Someone')), b = m.body, other = id => id === uid ? T('seni', 'you') : esc(names.get(id) || T('birini', 'someone'));
     if (b === 'created') return T(`${who} grubu kurdu`, `${who} created the group`);
+    if (b === 'joined') return T(`${who} davet bağlantısıyla katıldı`, `${who} joined via the invite link`);
     if (b === 'left') return T(`${who} gruptan ayrıldı`, `${who} left the group`);
     if (b.startsWith('added:')) { const o = b.slice(6); return T(`${who}, ${o === uid ? 'seni' : esc(names.get(o) || 'birini')} ekledi`, `${who} added ${other(o)}`); }
     if (b.startsWith('removed:')) { const o = b.slice(8); return T(`${who}, ${o === uid ? 'seni' : esc(names.get(o) || 'birini')} çıkardı`, `${who} removed ${other(o)}`); }
@@ -695,6 +703,56 @@ const Msn = (() => {
     if (stick || box.dataset.peer !== key) box.scrollTop = box.scrollHeight;
     box.dataset.peer = key;
   }
+  const linkOf = t => location.origin + location.pathname + '?grup=' + t + '#msn';
+  function inviteLink(id) {
+    const r = rooms.get(id); if (!r) return;
+    const valid = () => r.invite_token && (!r.invite_expires || Date.parse(r.invite_expires) > Date.now());
+    const body = () => valid() ? `<div class="ms-link-box"><input readonly value="${esc(linkOf(r.invite_token))}" aria-label="${T('Davet bağlantısı', 'Invite link')}"></div>
+        <p class="ms-small">${T(`Son geçerlilik: ${new Date(r.invite_expires).toLocaleDateString(I18N.locale, { day: 'numeric', month: 'long' })}. Bağlantıyı alan, BABA.’ya girebilen herkes grup dolmadıysa (6 kişi) katılabilir.`, `Valid until ${new Date(r.invite_expires).toLocaleDateString(I18N.locale, { day: 'numeric', month: 'long' })}. Anyone with the link who can open BABA. can join while the group has room (6 people).`)}</p>
+        <div class="ms-row"><button type="button" class="ms-btn" data-a="share">${navigator.share ? T('Paylaş', 'Share') : T('Kopyala', 'Copy')} <i>→</i></button>${navigator.share ? `<button type="button" class="ms-btn ghost" data-a="copy">${T('Kopyala', 'Copy')}</button>` : ''}</div>
+        <div class="ms-row"><button type="button" class="ms-link" data-a="new">↻ ${T('Yeni bağlantı oluştur', 'Create a new link')}</button><button type="button" class="ms-link danger" data-a="off">${T('Bağlantıyı kapat', 'Turn the link off')}</button></div>`
+      : `<p>${T('Bağlantıyla arkadaş olmadığın kişileri de gruba çağırabilirsin. Bağlantı 7 gün geçerli olur.', 'With a link you can invite people who aren’t your friends yet. The link stays valid for 7 days.')}</p><button type="button" class="ms-btn" data-a="new">${T('Bağlantı oluştur', 'Create link')} <i>→</i></button>`;
+    modal(`<p class="ms-k">${T('Grup daveti', 'Group invite')}</p><h2>${esc(r.name)}</h2><div class="ms-inv"></div><p class="ms-msg" role="status"></p>`, m => {
+      const box = m.querySelector('.ms-inv'), msg = m.querySelector('.ms-msg');
+      const wire = () => {
+        box.innerHTML = body();
+        const q = s => box.querySelector(s), text = () => T(`“${r.name}” grup sohbetine katıl: ${linkOf(r.invite_token)}`, `Join the “${r.name}” group chat: ${linkOf(r.invite_token)}`);
+        const copy = async () => { try { await navigator.clipboard.writeText(linkOf(r.invite_token)); msg.textContent = T('Bağlantı kopyalandı', 'Link copied'); } catch (e) { const i = q('input'); i.select(); msg.textContent = T('Bağlantıyı seçip kopyala', 'Select the link and copy it'); } };
+        if (q('[data-a=share]')) q('[data-a=share]').onclick = () => navigator.share ? navigator.share({ title: r.name, text: text() }).catch(() => {}) : copy();
+        if (q('[data-a=copy]')) q('[data-a=copy]').onclick = copy;
+        if (q('input')) q('input').onfocus = e => e.target.select();
+        q('[data-a=new]').onclick = async () => { msg.textContent = '…'; try { const res = await rpc('msn_room_invite', { p_room: id }); const x = res && res[0]; if (x) { r.invite_token = x.token; r.invite_expires = x.expires; } msg.textContent = ''; wire(); } catch (e) { msg.textContent = missing(e) ? T('Davet bağlantısı için Supabase’de messenger.sql dosyasını yeniden çalıştırman gerekiyor.', 'For invite links, run messenger.sql again in Supabase.') : e.message; } };
+        if (q('[data-a=off]')) q('[data-a=off]').onclick = async () => { try { await rpc('msn_room_invite_off', { p_room: id }); r.invite_token = null; r.invite_expires = null; msg.textContent = T('Bağlantı kapatıldı; eski bağlantı artık çalışmaz.', 'Link turned off; the old link no longer works.'); wire(); } catch (e) { msg.textContent = e.message; } };
+      };
+      wire();
+    });
+  }
+  let joining = false;
+  async function checkJoin() {
+    const t = pendingJoin(); if (!t || !ready || joining) return;
+    joining = true;
+    try {
+      const pk = await rpc('msn_room_peek', { p_token: t }), p = pk && pk[0];
+      const done = () => { try { localStorage.removeItem(JOIN_KEY); } catch (e) {} };
+      if (!p) { done(); toast(T('Grup daveti geçersiz ya da kapatılmış', 'The group invite is invalid or has been turned off'), '⚠️'); return; }
+      if (p.state === 'member') { done(); await loadRooms(); openTarget('r:' + p.room); return; }
+      if (p.state !== 'ok') { done(); toast(p.state === 'full' ? T(`“${p.name}” grubu dolu (6 kişi)`, `The “${p.name}” group is full (6 people)`) : T('Grup davetinin süresi dolmuş', 'The group invite has expired'), '⚠️'); return; }
+      modal(`<p class="ms-k">${T('Grup daveti', 'Group invite')}</p><h2>${esc(p.name)}</h2><p>${T(`Bu grup sohbetinde ${p.people} kişi var. Katılırsan gruptakiler adını ve avatarını görür.`, `There are ${p.people} people in this group chat. If you join, they’ll see your name and avatar.`)}</p><p class="ms-msg" role="status"></p>
+        <div class="ms-row"><button type="button" class="ms-btn" data-a="join">${T('Gruba katıl', 'Join the group')} <i>→</i></button><button type="button" class="ms-btn ghost" data-a="no">${T('Vazgeç', 'Not now')}</button></div>`, (m, close) => {
+        m.querySelector('[data-a=no]').onclick = () => { done(); close(); };
+        m.querySelector('[data-a=join]').onclick = async () => {
+          try {
+            const res = String(await rpc('msn_room_join', { p_token: t }) || '');
+            if (/^(ok|member):/.test(res)) { done(); close(); await loadRooms(); sound('on'); toast(T(`“${p.name}” grubuna katıldın`, `You joined “${p.name}”`), '👥'); openTarget('r:' + res.split(':')[1]); return; }
+            m.querySelector('.ms-msg').textContent = { full: T('Grup dolu (6 kişi)', 'The group is full (6 people)'), expired: T('Davetin süresi dolmuş', 'The invite has expired'), invalid: T('Davet geçersiz', 'The invite is invalid'), limit: T('Çok fazla grubun var', 'You’re in too many groups') }[res] || res;
+            if (res !== 'limit') done();
+          } catch (e) { m.querySelector('.ms-msg').textContent = e.message; }
+        };
+      });
+    } catch (e) { if (missing(e)) toast(T('Grup daveti için uygulama sahibinin kurulumu güncellemesi gerekiyor', 'The app owner needs to update the set-up for group invites'), '⚠️'); }
+    finally { joining = false; }
+  }
+
   async function sendRoom(body) {
     const key = open, id = rid(key), tmp = { id: 'tmp' + Date.now(), tmp: true, room: id, sender: uid, kind: 'text', body, created_at: new Date().toISOString() };
     const a = msgs.get(key) || []; msgs.set(key, a); a.push(tmp); drawMsgs();
