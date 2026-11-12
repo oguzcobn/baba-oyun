@@ -293,3 +293,16 @@ body:has(.ms-dock.open) .ms-toasts{right:auto;left:16px}
 .ms-list,.ms-chat,.ms-card,.ms-tile,.ms-dd{color:var(--ink)}
 .ms-b.me{color:#fff}
 .ms-psm{color:#fff!important;-webkit-text-fill-color:#fff}
+
+/* sürüklenebilir düğme: yer CSS değişkeniyle (--fab-b) ve .left sınıfıyla belirlenir */
+.ms-dock{bottom:calc(var(--fab-b,18px) + env(safe-area-inset-bottom))}
+.ms-dock.left{right:auto;left:calc(18px + env(safe-area-inset-left));align-items:flex-start}
+.ms-fab{touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.ms-dock.dragging .ms-fab{transform:scale(1.12);box-shadow:0 20px 44px rgba(11,42,143,.5),0 0 0 4px #ceff00;cursor:grabbing;transition:none}
+.ms-dock .ms-panel{max-height:calc(100svh - var(--fab-b,18px) - 100px)}
+@media (max-width:600px){
+  .ms-dock{bottom:calc(var(--fab-b,12px) + env(safe-area-inset-bottom))}
+  .ms-dock.left{left:12px}
+  .ms-dock.open,.ms-dock.open.left{left:0;right:0;bottom:0;align-items:stretch}
+  .ms-dock.open .ms-panel{max-height:none}
+}

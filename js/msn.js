@@ -769,12 +769,53 @@ const Msn = (() => {
     if (dock) return dock;
     dock = document.createElement('div'); dock.className = 'ms-dock';
     dock.innerHTML = `<div class="ms-panel" hidden role="dialog" aria-label="Messenger"><div class="ms-ph"><b>Messenger</b><a class="ms-link" href="#msn" data-a="full">${T('Tam ekran', 'Full screen')} ↗</a><button type="button" class="ms-x" data-a="close" aria-label="${T('Kapat', 'Close')}">×</button></div><div class="ms ms-mini"><div class="ms-app compact"></div></div></div>
-      <button type="button" class="ms-fab" aria-label="Messenger" aria-expanded="false"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M24 7 V33" stroke="#fff" stroke-width="2.6"/><path d="M23 10 Q 12 22 9 32 H23 Z" fill="#7b1e3b"/><path d="M25 13 Q 34 24 38 32 H25 Z" fill="#5ec8f2"/><path d="M6 35 H42 Q 39 41 33 42 H14 Q 8 41 6 35 Z" fill="#ceff00"/></svg><b class="ms-fb" hidden></b></button>`;
+      <button type="button" class="ms-fab" aria-label="Messenger" aria-expanded="false" title="${T('Messenger — sürükleyerek yerini değiştirebilirsin', 'Messenger — drag to move it')}"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M24 7 V33" stroke="#fff" stroke-width="2.6"/><path d="M23 10 Q 12 22 9 32 H23 Z" fill="#7b1e3b"/><path d="M25 13 Q 34 24 38 32 H25 Z" fill="#5ec8f2"/><path d="M6 35 H42 Q 39 41 33 42 H14 Q 8 41 6 35 Z" fill="#ceff00"/></svg><b class="ms-fb" hidden></b></button>`;
     document.body.appendChild(dock);
-    dock.querySelector('.ms-fab').onclick = () => dock.querySelector('.ms-panel').hidden ? openDock() : closeDock();
+    dragFab(dock.querySelector('.ms-fab'));
+    placeDock();
+    addEventListener('resize', placeDock);
     dock.querySelector('[data-a=close]').onclick = closeDock;
     dock.querySelector('[data-a=full]').onclick = () => closeDock();
     return dock;
+  }
+  /* düğme sürüklenebilir: bırakınca en yakın kenara yapışır, yeri cihazda hatırlanır */
+  const POS_KEY = 'msn_fab_pos';
+  const getPos = () => { try { const p = JSON.parse(localStorage.getItem(POS_KEY) || 'null'); if (p && (p.s === 'l' || p.s === 'r') && p.y >= 0 && p.y <= 1) return p; } catch (e) {} return null; };
+  function placeDock() {
+    if (!dock) return;
+    const p = getPos(), H = innerHeight, bar = document.querySelector('.cbn-tabs'), barH = bar && getComputedStyle(bar).display !== 'none' ? bar.getBoundingClientRect().height : 0;
+    const minB = 12 + barH, maxB = Math.max(minB, H - 140);
+    const b = p ? Math.round(minB + (maxB - minB) * p.y) : minB + 6;
+    dock.style.setProperty('--fab-b', b + 'px');
+    dock.classList.toggle('left', !!p && p.s === 'l');
+  }
+  function dragFab(fab) {
+    let sx = 0, sy = 0, ox = 0, oy = 0, moved = false, id = null;
+    fab.addEventListener('pointerdown', e => {
+      if (e.button) return; id = e.pointerId; moved = false; sx = e.clientX; sy = e.clientY;
+      const r = fab.getBoundingClientRect(); ox = sx - r.left; oy = sy - r.top;
+      try { fab.setPointerCapture(id); } catch (er) {}
+    });
+    fab.addEventListener('pointermove', e => {
+      if (e.pointerId !== id) return;
+      if (!moved && Math.hypot(e.clientX - sx, e.clientY - sy) < 8) return;
+      if (!moved) { moved = true; if (!dock.querySelector('.ms-panel').hidden) closeDock(); dock.classList.add('dragging'); }
+      e.preventDefault();
+      const w = fab.offsetWidth, x = Math.min(innerWidth - w - 4, Math.max(4, e.clientX - ox)), y = Math.min(innerHeight - w - 4, Math.max(4, e.clientY - oy));
+      fab.style.position = 'fixed'; fab.style.left = x + 'px'; fab.style.top = y + 'px';
+    });
+    const end = e => {
+      if (e.pointerId !== id) return; id = null;
+      if (!moved) { dock.querySelector('.ms-panel').hidden ? openDock() : closeDock(); return; }
+      const r = fab.getBoundingClientRect(), bar = document.querySelector('.cbn-tabs'), barH = bar && getComputedStyle(bar).display !== 'none' ? bar.getBoundingClientRect().height : 0;
+      const minB = 12 + barH, maxB = Math.max(minB, innerHeight - 140), b = innerHeight - r.bottom;
+      const pos = { s: r.left + r.width / 2 < innerWidth / 2 ? 'l' : 'r', y: Math.min(1, Math.max(0, (b - minB) / Math.max(1, maxB - minB))) };
+      try { localStorage.setItem(POS_KEY, JSON.stringify(pos)); } catch (er) {}
+      fab.style.position = fab.style.left = fab.style.top = ''; dock.classList.remove('dragging'); placeDock();
+    };
+    fab.addEventListener('pointerup', end); fab.addEventListener('pointercancel', end);
+    fab.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); dock.querySelector('.ms-panel').hidden ? openDock() : closeDock(); } });
+    fab.addEventListener('click', e => e.preventDefault());
   }
   function openDock() {
     if (!canDock()) return;
@@ -788,7 +829,7 @@ const Msn = (() => {
   }
   function updateDock() {
     if (!canDock()) { if (dock) { closeDock(); dock.hidden = true; } return; }
-    ensureDock(); dock.hidden = false;
+    ensureDock(); dock.hidden = false; placeDock();
     dock.querySelector('.ms-panel .ms-ph b').textContent = 'Messenger';
     dock.querySelector('[data-a=full]').textContent = T('Tam ekran', 'Full screen') + ' ↗';
   }
@@ -805,7 +846,7 @@ const Msn = (() => {
     if (dock.querySelector('.ms-panel').hidden) { openDock(); }
     if (open !== k && !(el && el.querySelector('.ms-in') === document.activeElement && document.activeElement.value)) openTarget(k);
   }
-  addEventListener('hashchange', () => setTimeout(updateDock, 0));
+  addEventListener('hashchange', () => setTimeout(() => { updateDock(); placeDock(); }, 60));
 
   /* ---------------- dış arayüz ---------------- */
   function draw() { if (el && el.isConnected) { if (dock && dock.contains(el)) drawApp(); else page(el); } updateDock(); }
