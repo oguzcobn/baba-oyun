@@ -2,7 +2,8 @@ const { test, expect, devices } = require('@playwright/test');
 const BASE='https://oguzcobn.github.io/baba./';
 for(const [name,device] of [['iPhone 13',devices['iPhone 13']],['Pixel 7',devices['Pixel 7']],['iPad Mini',devices['iPad Mini']],['Desktop Chrome',{viewport:{width:1440,height:900}}]]){
  test.describe(name,()=>{
-  test.use({...device,browserName:'chromium'});
+  const {defaultBrowserType, browserName, ...emulation}=device;
+  test.use({...emulation,browserName:'chromium'});
   test.beforeEach(async({page})=>{
    await page.addInitScript(()=>sessionStorage.setItem('baba_ok','1'));
   });
@@ -45,3 +46,28 @@ for(const [name,device] of [['iPhone 13',devices['iPhone 13']],['Pixel 7',device
   });
  });
 }
+
+test.describe('BABA. new daily experience',()=>{
+ test.use({browserName:'chromium',viewport:{width:390,height:844}});
+ test.beforeEach(async({page})=>await page.addInitScript(()=>sessionStorage.setItem('baba_ok','1')));
+ test('TODAY and mobile nav appear without overflow',async({page})=>{
+  await page.goto(BASE+'#today');
+  await expect(page.locator('.bb-today h1')).toBeVisible();
+  await expect(page.locator('#bbMobileNav')).toBeVisible();
+  await expect(page.locator('#bbMobileNav a[href="#backup"]')).toBeVisible();
+  const d=await page.evaluate(()=>[document.documentElement.scrollWidth,document.documentElement.clientWidth]);
+  expect(d[0]).toBeLessThanOrEqual(d[1]+3);
+ });
+ test('BACKUP export and safe import UI',async({page})=>{
+  await page.goto(BASE+'#backup');
+  await expect(page.locator('#bbExport')).toBeVisible();
+  await expect(page.locator('#bbImport')).toBeAttached();
+ });
+ test('shared actions menu replaces repeated buttons',async({page})=>{
+  await page.goto(BASE+'#lab');
+  await expect(page.locator('.bb-lab')).toBeVisible();
+  await page.locator('.baba-shared-trigger').click();
+  await expect(page.locator('.baba-shared-menu button')).toHaveCount(2);
+  await expect(page.locator('.bb-lab .baba-actions')).toHaveCount(0);
+ });
+});
