@@ -68,6 +68,7 @@
     const soon = (v, a) => `<li><b>${v}</b> ${a.map(x => `<span class="cbn-badge">${x}</span>`).join(' ')}</li>`;
     main.innerHTML = `<header class="cbn-head"><div><h1>${esc(CBN.modName('settings'))}</h1><p class="cbn-sub">${L('Ayarlar ve tüm veriler yalnızca bu cihazda saklanır.', 'Settings and all data are stored on this device only.')}</p></div></header>
       <div class="st">
+      <section class="cbn-card st-prof"><h2>${L('Profil ve avatar', 'Profile & avatar')}</h2><div class="st-pf">${CBN.profile.mine(96) || `<div class="st-noav">?</div>`}<div><b>${esc(CBN.profile.name())}</b><p class="cbn-hint">${L('Avatar, birkaç soruya verdiğin yanıtlardan otomatik çizilir. İstediğin zaman yeniden oluşturabilirsin.', 'The avatar is drawn automatically from your answers to a few questions. You can recreate it any time.')}</p><button type="button" class="cbn-btn" data-a="avatar">${CBN.profile.has() ? L('Avatarı yeniden oluştur', 'Recreate avatar') : L('Avatar oluştur', 'Create avatar')}</button></div></div></section>
       <section class="cbn-card"><h2>${L('Görünüm ve dil', 'Appearance & language')}</h2><div class="cbn-fg">
         <label>${L('Tema', 'Theme')}${sel('theme', [['system', L('Sistem', 'System')], ['light', L('Açık', 'Light')], ['dark', L('Koyu', 'Dark')]], s.theme)}</label>
         <label>${L('Dil', 'Language')}${sel('lang', [['tr', 'Türkçe'], ['en', 'English']], s.lang)}</label>
@@ -109,6 +110,7 @@
     });
     $('[name=notif]').onchange = e => { s.notif = e.target.checked; CBN.saveSettings(); };
     if ($('[data-a=perm]')) $('[data-a=perm]').onclick = async () => { try { await Notification.requestPermission(); } catch (e) {} CBN.refresh(); };
+    $('[data-a=avatar]').onclick = () => CBN.profile.wizard();
     $('[data-a=export]').onclick = exportAll;
     const fi = $('input[type=file]'); $('[data-a=import]').onclick = () => fi.click(); fi.onchange = () => { const f = fi.files[0]; fi.value = ''; if (f) importFile(f); };
     $('[data-a=persist]').onclick = async () => { let ok = false; try { ok = !!(navigator.storage && navigator.storage.persist && await navigator.storage.persist()); } catch (e) {} toast(ok ? L('Kalıcı depolama etkin: tarayıcı bu veriyi kendiliğinden silmez', 'Persistent storage granted: the browser will not evict this data on its own') : L('Tarayıcı kalıcı depolama izni vermedi; düzenli yedek al', 'The browser did not grant persistent storage; keep regular backups'), { type: ok ? '' : 'err' }); };

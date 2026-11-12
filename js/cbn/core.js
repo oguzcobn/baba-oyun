@@ -238,6 +238,7 @@ const CBN = (() => {
         <a class="cbn-brand" href="#cbn"><b>CBN</b><span>Personal OS</span></a>
         <button type="button" class="cbn-find">${icon('search')}<span>${L('Ara ya da komut…', 'Search or command…')}</span><kbd>Ctrl K</kbd></button>
         <nav class="cbn-menu" aria-label="${L('CBN modülleri', 'CBN modules')}">${vis.map(m => a(m, 'cbn-link')).join('')}</nav>
+        <a class="cbn-me" href="#cbn/settings">${CBN.profile && CBN.profile.mine(34) || ''}<span>${esc(CBN.profile ? CBN.profile.name() : '')}</span></a>
         <div class="cbn-side-foot"><button type="button" class="cbn-link cbn-theme">${themeBtn()}</button><p>${L('Veriler yalnızca bu cihazda', 'Data stays on this device')}</p></div>
       </aside>
       <section class="cbn-main" id="cbnMain" tabindex="-1"></section>
