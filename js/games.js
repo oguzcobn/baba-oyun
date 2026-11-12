@@ -85,7 +85,7 @@ const App = (() => {
     const d = new Date(), name = isOwner() ? 'Oğuzhan' : (guest && guest.name);
     const CATS = [
       ...(isOwner() ? [{ id: 'is', n: '01', t: 'İş', d: 'DSAn kısayolları, hatırlatmalar, notlar, LinkedIn', cls: 'c-is' }] : []),
-      { id: 'dost', n: '02', t: 'Dost', d: 'Seni dinleyen sohbet arkadaşı', cls: 'c-dost' },
+      { id: 'dost', n: '02', t: 'Dost', d: 'Psikoloji okuma alanı · nefes molası', cls: 'c-dost' },
       { id: 'oyunlar', n: '03', t: 'Oyunlar', d: 'Süper Lig Draft · Empires of the Valley · 2048 · Sudoku · Mayın · Blok', cls: 'c-oyun' },
       { id: 'seyahat', n: '04', t: 'Seyahat', d: 'Booking · Airbnb · Skyscanner · Gezilerim 3D dünya', cls: 'c-sey' },
       { id: 'foto', n: '05', t: 'Fotoğraf', d: 'Pexels · günün fotoğrafçısı · 3D sokak galerisi', cls: 'c-foto' },
@@ -97,7 +97,7 @@ const App = (() => {
         <h1 class="display xl">BABA<em>.</em></h1>
         <p class="lead">İş, dinlenme, oyun ve yolculuk — hepsi tek yerde, sadece davetlilere açık.</p></section>
       <section class="hub">${CATS.map(c => `<a class="hub-card ${c.cls}" href="#${c.id}"><span class="hub-n">${c.n}</span><h2>${c.t}</h2><p>${c.d}</p><span class="arrow">↗</span></a>`).join('')}</section>
-      <footer class="foot"><div class="foot-word">BABA<span>.</span></div><div class="foot-row">${isOwner() ? '<button class="link" data-a="pin">Şifreyi değiştir</button><a class="link" href="#erisim">Davetler &amp; erişim</a><button class="link" data-a="lock">Kilitle</button>' : '<button class="link" data-a="gout">Bu cihazdan çık</button>'}<span class="muted">Yalnızca davetliler için · sürüm 23</span></div></footer>`;
+      <footer class="foot"><div class="foot-word">BABA<span>.</span></div><div class="foot-row">${isOwner() ? '<button class="link" data-a="pin">Şifreyi değiştir</button><a class="link" href="#erisim">Davetler &amp; erişim</a><button class="link" data-a="lock">Kilitle</button>' : '<button class="link" data-a="gout">Bu cihazdan çık</button>'}<span class="muted">Yalnızca davetliler için · sürüm 24</span></div></footer>`;
     const q = s => root().querySelector(s);
     if (q('[data-a=pin]')) q('[data-a=pin]').onclick = () => { click(); changePin(); };
     if (q('[data-a=lock]')) q('[data-a=lock]').onclick = () => { click(); lock(); };
@@ -446,12 +446,12 @@ const App = (() => {
     document.body.classList.toggle('guest', isGuest());
     document.body.classList.toggle('work-mode', r === 'is');
     document.body.classList.toggle('dark-mode', ['seyahat', 'gezilerim', 'foto'].includes(r));
-    document.querySelectorAll('.nav a[data-r]').forEach(a => a.classList.toggle('on', a.dataset.r === r || (a.dataset.r === 'cbn' && cbnOn) || (a.dataset.r === 'oyunlar' && GAMES.some(g => g.id === r))));
+    document.querySelectorAll('.nav a[data-r]').forEach(a => a.classList.toggle('on', a.dataset.r === r || (a.dataset.r === 'cbn' && cbnOn) || (a.dataset.r === 'dost' && r.startsWith('dost/')) || (a.dataset.r === 'oyunlar' && GAMES.some(g => g.id === r))));
     if (r === 'ts' && typeof TS !== 'undefined') { root().innerHTML = '<div id="tsRoot"></div>'; window.scrollTo(0, 0); TS.open(root().querySelector('#tsRoot')); }
     else if (cbnOn) { root().innerHTML = '<div id="cbnRoot"></div>'; window.scrollTo(0, 0); CBN.open(root().querySelector('#cbnRoot'), r); }
     else if (r === 'draft') { root().innerHTML = '<section class="game-page"><div class="gp-head"><a class="back" href="#oyunlar">← Oyunlar</a></div><div id="draftRoot"></div></section>'; window.scrollTo(0, 0); Draft.open(root().querySelector('#draftRoot')); }
     else if (r === 'is' && typeof Is !== 'undefined') { root().innerHTML = '<div id="isRoot"></div>'; window.scrollTo(0, 0); Is.open(root().querySelector('#isRoot')); }
-    else if (r === 'dost' && typeof Dost !== 'undefined') { root().innerHTML = '<section class="game-page"><div class="gp-head"><a class="back" href="#">← Ana sayfa</a></div><div id="dostRoot"></div></section>'; window.scrollTo(0, 0); Dost.open(root().querySelector('#dostRoot')); }
+    else if ((r === 'dost' || r.startsWith('dost/')) && typeof Dost !== 'undefined') { root().innerHTML = '<div id="dostRoot"></div>'; window.scrollTo(0, 0); Dost.open(root().querySelector('#dostRoot'), r); }
     else if (r === 'vadi') vadi();
     else if (r === '2048') g2048();
     else if (r === 'sudoku') sudoku();

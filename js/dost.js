@@ -1,313 +1,355 @@
 "use strict";
 /* =====================================================================
-   DOST — dinleyen sohbet arkadaşı
-   Danışmanlık mikro-becerileri (aktif dinleme, duygu yansıtma, açık uçlu
-   soru, onaylama, özetleme — OARS), BDT araçları (düşünce kaydı, bilişsel
-   çarpıtmalar, Sokratik soru, nefes ve topraklanma) ve kriz güvenliği.
-   Dost bir psikolog DEĞİLDİR; tanı koymaz, ilaç önermez.
-   Sohbet yalnızca bu cihazda saklanır. İsteğe bağlı "gelişmiş mod" için
-   kullanıcının kendi Claude API anahtarı yalnızca localStorage'da tutulur.
+   DOST — psikoloji okuma alanı (eski sohbet botunun yerine).
+   Yazılar genel bilgi içindir; tanı koymaz, tedavinin yerini tutmaz.
+   İçerik tamamen bu dosyada; dış servis, anahtar ya da ücret yok.
+   Rotalar: #dost (ana sayfa) · #dost/<yazı> (yazı sayfası)
    ===================================================================== */
 const Dost = (() => {
-  const ls = { get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } }, set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }, del(k) { try { localStorage.removeItem(k); } catch (e) {} } };
-  const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-  const pick = a => a[Math.floor(Math.random() * a.length)];
-  const low = s => s.toLocaleLowerCase('tr-TR');
-  const has = (t, list) => list.some(w => t.includes(w));
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const store = { get(k, d) { try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch (e) { return d; } }, set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} } };
+  const CATS = { kaygi: 'Stres ve kaygı', zihin: 'Zihin alışkanlıkları', duygular: 'Duygular', beden: 'Uyku ve beden', ben: 'Kendinle ilişki', aile: 'İlişkiler ve aile', destek: 'Destek almak' };
 
-  /* ---------------- bilgi tabanı ---------------- */
-  const CRISIS = ['intihar', 'kendimi öldür', 'kendimi öldürmek', 'canıma kıy', 'ölmek istiyorum', 'ölsem', 'ölmeyi düşün', 'yaşamak istemiyorum', 'yaşamanın anlamı yok', 'hayatıma son', 'kendime zarar', 'kendimi kes', 'bileklerimi', 'kendimi asmak', 'kendimi atmak', 'uyanmasam', 'herkes bensiz daha iyi', 'artık dayanamıyorum yaşamak', 'son vermek istiyorum'];
-  const VIOLENCE = ['beni dövüyor', 'bana vuruyor', 'şiddet görüyorum', 'şiddet uyguluyor', 'tehdit ediyor', 'beni öldürecek', 'darp', 'istismar'];
-  const HARM_OTHERS = ['onu öldüreceğim', 'öldüreceğim onu', 'birine zarar vereceğim', 'zarar vermek istiyorum ona'];
+  /* Yazı biçimi: boş satır = paragraf · "## " ara başlık · "- " madde · "! " bilgi kutusu · **kalın** */
+  const A = [
+    { s: 'kaygi', c: 'kaygi', m: 5, t: 'Kaygı neden gelir, ne işe yarar?', l: 'Kaygı bir arıza değil, aşırı çalışan bir alarm sistemi. Onu susturmaya çalışmak yerine ayarını yapmayı öğrenebiliriz.', q: 'Kaygı, geleceği şimdi yaşamaya çalışan bir zihnin yorgunluğudur.', b: `
+Kaygı, beynin olası bir tehlikeye hazırlanma biçimidir. Kalp hızlanır, nefes sıklaşır, kaslar gerilir; beden kaçmaya ya da savaşmaya hazırlanır. Ormanda bir yırtıcıyla karşılaşan atalarımız için bu tepki hayat kurtarıcıydı. Bugün ise aynı alarm bir e-postada, bir faturada ya da “ya olursa” diye başlayan bir düşüncede çalabiliyor.
 
-  // duygu sözlüğü: anahtar kelimeler → etiket ve yansıtma cümleleri
-  const EMO = {
-    uzgun: { k: ['üzgün', 'üzülüyorum', 'üzüldüm', 'mutsuz', 'ağlıyorum', 'ağladım', 'ağlamak', 'kederli', 'moralim bozuk', 'canım sıkkın', 'depresif', 'çökkün', 'hüzün'], ad: 'üzüntü',
-      r: ['Sesinde ciddi bir üzüntü duyuyorum.', 'İçinin ağır olduğunu hissediyorum.', 'Bu seni gerçekten üzmüş gibi görünüyor.'] },
-    kaygi: { k: ['kaygı', 'kaygılı', 'endişe', 'endişeli', 'gergin', 'tedirgin', 'huzursuz', 'korkuyorum', 'korku', 'panik', 'kalbim çarp', 'nefes alamı', 'ya olursa', 'ya kötü'], ad: 'kaygı',
-      r: ['Zihnin seni tetikte tutuyor gibi; bu çok yorucu olabilir.', 'Kaygının bedeninde ve zihninde yer kapladığını duyuyorum.', 'Bir şeylerin kötü gideceği hissi seni rahat bırakmıyor gibi.'] },
-    ofke: { k: ['sinir', 'sinirli', 'öfke', 'öfkeli', 'kızgın', 'kızıyorum', 'deliriyorum', 'çıldır', 'nefret', 'tahammül edemiyorum', 'bıktım'], ad: 'öfke',
-      r: ['Öfkelenmen çok anlaşılır; bir şey sana haksızlık gibi gelmiş.', 'Bu durum seni epey kızdırmış gibi.', 'İçinde biriken bir öfke var gibi duyuluyor.'] },
-    yalniz: { k: ['yalnız', 'kimsem yok', 'kimse anlamıyor', 'anlaşılmıyorum', 'dışlanmış', 'tek başıma', 'yapayalnız'], ad: 'yalnızlık',
-      r: ['Yalnız hissetmek insanı derinden yorar.', 'Anlaşılmadığını hissetmek çok zor bir duygu.', 'Kendini bir başına hissettiğini duyuyorum.'] },
-    sucluluk: { k: ['suçlu', 'pişman', 'benim yüzümden', 'hata yaptım', 'utanıyorum', 'utanç', 'rezil', 'mahcup'], ad: 'suçluluk ve utanç',
-      r: ['Kendine karşı oldukça sert davranıyor olabilirsin.', 'Suçluluk ve pişmanlık ağır bir yük gibi duyuluyor.', 'Bu konuda kendini çok sorumlu tutuyorsun gibi.'] },
-    yorgun: { k: ['yorgun', 'tükendim', 'tükenmiş', 'bitkin', 'enerjim yok', 'halim yok', 'hiçbir şey yapmak istemiyorum', 'motivasyon', 'isteksiz'], ad: 'tükenmişlik',
-      r: ['Uzun süredir çok şey taşıyormuşsun gibi geliyor.', 'Bu yorgunluk sadece bedensel değil gibi; içten bir tükenmişlik var.', 'Enerjinin çekildiğini duyuyorum.'] },
-    stres: { k: ['stres', 'stresli', 'baskı', 'yetişemiyorum', 'bunaldım', 'boğuluyorum', 'kafam karışık', 'karmaşa'], ad: 'stres',
-      r: ['Üzerinde çok fazla baskı var gibi.', 'Bunalmış hissettiğini duyuyorum; her şey aynı anda üstüne geliyor gibi.', 'Kafanın çok dolu olduğu belli.'] },
-    umutsuz: { k: ['umutsuz', 'çaresiz', 'hiçbir şey düzelmeyecek', 'anlamı yok', 'boşuna', 'işe yaramaz', 'değersiz', 'bir işe yaramıyorum'], ad: 'umutsuzluk',
-      r: ['Şu an önünü göremiyormuşsun gibi hissettiğini duyuyorum.', 'Çaresizlik duygusu çok ağır bir duygu.', 'Her şeyin anlamsız göründüğü bir yerdesin gibi.'] },
-    kiskanc: { k: ['kıskan', 'güvenemiyorum', 'şüphe', 'aldatıyor', 'aldattı', 'aldatıldım'], ad: 'güvensizlik',
-      r: ['Güvenin sarsıldığı yerde insan kendini çok savunmasız hisseder.', 'Bu belirsizlik seni içten içe kemiriyor gibi.'] },
-    iyi: { k: ['iyiyim', 'mutluyum', 'harika', 'güzel geçti', 'rahatladım', 'sevindim', 'keyifliyim', 'daha iyi'], ad: 'iyi hissetme',
-      r: ['Bunu duymak güzel.', 'Sesinde bir hafiflik var, sevindim.'] }
-  };
+## Alarmın dili
+Kaygı genellikle üç yerde birden konuşur:
+- **Bedende:** çarpıntı, mide düğümü, omuzlarda gerginlik, uykuya dalamama.
+- **Düşüncede:** “Ya kötü bir şey olursa?”, “Kesin yanlış yapacağım.”
+- **Davranışta:** ertelemek, kaçınmak, sürekli kontrol etmek ya da onay aramak.
 
-  // konu sözlüğü: normalleştirme + konuya özgü açık uçlu sorular
-  const TOPIC = {
-    iliski: { k: ['eşim', 'karım', 'kocam', 'evlilik', 'ilişki', 'sevgilim', 'partnerim', 'ayrılık', 'ayrıldık', 'boşan', 'kavga ediyoruz', 'tartışıyoruz', 'nicole'], ad: 'ilişkin',
-      n: ['İlişkilerde tartışmalar çoğu zaman tek bir konudan değil, birikmiş ve konuşulamamış ihtiyaçlardan çıkar.', 'Çiftlerin yaşadığı sorunlar genellikle "kim haklı" sorusundan çok, iki tarafın da duyulmamış hissetmesiyle ilgilidir.'],
-      q: ['Bu tartışmalarda sen en çok neyin duyulmasını istiyorsun?', 'Aranızdaki durum en son ne zaman daha iyiydi, o zaman farklı olan neydi?', 'O böyle davrandığında içinden ne geçiyor, sonra ne yapıyorsun?', 'Eşinin bu durumu nasıl gördüğünü tahmin ediyorsun?'] },
-    aile: { k: ['annem', 'babam', 'ailem', 'kardeşim', 'ablam', 'abim', 'kayınvalide', 'kayınpeder', 'akraba'], ad: 'ailenle ilgili yaşadıkların',
-      n: ['Aile ilişkileri en yakın oldukları için en çok yaralayabilen ilişkilerdir de.', 'Ailemizden beklediklerimizle gördüklerimiz arasındaki fark çoğu zaman en derin kırgınlıkları doğurur.'],
-      q: ['Bu ilişkide senin için en çok acıtan kısım ne?', 'Onlardan aslında neye ihtiyaç duyuyorsun?', 'Bu durum seni ne zamandır etkiliyor?'] },
-    cocuk: { k: ['kızım', 'oğlum', 'çocuğum', 'çocuklarım', 'lale', 'ela', 'ebeveyn', 'babalık', 'annelik'], ad: 'çocuklarınla ilgili düşüncelerin',
-      n: ['Ebeveynlik, insanın hem en çok sevdiği hem de en çok kendini sorguladığı rollerden biri.', 'Çocuklar konusunda endişelenmek, onları ne kadar önemsediğinin bir göstergesi.'],
-      q: ['Bir baba olarak seni en çok zorlayan şey ne oluyor?', 'Çocuklarınla geçirdiğin anlarda kendini en iyi ne zaman hissediyorsun?', 'Bu konuda kendinden ne bekliyorsun; bu beklenti gerçekçi mi?'] },
-    is: { k: ['işim', 'iş yerinde', 'patron', 'müdür', 'çalışma', 'mesai', 'işsiz', 'kovul', 'terfi', 'iş arkadaş', 'proje', 'toplantı'], ad: 'işindeki durum',
-      n: ['İş stresi, uzun süre devam ettiğinde uykudan ilişkilere kadar her şeye sızabilir.', 'Kontrolümüzün az olduğu iş durumları özellikle yıpratıcıdır.'],
-      q: ['İşte seni en çok yoran tam olarak ne?', 'Bu durumda kontrol edebildiğin ve edemediğin şeyler neler?', 'İş bittiğinde zihnin işten kopabiliyor mu, yoksa eve de geliyor mu?'] },
-    para: { k: ['para', 'borç', 'kredi', 'maaş', 'geçim', 'kira', 'fatura', 'masraf'], ad: 'maddi kaygıların',
-      n: ['Maddi belirsizlik, insanın güvenlik duygusunu doğrudan sarsar; kaygılanman çok doğal.'],
-      q: ['Bu konuda seni en çok korkutan senaryo ne?', 'Şu an atabileceğin en küçük somut adım ne olabilir?'] },
-    yas: { r: ['Başın sağ olsun. Bir kaybın ardından insanın içinde kocaman bir boşluk kalır.', 'Çok değerli birini kaybetmişsin; bunu yaşamak gerçekten çok ağır.'], k: ['vefat', 'kaybettim', 'öldü', 'cenaze', 'yas', 'özlüyorum', 'rahmetli', 'aramızdan ayrıldı'], ad: 'yaşadığın kayıp',
-      n: ['Yasın doğru bir yolu ya da süresi yoktur; dalgalar halinde gelip gidebilir.', 'Kaybın ardından öfke, suçluluk, hatta zaman zaman rahatlama hissetmek bile yasın doğal parçaları olabilir.'],
-      q: ['Onunla ilgili aklına en çok gelen anı ne?', 'Kaybından sonra seni en çok zorlayan anlar hangileri?', 'Bu süreçte yanında kimler var?'] },
-    uyku: { k: ['uyuyamıyorum', 'uykusuz', 'uyku', 'uykum', 'gece uyan', 'kabus'], ad: 'uyku düzenin',
-      n: ['Uykusuzluk ile kaygı birbirini besleyen bir döngü oluşturabilir: uyuyamadıkça kaygı artar, kaygı arttıkça uyumak zorlaşır.'],
-      q: ['Yatağa girdiğinde zihninden en çok neler geçiyor?', 'Uyku sorunun ne zamandır var, öncesinde değişen bir şey oldu mu?'],
-      tip: 'Uyku için küçük ama etkili adımlar: her gün aynı saatte kalkmak, yatmadan 1 saat önce ekranı bırakmak, 20 dakikada uyuyamazsan kalkıp loş ışıkta sakin bir şey yapıp uykun gelince dönmek, öğleden sonra kafeini azaltmak.' },
-    saglik: { k: ['hastalık', 'hastayım', 'ağrı', 'doktor', 'teşhis', 'ameliyat', 'sağlığım'], ad: 'sağlığınla ilgili endişelerin',
-      n: ['Sağlıkla ilgili belirsizlik insanı çok çaresiz hissettirebilir.'],
-      q: ['Bu süreçte seni en çok ne endişelendiriyor?', 'Doktorunla bu endişelerini konuşabildin mi?'] },
-    futbol: { k: ['trabzonspor', 'maç', 'futbol', 'kaybettik', 'yenildik', 'şampiyon'], ad: 'takımın',
-      n: ['Bir takıma bağlılık sadece oyun değil, aidiyet ve kimlik de demek; bu yüzden sonuçlar duygularımızı bu kadar etkiler.'],
-      q: ['Takımın senin için ne ifade ediyor?', 'Maç sonuçları ruh halini ne kadar etkiliyor sence?'] },
-    sosyal: { k: ['arkadaş', 'çevrem', 'insanlar', 'toplum', 'utangaç', 'sosyal'], ad: 'insan ilişkilerin',
-      n: ['Başkalarının bizi nasıl gördüğü kaygısı çok yaygındır; çoğu zaman insanlar bizi sandığımızdan çok daha az yargılar.'],
-      q: ['Bu ortamlarda zihninden geçen en olumsuz düşünce ne oluyor?', 'Kendini en rahat hissettiğin insanlar kimler?'] },
-    gurbet: { k: ['iskoçya', 'yurt dışı', 'gurbet', 'memleket', 'türkiye\'yi özlü', 'taşındık', 'yabancı'], ad: 'gurbetteki hayatın',
-      n: ['Başka bir ülkede yaşamak, alışılmış destek ağından uzak kalmak demek; bu da yalnızlığı ve özlemi büyütebilir.'],
-      q: ['En çok neyi ya da kimi özlüyorsun?', 'Burada seni iyi hissettiren şeyler neler?'] }
-  };
+Bu üç katman birbirini besler. Kaçındıkça kısa vadede rahatlarız, ama beyin “demek ki gerçekten tehlikeliymiş” sonucunu çıkarır ve alarm bir dahaki sefere daha erken çalar.
 
-  // bilişsel çarpıtma ipuçları → nazik Sokratik sorular
-  const DIST = [
-    { k: ['hep ', 'her zaman', 'asla', 'hiçbir zaman', 'hiç kimse', 'herkes'], ad: 'aşırı genelleme', q: ['"Hep" ya da "asla" dediğinde bunun istisnası olan bir an hatırlıyor musun?', 'Bu her seferinde mi oluyor, yoksa zor anlarda öyle mi görünüyor?'] },
-    { k: ['berbat', 'felaket', 'mahvoldum', 'mahvoldu', 'bitti her şey', 'dünyanın sonu'], ad: 'felaketleştirme', q: ['En kötü senaryo gerçekleşse bile onunla nasıl başa çıkardın?', 'En kötü, en iyi ve en olası senaryoları ayrı ayrı düşünsek, en olası olan hangisi?'] },
-    { k: ['zorundayım', 'yapmalıyım', 'olmalıyım', 'etmeliyim', 'gerekirdi', 'meliydim', 'malıydım'], ad: '"-meli/-malı" düşünceleri', q: ['Bu "-malıyım" kuralı nereden geliyor; kim koydu bu kuralı?', 'Aynı durumda bir arkadaşına da "yapmalıydın" der miydin?'] },
-    { k: ['aptalım', 'beceriksizim', 'başarısızım', 'ezik', 'işe yaramazım', 'kötü bir baba', 'kötü bir insan'], ad: 'etiketleme', q: ['Tek bir olay ya da hata seni tümüyle tanımlar mı?', 'Seni iyi tanıyan biri bu cümleye ne derdi?'] },
-    { k: ['benden nefret', 'beni sevmiyor', 'kesin kızgın', 'eminim düşünüyor', 'beni aptal sanıyor'], ad: 'zihin okuma', q: ['Onun böyle düşündüğüne dair elindeki kanıt ne, karşı kanıt ne?', 'Bunu ona sorma şansın olsaydı ne derdi sence?'] }
+## Ayar yapmanın yolları
+- **Adını koy:** “Şu an kaygılanıyorum” demek, duyguyla aranıza küçük bir mesafe koyar.
+- **Nefesi uzat:** Nefes verişi alıştan uzun tutmak (örneğin 4 saniye al, 6 saniye ver) bedenin sakinleşme sistemini devreye sokar. Bu sayfadaki nefes molasını deneyebilirsin.
+- **Kaygı saati:** Endişeleri gün içinde bir kâğıda yaz, onlarla günde bir kez, belirli bir 15 dakikada ilgilen. Zihin “unutmayacağım” güvencesini alınca daha kolay bırakır.
+- **Küçük adımlarla yaklaş:** Kaçındığın şeye tümden değil, katlanabilir parçalarla yaklaş. Her adım alarmın yeniden ayarlanmasına yardım eder.
+
+! Kaygı haftalar boyunca günlük hayatını, işini, uykunu ya da ilişkilerini belirgin biçimde zorluyorsa ya da ani ve yoğun panik atakları yaşıyorsan bir uzmanla konuşmak iyi bir adımdır. Kaygı bozuklukları yaygındır ve tedaviye iyi yanıt verir.` },
+
+    { s: 'zihin-tuzaklari', c: 'zihin', m: 6, t: 'Zihnin tuzakları: düşünce çarpıtmaları', l: 'Her düşünce bir gerçek değildir. Zihnin en sık kurduğu tuzakları tanımak, onlara takılmamanın ilk adımı.', q: 'Bir düşünceye sahip olmak, ona inanmak zorunda olmak demek değildir.', b: `
+Bilişsel davranışçı terapinin (BDT) temel fikirlerinden biri şudur: Bizi üzen çoğu zaman olayın kendisi değil, olayı nasıl yorumladığımızdır. Zihin hızlı çalışmak için kısayollar kullanır; bu kısayollar bazen bizi yanlış sonuçlara götürür.
+
+## Sık görülen tuzaklar
+- **Ya hep ya hiç:** “Mükemmel olmadıysa başarısızdır.” Gri alanlar yok sayılır.
+- **Felaketleştirme:** Küçük bir aksilikten en kötü senaryoya atlamak. “Toplantıda takıldım, kesin kovulacağım.”
+- **Zihin okuma:** Başkalarının ne düşündüğünü bildiğini sanmak. “Kesin beni sıkıcı buldu.”
+- **Aşırı genelleme:** Tek bir olaydan genel kural çıkarmak; “hep”, “hiç”, “asla” kelimeleri ipucudur.
+- **Olumluyu yok saymak:** İyi giden şeyleri “şans eseri” diye geçiştirmek.
+- **-meli, -malı cümleleri:** Kendine ve başkalarına katı kurallar koymak. “Asla yorulmamalıyım.”
+- **Etiketleme:** Bir hatadan kimlik çıkarmak. “Bir hata yaptım” yerine “Ben bir aptalım.”
+
+## Tuzağı fark edince
+Düşünceyi bastırmaya çalışmak genellikle işe yaramaz. Onun yerine onu bir hipotez gibi incele:
+- Bu düşüncenin lehine ve aleyhine kanıtlar neler?
+- Aynı durumu yaşayan bir arkadaşıma ne derdim?
+- Bir yıl sonra bu bana ne kadar önemli gelecek?
+- Daha dengeli, daha gerçekçi bir cümle nasıl olurdu?
+
+Amaç “olumlu düşünmek” değil, **doğru düşünmek**. “Her şey harika olacak” yerine “Zor bir gündü ama bir hatam her şeyi tanımlamaz” gibi dengeli bir cümle çok daha inandırıcıdır.
+
+! Küçük bir alıştırma: Bu hafta seni üzen bir anı seç; ne oldu, aklından ne geçti, ne hissettin ve hangi tuzağa benziyor, dört satırda yaz. Birkaç kez tekrarlayınca tuzaklar kendini daha erken ele verir.` },
+
+    { s: 'duygulara-isim', c: 'duygular', m: 4, t: 'Duygulara isim vermek', l: 'Hissettiğini kelimelere dökmek onu küçültmez, ama yönetilebilir kılar.', q: 'Adını koyduğun duygu seni yönetmeyi bırakır; sen onunla birlikte yürümeye başlarsın.', b: `
+“Kötüyüm” çok geniş bir kelime. Kırgınlık, hayal kırıklığı, utanç, yalnızlık, yorgunluk ya da kaygı… Hepsi “kötü” hissettirir ama her biri farklı bir şeye ihtiyaç duyar. Araştırmalar, duyguyu sözcüklerle tarif etmenin (psikolojide “duygu etiketleme” denir) beynin alarm tepkisini hafifletebildiğini gösteriyor.
+
+## Duygu kelime hazineni genişlet
+Temel duyguların her birinin tonları vardır:
+- **Öfke:** sinirli, kırgın, kıskanç, hayal kırıklığına uğramış, haksızlığa uğramış.
+- **Üzüntü:** hüzünlü, yalnız, özlem dolu, çaresiz, boş.
+- **Korku:** endişeli, gergin, güvensiz, tedirgin, panik içinde.
+- **Sevinç:** rahatlamış, minnettar, gururlu, heyecanlı, huzurlu.
+- **Utanç:** mahcup, yetersiz, açıkta kalmış.
+
+## Üç adımlı mini yoklama
+- **Bedende nerede?** Göğüste sıkışma, boğazda düğüm, yüzde sıcaklık…
+- **Adı ne?** En yakın kelimeyi seç; emin olmasan da olur.
+- **Neye ihtiyacı var?** Dinlenmek, konuşmak, sınır koymak, hareket etmek, yalnız kalmak…
+
+Duygular iyi ya da kötü değildir; hepsi bir bilgi taşır. Öfke çoğu zaman bir sınırın aşıldığını, üzüntü değer verdiğimiz bir şeyi kaybettiğimizi, kaygı önemsediğimiz bir şeyin belirsiz olduğunu söyler.
+
+! Çocuklarla da işe yarar: “Kızgın görünüyorsun, oyun bitti diye mi?” gibi bir cümle, çocuğun duygusunu tanımasına ve sakinleşmesine yardım eder.` },
+
+    { s: 'tukenmislik', c: 'kaygi', m: 5, t: 'Tükenmişlik: sıradan yorgunluktan farkı', l: 'Bir hafta sonu dinlenince geçmeyen yorgunluk bir uyarı işareti olabilir.', q: 'Tükenmişlik bir karakter zayıflığı değil, uzun süre dengesiz kalmış bir yükün sonucudur.', b: `
+Dünya Sağlık Örgütü tükenmişliği (burnout) bir hastalık olarak değil, iyi yönetilemeyen kronik iş stresinden kaynaklanan bir “mesleki olgu” olarak tanımlar. Üç belirgin yüzü vardır:
+- **Bitkinlik:** Enerjinin sürekli düşük olması, sabah kalkmanın ağırlaşması.
+- **Uzaklaşma:** İşe ve insanlara karşı soğukluk, alaycılık, “umurumda değil” hissi.
+- **Etkisizlik hissi:** Ne yaparsan yap yetmiyormuş, işe yaramıyormuş duygusu.
+
+Benzer bir tablo ev işleri, bakım verme ya da ebeveynlik gibi bitmeyen sorumluluklarda da görülebilir.
+
+## Yorgunluk mu, tükenmişlik mi?
+Sıradan yorgunluk dinlenince geçer. Tükenmişlikte ise tatil bile kısa süre iyi gelir; dönünce aynı ağırlık hızla geri gelir. Sevdiğin şeylerden keyif almakta da zorlanabilirsin.
+
+## Ne yapılabilir?
+- **Yükü görünür kıl:** Bir hafta boyunca seni yoran ve dolduran şeyleri iki sütunda yaz.
+- **Sınır koy:** Mesai dışında bildirimleri kapatmak, “şu an yapamam” demek, öncelikleri birlikte konuşmak.
+- **Küçük toparlanmalar:** Gün içinde kısa molalar, öğle arası kısa bir yürüyüş, işten sonra ekrandan uzak bir saat.
+- **Temelleri koru:** Uyku, hareket ve düzenli yemek en dirençli insanın bile yakıtıdır.
+- **Anlam bağlantısı:** İşin sana ne kattığını, kime dokunduğunu hatırlamak motivasyonu yeniler.
+
+! Tükenmişlik ile depresyon birbirine karışabilir. Keyif kaybı işin dışına da taşıyorsa, uyku ve iştahın belirgin biçimde değiştiyse ya da umutsuzluk hissi baskınsa bir uzmana danış.` },
+
+    { s: 'uyku', c: 'beden', m: 5, t: 'İyi uykunun basit kuralları', l: 'Uyku bir lüks değil, duyguları dengeleyen gece vardiyası. Birkaç küçük alışkanlık büyük fark yaratır.', q: 'Beden saatine ne kadar düzenli davranırsan, o da sana o kadar düzenli uyku verir.', b: `
+Yetişkinlerin çoğunun her gece en az 7 saat uykuya ihtiyacı vardır. Uykusuzluk yalnızca yorgunluk yapmaz; sabrı kısaltır, kaygıyı büyütür, odaklanmayı zorlaştırır. İyi haber şu: Uyku büyük ölçüde alışkanlıklara yanıt verir.
+
+## Gündüz yapılacaklar
+- **Sabah ışığı:** Uyandıktan sonra birkaç dakika gün ışığı almak beden saatini ayarlar.
+- **Hareket:** Düzenli fiziksel aktivite uykuyu derinleştirir; yatmadan hemen önceki yoğun egzersiz ise bazı kişilerde uykuyu zorlaştırabilir.
+- **Kafein:** Etkisi saatlerce sürer. Öğleden sonra kahve ve çayı azaltmayı dene.
+- **Kısa şekerleme:** Gerekirse 20–30 dakikayı ve öğleden sonranın ilk saatlerini geçmesin.
+
+## Akşam yapılacaklar
+- **Sabit saatler:** Hafta sonu dahil yaklaşık aynı saatte yatıp kalkmak en güçlü kuraldır.
+- **Ekran molası:** Yatmadan 30–60 dakika önce telefonu bırak, ışığı kıs.
+- **Zihni boşalt:** Yarın yapılacakları bir kâğıda yaz; zihin “unutmamalıyım” diye uyanık kalmaz.
+- **Serin, karanlık, sessiz oda:** Yatak uyku içindir; işi, tartışmayı ve uzun ekran süresini dışarıda bırak.
+
+## Uyuyamazsan
+Yatakta 20 dakika kadar uyuyamadıysan kalk, loş ışıkta sakin bir şey yap (kitap, hafif esneme), uykun gelince geri dön. Saate bakmamak da kaygıyı azaltır.
+
+! Haftalardır uykuya dalamıyor ya da sık uyanıyorsan, horlama ve nefes durmaları fark ediliyorsa ya da gündüz aşırı uykululuk işini etkiliyorsa bir hekime başvur; tedavi edilebilir nedenler olabilir.` },
+
+    { s: 'oz-sefkat', c: 'ben', m: 4, t: 'Öz-şefkat: kendine bir arkadaş gibi davranmak', l: 'Kendimize, sevdiğimiz birine asla kurmayacağımız cümleleri kurarız. Bunu değiştirmek mümkün.', q: 'Kendine nazik olmak kendini bırakmak değil; yeniden denemek için güç toplamaktır.', b: `
+Bir arkadaşın hata yaptığında ona “Ne kadar beceriksizsin” demezsin. Muhtemelen “Olur böyle şeyler, hadi bir bakalım” dersin. Öz-şefkat, aynı tavrı kendine göstermektir. Psikolog Kristin Neff öz-şefkati üç parçada tarif eder:
+- **Kendine nezaket:** Zor anda kendini yargılamak yerine destekleyici bir ses kullanmak.
+- **Ortak insanlık:** Hata yapmanın ve acı çekmenin herkesin hayatının parçası olduğunu hatırlamak; “bir tek ben değilim”.
+- **Farkındalık:** Acıyı ne büyütmek ne de bastırmak; “şu an zorlanıyorum” diyebilmek.
+
+## Ama bu tembellik olmaz mı?
+Yaygın bir korku bu. Oysa araştırmalar, öz-şefkati yüksek kişilerin hatalarından ders çıkarmaya ve yeniden denemeye daha istekli olduğunu gösteriyor. Sert eleştiri çoğu zaman motive etmez, korkutur; korku da kaçınmayı artırır.
+
+## Küçük pratikler
+- **İç sesini fark et:** Kendine ne dediğini yakala. Bu cümleyi bir arkadaşına söyler miydin?
+- **Şefkat molası:** Zor bir anda elini göğsüne koy ve sessizce söyle: “Bu zor bir an. Zorlanmak insanca. Kendime nazik olabilirim.”
+- **Mektup:** Kendine, seni koşulsuz seven bir arkadaşın ağzından kısa bir mektup yaz.` },
+
+    { s: 'ebeveynlik', c: 'aile', m: 5, t: 'Ebeveynlikte sakin kalmak', l: 'Mükemmel ebeveyn yok; yeterince iyi ve onarmayı bilen ebeveyn var.', q: 'Çocuklar sakinliği nasihatle değil, bizim sakinliğimizi izleyerek öğrenir.', b: `
+Yorgun bir akşam, dökülen bir bardak, bitmeyen bir “hayır”… Ebeveynler için öfke ve sabırsızlık çok tanıdık duygulardır. Bunları hissetmek kötü bir ebeveyn olduğun anlamına gelmez; önemli olan o anlarda ne yaptığın ve sonrasında nasıl onardığındır.
+
+## Anı yavaşlatmak
+- **Önce kendini sakinleştir:** Birkaç derin nefes, bir bardak su ya da iki dakikalık bir mola. Sakin bir yetişkin, çocuğun sakinleşmesi için en güçlü araçtır.
+- **Duyguyu adlandır, davranışa sınır koy:** “Çok kızgınsın, anlıyorum. Ama kardeşine vurmak yok.” Duygu kabul edilir, davranış yönlendirilir.
+- **Az kelime, net mesaj:** Öfke anında uzun açıklamalar duyulmaz. Kısa, sakin ve tekrarlanabilir cümleler kullan.
+- **Seçenek sun:** “Pijamanı mı önce giyersin, dişini mi önce fırçalarsın?” Kontrol hissi direnci azaltır.
+
+## Onarmak
+Herkes zaman zaman sesini yükseltir. Sonrasında “Az önce bağırdım, bu doğru değildi. Özür dilerim. Kızgındım ama seni çok seviyorum” demek, çocuğa hem duygularla nasıl baş edileceğini hem de ilişkinin güvende olduğunu öğretir.
+
+## Kendi deponu doldur
+Uyku, kısa bir yürüyüş, görevleri eşinle paylaşmak, bir arkadaşla konuşmak… Ebeveynin dinlenmesi bencillik değil, ailenin sabır stoğudur.
+
+! Kendini sürekli tükenmiş, öfkeli ya da çaresiz hissediyorsan bir aile danışmanından ya da çocuk psikoloğundan destek almak hem aile hem çocuk için iyi bir yatırımdır.` },
+
+    { s: 'ben-dili', c: 'aile', m: 4, t: 'Çatışmada konuşmak: “ben dili”', l: 'Kavga çoğu zaman konudan değil, konuşma biçiminden büyür.', q: 'Haklı çıkmak mı istiyorsun, anlaşılmak mı? İkisi her zaman aynı cümleyi gerektirmez.', b: `
+“Sen hep geç kalıyorsun!” cümlesini duyan biri büyük olasılıkla savunmaya geçer. “Geç kaldığında merak edip endişeleniyorum, haber verirsen rahatlarım” cümlesi ise aynı konuyu konuşmaya kapı aralar. Fark, suçlayan “sen dili” ile kendi deneyimini anlatan “ben dili” arasındadır.
+
+## Dört parçalı cümle
+- **Olay:** Yargısız, gözlemlenebilir bir anlatım. “Dün akşam yemekte telefona baktığında…”
+- **Duygu:** “…kendimi önemsenmemiş hissettim…”
+- **İhtiyaç:** “…çünkü seninle vakit geçirmek benim için değerli.”
+- **İstek:** “Yemekte telefonları kenara koyabilir miyiz?”
+
+## Dinlemenin de bir dili var
+- **Sözünü kesmeden dinle**, sonra duyduğunu kendi kelimelerinle özetle: “Yani yorgun geldiğin için sessiz kaldın, doğru mu anladım?”
+- **“Ama” yerine “ve” kullan:** “Seni anlıyorum ve benim de ihtiyacım…”
+- **Mola hakkı:** Sesler yükseldiyse “20 dakika ara verip sonra devam edelim” demek kaçmak değil, ilişkiyi korumaktır.
+- **Tek konu:** Geçmişin bütün dosyalarını aynı akşam açma.
+
+! İlişkide korku, tehdit ya da şiddet varsa bu bir iletişim sorunu değildir; önce güvenliğin gelir. Acil durumda 112’yi ara.` },
+
+    { s: 'yalnizlik', c: 'aile', m: 4, t: 'Yalnızlık ve bağ kurmak', l: 'Kalabalık içinde de yalnız hissedilebilir; yalnızlık insan sayısıyla değil, bağın derinliğiyle ilgilidir.', q: 'Bağ büyük jestlerle değil, tekrarlanan küçük temaslarla kurulur.', b: `
+Yalnızlık, istediğimiz ilişkilerle sahip olduğumuz ilişkiler arasındaki farkın acısıdır. Taşınmak, yeni bir iş, çocuk sahibi olmak, gurbette yaşamak ya da yoğun bir dönem bu boşluğu büyütebilir. Utanılacak bir şey değil; açlık gibi bir ihtiyacın sinyalidir.
+
+## Yalnızlığın kurduğu tuzak
+Yalnız hisseden zihin sosyal ipuçlarına karşı daha temkinli olur: Geç dönen bir mesajı reddedilme gibi okur, daveti geri çevirmeye meyleder. Bu da yalnızlığı besleyen bir döngü yaratır. Döngüyü kırmanın yolu büyük adımlar değil, küçük ve düzenli temaslardır.
+
+## Küçük adımlar
+- **Bir mesaj:** Uzun zamandır konuşmadığın birine “Aklıma geldin, nasılsın?” yaz.
+- **Düzenli buluşma:** Haftada bir, aynı saatte bir arkadaşla yürüyüş ya da telefon görüşmesi.
+- **Ortak ilgi:** Bir kurs, spor grubu, gönüllülük ya da kulüp; aynı insanları tekrar tekrar görmek yakınlığı kolaylaştırır.
+- **Uzaktaki aile:** Görüntülü görüşmeleri bir rutine bağla; birlikte yemek yemek ya da kitap okumak gibi ortak bir şey yapın.
+- **Kendinle vakit:** Yalnız kalmayı keyifli hâle getirmek (bir hobi, doğa, müzik) yalnızlığın acısını hafifletir.
+
+! Yalnızlık uzun süredir sürüyor ve umutsuzlukla birlikte geliyorsa bunu bir uzmanla konuşmak iyi gelir. Kendine zarar verme düşüncelerin varsa hemen 112’yi ara.` },
+
+    { s: 'erteleme', c: 'zihin', m: 4, t: 'Erteleme bir zaman değil, duygu meselesidir', l: 'Ertelediğimiz şey çoğu zaman işin kendisi değil, onun bize hissettirdiği şeydir.', q: 'Başlamak için motivasyonu bekleme; motivasyon çoğu zaman başladıktan sonra gelir.', b: `
+Erteleme genellikle tembellik ya da kötü zaman yönetimi sanılır. Oysa araştırmacılar onu çoğu zaman bir duygu düzenleme çabası olarak görür: sıkıntı, belirsizlik, başarısızlık korkusu ya da mükemmeliyetçilik gibi rahatsız edici duygulardan kısa süreliğine kaçmak. Ne var ki kaçış geçicidir; iş beklerken suçluluk büyür.
+
+## Neden erteliyorum?
+- İş **belirsiz** mi? (“Raporu yaz” çok büyük; “ilk paragrafı yaz” net.)
+- **Mükemmel** olması mı gerekiyor?
+- **Sıkıcı** ya da **anlamsız** mı geliyor?
+- **Yorgun** muyum? Bazen gereken şey disiplin değil, dinlenmedir.
+
+## İşe yarayan küçük taktikler
+- **İlk 5 dakika:** “Sadece 5 dakika çalışacağım” de. Başlamak çoğu zaman en zor kısımdır.
+- **Bir sonraki somut adım:** Görevi hemen yapılabilecek fiziksel bir eyleme indir: dosyayı aç, başlığı yaz.
+- **Önce taslak:** “Kötü bir ilk sürüm yazacağım” izni mükemmeliyetçiliği yumuşatır.
+- **Ortamı kolaylaştır:** Telefonu başka odaya koy, gereken her şeyi önceden hazırla.
+- **Kendini affet:** Araştırmalar, geçmişteki ertelemesi için kendini affeden kişilerin bir sonrakinde daha az ertelediğini gösteriyor.
+
+! CBN’deki “Bugüne ekle” ile günün tek bir küçük adımını yazmak iyi bir başlangıç olabilir.` },
+
+    { s: 'ofke', c: 'duygular', m: 4, t: 'Öfkeyle baş etmek', l: 'Öfke yanlış bir duygu değil; ama yönetilmezse yanlış yerlere çarpar.', q: 'Öfke bir sınırın aşıldığını haber verir; o sınırı nasıl koruyacağına sen karar verirsin.', b: `
+Öfke, haksızlığa uğradığımızda, engellendiğimizde ya da değer verdiğimiz bir şey tehdit edildiğinde ortaya çıkan güçlü bir enerjidir. Kendi başına sorun değildir; çoğu zaman bir sınırın ya da karşılanmamış bir ihtiyacın habercisidir. Zorluk, o enerjinin bizi pişman olacağımız sözlere ve davranışlara sürüklemesidir.
+
+## Erken uyarı işaretleri
+Öfke genellikle birden patlamaz, tırmanır. Çene ve omuzlarda gerilme, yüzde ısınma, sesin yükselmesi, hızlı konuşma… Bu işaretleri ne kadar erken fark edersen frene basmak o kadar kolaylaşır.
+
+## O anda
+- **Dur ve uzaklaş:** “Bir dakika ara vermem gerek” deyip ortamdan kısa süre ayrıl.
+- **Bedeni sakinleştir:** Yavaş ve uzun nefes ver, soğuk su iç, kısa bir yürüyüş yap.
+- **Zirveyi bekle:** Öfkenin en yüksek noktası çoğu zaman kısa sürer; o anda karar verme, mesaj gönderme.
+
+## Sonrasında
+- **Altını kaz:** Öfkenin altında çoğu zaman başka bir duygu vardır: kırgınlık, korku, yorgunluk, utanç.
+- **Sorunu konuş:** Sakinleşince “ben dili”yle ne olduğunu ve neye ihtiyacın olduğunu anlat.
+- **Birikmeyi önle:** Küçük rahatsızlıkları zamanında dile getirmek büyük patlamaları azaltır.
+
+! Öfke sık sık kontrolden çıkıyor, birine ya da eşyalara zarar vermene yol açıyorsa veya yakınların senden korkuyorsa bir uzmandan destek al. Birinin güvenliği tehlikedeyse 112’yi ara.` },
+
+    { s: 'destek', c: 'destek', m: 4, t: 'Ne zaman profesyonel destek almalı?', l: 'Destek almak için her şeyin çok kötü olmasını beklemek gerekmiyor.', q: 'Yardım istemek bir zayıflık değil; kendine gösterdiğin en somut özenlerden biridir.', b: `
+Bu sayfadaki yazılar genel bilgi verir; bir uzmanın değerlendirmesinin yerini tutmaz. Bazı durumlarda tek başına uğraşmak yerine bir psikolog, psikiyatrist ya da aile hekimiyle konuşmak çok daha hızlı iyi gelir.
+
+## Şu işaretlere dikkat
+- Üzüntü, kaygı ya da öfke **iki haftadan uzun** sürüyor ve günlük hayatını zorluyor.
+- Uyku, iştah ya da enerji belirgin biçimde değişti.
+- Eskiden keyif aldığın şeylerden artık keyif alamıyorsun.
+- İşte, okulda ya da evde sorumluluklarını yerine getirmekte zorlanıyorsun.
+- Alkolü, maddeleri ya da başka davranışları baş etmek için giderek daha çok kullanıyorsun.
+- Yaşadığın bir olay (kayıp, kaza, şiddet) aklından çıkmıyor; kâbuslar ya da ani irkilmeler yaşıyorsun.
+
+## Kime başvurabilirim?
+- **Aile hekimi:** İlk adım için iyi bir kapı; gerekirse yönlendirme yapar.
+- **Psikiyatrist:** Tıp doktorudur; tanı koyar, gerekirse ilaç tedavisi planlar.
+- **Klinik psikolog / psikolojik danışman:** Terapi ve danışmanlık sunar.
+- **Hastanelerin psikiyatri poliklinikleri** ve üniversite hastaneleri de başvurulabilecek yerlerdir.
+
+## Acil durumda
+Kendine ya da bir başkasına zarar verme düşüncen varsa ya da kendini güvende hissetmiyorsan beklemeden **112**’yi ara veya en yakın acil servise git. Yanında güvendiğin birinin olması da iyi gelir.
+
+! Birleşik Krallık’taysan Samaritans’a günün her saati ücretsiz olarak 116 123’ten ulaşabilirsin.` }
   ];
+  const MOODS = [['Kaygılı', ['kaygi', 'zihin-tuzaklari']], ['Yorgun', ['tukenmislik', 'uyku']], ['Uykusuz', ['uyku']], ['Öfkeli', ['ofke', 'ben-dili']], ['Yalnız', ['yalnizlik']], ['Kendime kızgın', ['oz-sefkat', 'erteleme']], ['Ebeveynlik zor', ['ebeveynlik', 'duygulara-isim']], ['Karışık', ['duygulara-isim', 'destek']]];
+  const find = s => A.find(a => a.s === s);
+  let el = null, filter = '', mood = -1, showAll = false, breath = null;
 
-  const OPEN_Q = ['Biraz daha anlatır mısın?', 'Bu sende en çok neyi tetikliyor?', 'Bunu yaşarken bedeninde neler hissediyorsun?', 'Böyle hissetmeye ne zaman başladın?', 'Bu durumda senin için en önemli olan ne?', 'Şu an bu konuşmadan ne almak istersin?', 'Daha önce benzer bir şeyle karşılaştığında sana ne iyi gelmişti?', 'Her şey biraz daha iyi olsaydı, bunu nereden anlardın?'];
-  const ENCOURAGE = ['Anlıyorum.', 'Seni dinliyorum.', 'Buradayım.', 'Evet…'];
-  const AFFIRM = ['Bunları paylaşman cesaret ister.', 'Bu kadar şeyin ortasında hâlâ çözüm araman çok değerli.', 'Durumu fark edip üzerine düşünmen önemli bir adım.', 'Duygularını bu kadar açık ifade edebilmen bir güç.'];
+  const inl = s => esc(s).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
+  function body(a) {
+    const out = [], lines = a.b.trim().split('\n'), pull = `<blockquote class="ds-pull">${esc(a.q)}</blockquote>`; let list = null, hi = 0, done = false;
+    const flush = () => { if (list) { out.push('<ul>' + list.map(x => `<li>${inl(x)}</li>`).join('') + '</ul>'); list = null; } };
+    lines.forEach(raw => {
+      const ln = raw.trim();
+      if (!ln) return flush();
+      if (ln.startsWith('- ')) { (list = list || []).push(ln.slice(2)); return; }
+      flush();
+      if (ln.startsWith('## ')) { if (++hi === 2 && !done) { out.push(pull); done = true; } out.push(`<h2>${inl(ln.slice(3))}</h2>`); }
+      else if (ln.startsWith('! ')) { if (!done) { out.push(pull); done = true; } out.push(`<aside class="ds-tip"><b>Bilmekte fayda var</b><p>${inl(ln.slice(2))}</p></aside>`); }
+      else out.push(`<p>${inl(ln)}</p>`);
+    });
+    flush(); if (!done) out.push(pull);
+    return out.join('');
+  }
+  const read = () => store.get('dost_read', []);
+  const markRead = s => { const r = read(); if (!r.includes(s)) { r.push(s); store.set('dost_read', r); } };
+  const crisis = `<p class="ds-crisis"><b>Acil bir durumdaysan</b> ya da kendine zarar verme düşüncen varsa hemen <a href="tel:112">112</a>’yi ara. Buradaki yazılar genel bilgi içindir; tanı koymaz, bir uzmanın yerini tutmaz.</p>`;
 
-  const TOOLS = {
-    nefes: `Birlikte <b>kutu nefesi</b> yapalım (yaklaşık 1 dakika):<br>1. 4 saniye burnundan nefes al<br>2. 4 saniye tut<br>3. 4 saniye ağzından yavaşça ver<br>4. 4 saniye bekle<br>Bunu 4–5 tur tekrarla. Nefesi verirken omuzlarını bırakmayı dene. Aşağıdaki <b>Nefes</b> düğmesiyle ekranda birlikte de yapabiliriz.<br><br>Bitince nasıl hissettiğini 0–10 arası bir sayıyla söyler misin?`,
-    topraklanma: `<b>5-4-3-2-1 topraklanma</b> zihni şu ana getirir:<br>• Etrafında <b>gördüğün 5</b> şey<br>• <b>Dokunabildiğin 4</b> şey<br>• <b>Duyduğun 3</b> ses<br>• <b>Kokusunu aldığın 2</b> şey<br>• <b>Tadını aldığın 1</b> şey<br>Acele etmeden, her birini aklından ya da yazarak say. İstersen buraya da yazabilirsin.`,
-    kayit: null // düşünce kaydı akışı aşağıda
-  };
-  const THOUGHT_FLOW = [
-    ['olay', 'Düşünce kaydı yapalım; 5 kısa adım. <b>1/5 — Durum:</b> Ne oldu? Nerede, kiminle, ne zaman? Kısaca yaz.'],
-    ['duygu', '<b>2/5 — Duygu:</b> O an ne hissettin? Duyguya bir isim ver ve şiddetini 0–100 arası puanla (ör. "kaygı 80").'],
-    ['dusunce', '<b>3/5 — Otomatik düşünce:</b> O anda aklından geçen cümle neydi? Kafandaki sesi olduğu gibi yaz.'],
-    ['kanit', '<b>4/5 — Kanıtlar:</b> Bu düşünceyi destekleyen ve <i>desteklemeyen</i> kanıtlar neler? Bir arkadaşın aynı şeyi yaşasa ona ne derdin?'],
-    ['alternatif', '<b>5/5 — Alternatif düşünce:</b> Tüm kanıtları düşününce, daha dengeli bir cümle nasıl olurdu?']
-  ];
+  /* ---------------- ana sayfa ---------------- */
+  function home() {
+    const r = read(), picks = mood >= 0 ? MOODS[mood][1] : null;
+    let list = A.filter(a => (!filter || a.c === filter) && (!picks || picks.includes(a.s)));
+    const more = !picks && !filter && !showAll && list.length > 6; if (more) list = list.slice(0, 6);
+    const words = ['Oku.', 'Dinlen.', 'Nefes', 'al.', 'Kendine', 'iyi', 'bak.'];
+    el.innerHTML = `<div class="ds">
+      <header class="ds-hero"><p class="ds-eye">Dost · okuma alanı</p>
+        <h1 class="ds-title">Dost<i>.</i></h1>
+        <p class="ds-stack" aria-label="${esc(words.join(' '))}">${words.map((w, i) => `<span style="--d:${i * 90}ms" aria-hidden="true">${esc(w)}</span>`).join('')}</p>
+        <p class="ds-lede">Kaygı, uyku, duygular, ilişkiler ve kendinle kurduğun bağ üzerine kısa, sade yazılar. Bir de sakinleşmek istediğinde nefes molası.</p></header>
 
-  /* ---------------- durum ---------------- */
-  let S = null, el = null, busy = false;
-  const fresh = () => ({ msgs: [], turn: 0, emos: {}, topics: {}, used: {}, flow: null, crisis: false, name: null, mood0: null });
-  const save = () => ls.set('dost_chat', Object.assign({}, S, { msgs: S.msgs.slice(-80) }));
+      <section class="ds-sec"><h2 class="ds-h"><span>Tanış</span><span>alım</span></h2>
+        <div class="ds-trio">
+          <a class="ds-card c1" href="#dost-list"><em>01</em><b>Yazılar</b><p>${A.length} kısa yazı, ${Object.keys(CATS).length} başlık. Her biri 4–6 dakikada okunur.</p><span>Okumaya başla +</span></a>
+          <a class="ds-card c2" href="#dost-nefes"><em>02</em><b>Nefes molası</b><p>Bir, üç ya da beş dakikalık rehberli nefes. Kaygı yükseldiğinde ya da uyumadan önce.</p><span>Nefes al +</span></a>
+          <a class="ds-card c3" href="#dost/destek"><em>03</em><b>Destek almak</b><p>Ne zaman bir uzmana başvurmalı, kime gidilir, acil durumda ne yapılır.</p><span>Oku +</span></a>
+        </div></section>
 
-  function useOnce(key, arr) { // tekrar etmeyen seçim
-    const u = S.used[key] || []; let opts = arr.filter((_, i) => !u.includes(i)); if (!opts.length) { S.used[key] = []; opts = arr; }
-    const v = pick(opts); S.used[key] = [...(S.used[key] || []), arr.indexOf(v)]; return v;
+      <section class="ds-sec ds-mood"><h2 class="ds-h sm"><span>Bugün</span><span>nasılsın?</span></h2>
+        <div class="ds-chips" role="group" aria-label="Bugün nasılsın">${MOODS.map((m, i) => `<button type="button" class="ds-chip${mood === i ? ' on' : ''}" data-m="${i}" aria-pressed="${mood === i}">${esc(m[0])}</button>`).join('')}</div>
+        ${picks ? `<p class="ds-hint">“${esc(MOODS[mood][0])}” için seçilen yazılar aşağıda. <button type="button" class="ds-link" data-m="-1">Tümünü göster</button></p>` : ''}</section>
+
+      <section class="ds-sec" id="dost-list"><h2 class="ds-h"><span>Okumaya</span><span>değer</span></h2>
+        <div class="ds-filter" role="group" aria-label="Başlıklar"><button type="button" class="ds-f${filter ? '' : ' on'}" data-f="" aria-pressed="${!filter}">Tümü</button>${Object.keys(CATS).map(k => `<button type="button" class="ds-f${filter === k ? ' on' : ''}" data-f="${k}" aria-pressed="${filter === k}">${esc(CATS[k])}</button>`).join('')}</div>
+        <div class="ds-list">${list.map(a => `<a class="ds-item" href="#dost/${a.s}"><div class="ds-meta"><em>${String(A.indexOf(a) + 1).padStart(2, '0')}</em><span>${esc(CATS[a.c])}</span><span>${a.m} dk okuma</span>${r.includes(a.s) ? '<span class="ds-done">Okundu ✓</span>' : ''}</div><div class="ds-main"><b>${esc(a.t)}</b><q>${esc(a.q)}</q><p>${esc(a.l)}</p></div><span class="ds-go">Oku +</span></a>`).join('')}</div>
+        ${more ? `<button type="button" class="ds-more" data-a="more">Daha fazla göster (${A.length - 6}) +</button>` : ''}</section>
+
+      <section class="ds-sec ds-breath" id="dost-nefes"><h2 class="ds-h light"><span>Nefes</span><span>molası</span></h2><div class="ds-bw"></div></section>
+      <footer class="ds-foot">${crisis}</footer></div>`;
+    breathUI(el.querySelector('.ds-bw'));
+    el.querySelectorAll('[data-m]').forEach(b => b.onclick = () => { mood = +b.dataset.m === mood ? -1 : +b.dataset.m; filter = ''; home(); if (mood >= 0) el.querySelector('#dost-list').scrollIntoView({ behavior: 'smooth', block: 'start' }); });
+    el.querySelectorAll('[data-f]').forEach(b => b.onclick = () => { filter = b.dataset.f; mood = -1; home(); const f = el.querySelector(`[data-f="${filter}"]`); if (f) f.focus(); });
+    const mb = el.querySelector('[data-a=more]'); if (mb) mb.onclick = () => { showAll = true; home(); };
+    el.querySelectorAll('a[href^="#dost-"]').forEach(a => a.onclick = e => { e.preventDefault(); const t = el.querySelector(a.getAttribute('href')); if (t) t.scrollIntoView({ behavior: 'smooth', block: 'start' }); });
   }
 
-  /* ---------------- yanıt motoru ---------------- */
-  function crisisReply() {
-    S.crisis = true;
-    return `Bunu benimle paylaştığın için teşekkür ederim. Şu an çok büyük bir acı yaşıyorsun ve bu yükü tek başına taşımak zorunda değilsin.<br><br>
-      <b>Kendine zarar verme tehlikesi şu an varsa lütfen hemen 112'yi ara</b> ya da en yakın acil servise git. Güvendiğin birini (eşini, bir arkadaşını) şimdi arayıp yanına çağırmak da çok önemli.<br><br>
-      Ben bir yapay sohbet arkadaşıyım; böyle anlarda gerçek bir insanın, bir uzmanın desteği gerekir. Bir psikiyatrist ya da psikologla görüşmen için de sana destek olmak isterim.<br><br>
-      Şu an güvende misin? Yanında biri var mı?`;
-  }
-  function violenceReply() {
-    return `Anlattıkların ciddi ve güvenliğin her şeyden önce gelir. <b>Acil bir tehlike varsa 112'yi ara.</b> Şiddet ve tehdit durumlarında <b>ALO 183</b> (Aile ve Sosyal Hizmetler danışma hattı) da destek verir.<br><br>Şu an güvende misin? Güvenli bir yere gidebileceğin ya da arayabileceğin biri var mı?`;
-  }
-  function harmOthersReply() {
-    return `Şu an çok yoğun bir öfke yaşadığını duyuyorum. Bu öfkeyi anlamaya çalışabiliriz ama kimsenin zarar görmemesi en önemlisi. Ortamdan bir süreliğine uzaklaşmak, birkaç dakika yürümek ya da yavaş nefes almak yoğunluğu düşürebilir. Kontrolünü kaybedeceğini hissediyorsan lütfen <b>112</b>'yi ara ya da güvendiğin birinden hemen destek iste.<br><br>Seni bu kadar öfkelendiren ne oldu?`;
-  }
-
-  function detect(t) {
-    const emos = ['umutsuz', ...Object.keys(EMO).filter(k => k !== 'umutsuz')].filter(k => has(t, EMO[k].k));
-    const order = ['yas', 'cocuk', 'iliski', 'saglik', 'is', 'para', 'uyku', 'aile', 'gurbet', 'sosyal', 'futbol'];
-    const topics = order.filter(k => has(t, TOPIC[k].k));
-    const dist = DIST.find(d => has(t + ' ', d.k));
-    return { emos, topics, dist };
-  }
-
-  function summary() {
-    const e = Object.entries(S.emos).sort((a, b) => b[1] - a[1]).slice(0, 2).map(([k]) => EMO[k].ad);
-    const tp = Object.entries(S.topics).sort((a, b) => b[1] - a[1]).slice(0, 2).map(([k]) => TOPIC[k].ad);
-    if (!e.length && !tp.length) return null;
-    let s = 'Bir durup toparlayayım, eksik ya da yanlış anladığım varsa düzelt: ';
-    if (tp.length) s += `Bugün en çok ${tp.join(' ve ')} üzerine konuştuk. `;
-    if (e.length) s += `Bunların içinde en çok ${e.join(' ve ')} öne çıkıyor gibi. `;
-    return s + 'Doğru anlamış mıyım? Bunlardan hangisine biraz daha odaklanmak istersin?';
+  /* ---------------- nefes ---------------- */
+  const PAT = { calm: { n: '4 · 6 sakinleşme', p: [['Nefes al', 4, 1], ['Nefes ver', 6, 0]] }, box: { n: 'Kutu nefesi 4 · 4 · 4 · 4', p: [['Nefes al', 4, 1], ['Tut', 4, 1], ['Nefes ver', 4, 0], ['Tut', 4, 0]] } };
+  function stopBreath() { if (breath) { clearTimeout(breath.t); clearInterval(breath.c); breath = null; } }
+  function breathUI(box) {
+    let pat = store.get('dost_bp', 'calm'), min = store.get('dost_bm', 3); if (!PAT[pat]) pat = 'calm'; if (![1, 3, 5].includes(min)) min = 3;
+    box.innerHTML = `<div class="ds-orb-w"><div class="ds-orb" aria-hidden="true"><i></i></div><p class="ds-phase" role="status" aria-live="polite">Hazır olduğunda başla</p><p class="ds-left"></p></div>
+      <div class="ds-bctl"><p>Rahat bir pozisyonda otur, omuzlarını bırak. Daireyle birlikte nefes al ve ver.</p>
+        <div class="ds-opts" role="group" aria-label="Nefes türü">${Object.keys(PAT).map(k => `<button type="button" class="ds-o${pat === k ? ' on' : ''}" data-p="${k}" aria-pressed="${pat === k}">${PAT[k].n}</button>`).join('')}</div>
+        <div class="ds-opts" role="group" aria-label="Süre">${[1, 3, 5].map(m => `<button type="button" class="ds-o${min === m ? ' on' : ''}" data-t="${m}" aria-pressed="${min === m}">${m} dk</button>`).join('')}</div>
+        <button type="button" class="ds-start">Başla</button><p class="ds-small">Başın dönerse normal nefese dön. Bu bir tedavi değil, kısa bir sakinleşme alıştırmasıdır.</p></div>`;
+    const orb = box.querySelector('.ds-orb'), ph = box.querySelector('.ds-phase'), left = box.querySelector('.ds-left'), btn = box.querySelector('.ds-start');
+    const reset = msg => { stopBreath(); orb.style.transitionDuration = '1.2s'; orb.classList.remove('big'); ph.textContent = msg || 'Hazır olduğunda başla'; left.textContent = ''; btn.textContent = 'Başla'; };
+    box.querySelectorAll('[data-p]').forEach(b => b.onclick = () => { pat = b.dataset.p; store.set('dost_bp', pat); box.querySelectorAll('[data-p]').forEach(x => { x.classList.toggle('on', x === b); x.setAttribute('aria-pressed', x === b); }); reset(); });
+    box.querySelectorAll('[data-t]').forEach(b => b.onclick = () => { min = +b.dataset.t; store.set('dost_bm', min); box.querySelectorAll('[data-t]').forEach(x => { x.classList.toggle('on', x === b); x.setAttribute('aria-pressed', x === b); }); reset(); });
+    btn.onclick = () => {
+      if (breath) return reset();
+      const end = Date.now() + min * 60000, steps = PAT[pat].p; let i = 0;
+      btn.textContent = 'Durdur';
+      const tick = () => { if (!box.isConnected) return stopBreath(); const s = Math.max(0, Math.ceil((end - Date.now()) / 1000)); left.textContent = Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
+      const step = () => {
+        if (!box.isConnected) return stopBreath();
+        if (Date.now() >= end && i % steps.length === 0) return reset('Tamamlandı. Kendine bu molayı verdiğin için teşekkürler.');
+        const [txt, sec, big] = steps[i % steps.length]; i++;
+        ph.textContent = txt; orb.style.transitionDuration = sec + 's'; orb.classList.toggle('big', !!big);
+        breath.t = setTimeout(step, sec * 1000);
+      };
+      breath = { t: 0, c: setInterval(tick, 500) }; tick(); step();
+    };
   }
 
-  function local(text) {
-    const t = low(text.trim()), words = t.split(/\s+/).filter(Boolean);
-    S.turn++;
-
-    // 1) güvenlik her şeyden önce
-    if (has(t, CRISIS)) return crisisReply();
-    if (has(t, HARM_OTHERS)) return harmOthersReply();
-    if (has(t, VIOLENCE)) return violenceReply();
-    if (S.crisis && has(t, ['evet', 'güvendeyim', 'iyiyim', 'yanımda'])) { S.crisis = false; return 'Güvende olduğunu duymak beni rahatlattı. Yine de bu duygular geri gelirse 112 her zaman bir telefon uzağında, lütfen bunu unutma. Bu düşünceler ne zamandır aklında? İstersen bunları birlikte konuşalım, bir uzmana ulaşmak için de adım atabiliriz.'; }
-    if (S.crisis && has(t, ['hayır', 'değilim', 'yalnızım', 'kimse yok'])) return 'Şu an yalnız ve güvende değilsen lütfen <b>112</b>\'yi ara; seni dinleyecek ve yardım edecek insanlar var. Telefonu açıp aramak zor geliyorsa sadece "yardıma ihtiyacım var" demen yeterli. Arayabileceğin bir yakının var mı?';
-
-    // 2) devam eden düşünce kaydı akışı
-    if (S.flow) {
-      S.flow.data[THOUGHT_FLOW[S.flow.step][0]] = text.trim(); S.flow.step++;
-      if (S.flow.step < THOUGHT_FLOW.length) return THOUGHT_FLOW[S.flow.step][1];
-      const d = S.flow.data; S.flow = null;
-      return `Harika iş çıkardın. Kaydın:<br><div class="dost-rec"><b>Durum:</b> ${esc(d.olay)}<br><b>Duygu:</b> ${esc(d.duygu)}<br><b>Otomatik düşünce:</b> ${esc(d.dusunce)}<br><b>Kanıtlar:</b> ${esc(d.kanit)}<br><b>Dengeli düşünce:</b> ${esc(d.alternatif)}</div><br>Şimdi dengeli düşünceyi okuyunca ilk yazdığın duygunun şiddeti 0–100 arası kaç olur? Küçük bir düşüş bile önemli bir değişimdir.`;
-    }
-
-    // 3) niyetler
-    const adim = t.match(/(?:adım|ismim)\s+([a-zçğıöşü]+)/i); if (adim) { S.name = adim[1][0].toLocaleUpperCase('tr-TR') + adim[1].slice(1); return `Memnun oldum ${S.name}. Bugün seni buraya getiren ne?`; }
-    if (has(t, ['psikolog musun', 'insan mısın', 'sen kimsin', 'robot musun', 'yapay zeka mısın', 'gerçek misin'])) return 'Ben <b>Dost</b>; bir yapay sohbet arkadaşıyım, psikolog değilim. Psikologların kullandığı dinleme ve düşünce çalışma tekniklerinden ilham alarak seni dinlemeye, düşüncelerini toparlamana yardım etmeye çalışırım. Tanı koymam, ilaç önermem; ihtiyaç olduğunda bir uzmana yönlendiririm. Şu an aklında ne var?';
-    if (has(t, ['nefes', 'sakinleş', 'rahatla', 'panik atak'])) return TOOLS.nefes;
-    if (has(t, ['topraklan', '5-4-3', 'şimdiye dön', 'kopuk hissed'])) return TOOLS.topraklanma;
-    if (has(t, ['düşünce kaydı', 'düşüncelerimi incele', 'düşünce çalış'])) { S.flow = { step: 0, data: {} }; return THOUGHT_FLOW[0][1]; }
-    if (/^(merhaba|selam|sa|selamün aleyküm|günaydın|iyi akşamlar|hey|naber)\b/.test(t) && words.length <= 4) return pick(['Merhaba, hoş geldin. Bugün nasılsın, aklında neler var?', `Merhaba${S.name ? ' ' + S.name : ''}. Seni dinliyorum; bugün neyi konuşmak istersin?`]);
-    if (has(t, ['teşekkür', 'sağ ol', 'eyvallah', 'iyi geldi'])) return pick(['Ben teşekkür ederim, paylaştığın için. Bugün konuştuklarımızdan yanında götürmek istediğin bir şey var mı?', 'Rica ederim. Kendine bu zamanı ayırman çok değerli. Başka konuşmak istediğin bir şey var mı?']);
-    if (/^(görüşürüz|hoşça kal|bay|iyi geceler|kapatıyorum)/.test(t)) return 'Görüşmek üzere. Kendine iyi bak; ne zaman istersen buradayım. Zorlandığın bir an olursa yakınlarından ve gerekirse bir uzmandan destek istemekten çekinme.';
-    if (has(t, ['ne yapmalıyım', 'ne yapayım', 'ne yapsam', 'bana tavsiye', 'öneri ver', 'ne önerirsin'])) return `Bu konuda sana hazır bir reçete vermek yerine birlikte düşünmek isterim, çünkü seni ve hayatını en iyi sen biliyorsun. ${pick(['Şimdiye kadar neler denedin, hangisi az da olsa işe yaradı?', 'Elinde olan seçenekleri sıralasak, her birinin artısı ve eksisi ne olurdu?', 'Bir arkadaşın aynı durumda olsa ona ne önerirdin?'])}`;
-
-    // 4) kısa ya da belirsiz yanıtlar
-    const det = detect(t);
-    det.emos.forEach(k => S.emos[k] = (S.emos[k] || 0) + 1);
-    det.topics.forEach(k => S.topics[k] = (S.topics[k] || 0) + 1);
-    if (words.length <= 2 && !det.emos.length && !det.topics.length) {
-      if (has(t, ['bilmiyorum', 'emin değilim', 'bilemiyorum'])) return 'Bilmemek de olabilir; bazen duygular bir isim koyamayacağımız kadar karışıktır. Sadece aklına ilk gelen kelime ne?';
-      if (has(t, ['evet', 'aynen', 'doğru', 'kesinlikle'])) return `${pick(ENCOURAGE)} ${useOnce('oq', OPEN_Q)}`;
-      if (has(t, ['hayır', 'yok', 'değil'])) return 'Peki, o zaman nasıl? Senin kelimelerinle duymak isterim.';
-      return `${pick(ENCOURAGE)} ${useOnce('oq', OPEN_Q)}`;
-    }
-
-    // 5) belirli aralıklarla özet
-    if (S.turn - (S.lastSum || 0) >= 6 && !det.emos.length && !det.topics.length && !det.dist) { const s = summary(); if (s) { S.lastSum = S.turn; return s; } }
-
-    // 6) yansıtma + onaylama/normalleştirme + tek açık soru
-    const parts = [];
-    const e = det.emos[0], tp = det.topics[0];
-    if (tp && TOPIC[tp].r) parts.push(useOnce('r_' + tp, TOPIC[tp].r));
-    else if (e) parts.push(useOnce('e_' + e, EMO[e].r));
-    else if (tp) parts.push(pick([`Anladığım kadarıyla ${TOPIC[tp].ad} şu an zihnini epey meşgul ediyor.`, `${TOPIC[tp].ad[0].toLocaleUpperCase('tr-TR') + TOPIC[tp].ad.slice(1)} seni zorluyor gibi.`]));
-    else { const m = text.match(/çünkü\s+(.{6,80}?)([.!?]|$)/i); parts.push(m ? `Yani bunun altında "${esc(m[1].trim())}" duygusu yatıyor.` : pick(['Anlattıklarını dikkatle dinliyorum.', 'Bunu benimle paylaştığın için teşekkür ederim.', 'Seni anlamaya çalışıyorum.'])); }
-
-    const mid = [];
-    if (e === 'umutsuz') parts.push('Bazen bu duygular "hiç bitmeyecek" gibi gelir, ama duygular kalıcı değildir. Bu düşünceler zaman zaman kendine zarar verme fikrine dönüşüyor mu? Bunu sormam önemli, çünkü öyleyse yalnız kalmaman gerekir.');
-    else if (tp === 'uyku' && !S.used.uykuTip) { S.used.uykuTip = [1]; mid.push(TOPIC.uyku.tip); }
-    else if (e === 'kaygi' && !S.used.kaygiTool) { S.used.kaygiTool = [1]; mid.push('İstersen kaygı yükseldiğinde işe yarayan kısa bir nefes ya da topraklanma egzersizi yapabiliriz; "nefes" ya da "topraklanma" yazman yeterli.'); }
-    else if (S.turn % 4 === 2 && e && e !== 'iyi') mid.push(useOnce('aff', AFFIRM));
-    else if (tp && Math.random() < .75) mid.push(useOnce('n_' + tp, TOPIC[tp].n));
-    else if (e && e !== 'iyi') mid.push(pick(['Böyle hissetmen çok anlaşılır.', 'Bu duyguyu yaşamakta yalnız değilsin; pek çok insan benzer anlardan geçiyor.', 'Bu tepkiler, zorlayıcı bir duruma verilen insani tepkiler.']));
-    parts.push(...mid.slice(0, 1));
-
-    if (e !== 'umutsuz') {
-      if (det.dist && Math.random() < .8) parts.push(useOnce('d_' + det.dist.ad, det.dist.q));
-      else if (tp) parts.push(useOnce('q_' + tp, TOPIC[tp].q));
-      else parts.push(useOnce('oq', OPEN_Q));
-    }
-    return parts.join(' ');
+  /* ---------------- yazı ---------------- */
+  function article(a) {
+    const i = A.indexOf(a), next = [A[(i + 1) % A.length], A[(i + 2) % A.length]], fs = Math.min(23, Math.max(16, +store.get('dost_fs', 19) || 19));
+    el.innerHTML = `<div class="ds ds-art"><div class="ds-prog" aria-hidden="true"><i></i></div>
+      <nav class="ds-top"><a class="ds-back" href="#dost">← Dost</a><div class="ds-fs" role="group" aria-label="Yazı boyutu"><button type="button" data-z="-1" aria-label="Yazıyı küçült">A−</button><button type="button" data-z="1" aria-label="Yazıyı büyüt">A+</button></div></nav>
+      <header class="ds-ahead"><p class="ds-eye">${esc(CATS[a.c])} · ${a.m} dk okuma</p><h1>${esc(a.t)}</h1><p class="ds-alede">${esc(a.l)}</p></header>
+      <article class="ds-body" style="--fs:${fs}px">${body(a)}</article>
+      ${a.s !== 'destek' ? `<div class="ds-body ds-endnote">${crisis}</div>` : ''}
+      <section class="ds-next"><h2 class="ds-h sm"><span>Sıradaki</span><span>yazılar</span></h2><div class="ds-trio two">${next.map((n, k) => `<a class="ds-card c${k + 1}" href="#dost/${n.s}"><em>${esc(CATS[n.c])}</em><b>${esc(n.t)}</b><p>${esc(n.l)}</p><span>Oku +</span></a>`).join('')}</div></section></div>`;
+    const bodyEl = el.querySelector('.ds-body'), bar = el.querySelector('.ds-prog i');
+    el.querySelectorAll('[data-z]').forEach(b => b.onclick = () => { const v = Math.min(23, Math.max(16, (parseInt(getComputedStyle(bodyEl).getPropertyValue('--fs'), 10) || 19) + (+b.dataset.z))); bodyEl.style.setProperty('--fs', v + 'px'); store.set('dost_fs', v); });
+    const onScroll = () => {
+      if (!bar.isConnected) return removeEventListener('scroll', onScroll);
+      const r = bodyEl.getBoundingClientRect(), total = r.height - innerHeight * .6, p = total > 0 ? Math.min(1, Math.max(0, -r.top / total)) : 1;
+      bar.style.width = (p * 100) + '%'; if (p > .9) markRead(a.s);
+    };
+    addEventListener('scroll', onScroll, { passive: true }); onScroll();
   }
 
-  /* ---------------- gelişmiş mod (isteğe bağlı, kullanıcının kendi anahtarı) ---------------- */
-  const SYS = `Sen "Dost" adlı Türkçe konuşan, sıcak ve profesyonel bir dinleme arkadaşısın. Psikolog DEĞİLSİN; bunu sorulursa dürüstçe söyle. Bir psikoloğun danışma becerileriyle konuş:
-- Önce duyguyu ve içeriği yansıt (aktif dinleme), onaylayıcı ve yargısız ol; sonra tek bir açık uçlu soru sor.
-- Kısa yaz (2-5 cümle). Ders verme, nutuk atma, hemen çözüm sıralama; birlikte keşfet (Sokratik sorular, OARS: açık soru, onaylama, yansıtma, özetleme).
-- Uygun olduğunda BDT araçlarını öner: düşünce kaydı, bilişsel çarpıtmaları nazikçe fark ettirme, kutu nefesi, 5-4-3-2-1 topraklanma, uyku hijyeni.
-- Tanı koyma, ilaç önerme. Belirtiler ağır ya da uzun süreliyse bir psikolog/psikiyatriste yönlendir.
-- İntihar, kendine ya da başkasına zarar, şiddet belirtisinde: sakin ve şefkatli ol, güvenliğini sor, Türkiye'de 112 acil hattını ve güvendiği birine ulaşmayı öner; şiddette ALO 183. Asla yöntem bilgisi verme.
-- Kullanıcı Oğuzhan, iki kız babası (Lale ve Ela), eşi Nicole; bunu yalnızca kendisi açarsa kullan.`;
-  async function remote() {
-    const key = ls.get('dost_key', ''); if (!key) return null;
-    const msgs = S.msgs.slice(-20).map(m => ({ role: m.me ? 'user' : 'assistant', content: m.raw || m.t.replace(/<[^>]+>/g, '') }));
-    while (msgs.length && msgs[0].role !== 'user') msgs.shift();
-    const r = await fetch('https://api.anthropic.com/v1/messages', { method: 'POST', headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-      body: JSON.stringify({ model: ls.get('dost_model', 'claude-sonnet-5-5'), max_tokens: 500, system: SYS, messages: msgs }) });
-    if (!r.ok) throw new Error('API ' + r.status);
-    const j = await r.json(); return esc((j.content || []).map(c => c.text || '').join('').trim()).replace(/\n/g, '<br>');
+  function open(root, route) {
+    stopBreath(); el = root;
+    const slug = String(route || '').split('/')[1], a = slug && find(slug);
+    if (slug && !a) { location.replace('#dost'); return; }
+    if (a) article(a); else home();
   }
-
-  /* ---------------- arayüz ---------------- */
-  function open(root) {
-    el = root; S = ls.get('dost_chat', null) || fresh(); busy = false;
-    el.innerHTML = `<section class="dost">
-      <div class="dost-head"><div><p class="eyebrow">Sohbet · yalnızca bu cihazda</p><h1 class="display sm">Dost<em>.</em></h1><p class="muted">Seni yargılamadan dinleyen bir sohbet arkadaşı. <span class="dost-mode">${ls.get('dost_key', '') ? '● Claude ile' : '○ Cihaz içi mod'}</span></p></div>
-        <div class="dost-tools"><button class="chip" data-a="breath">🫁 Nefes</button><button class="chip" data-a="rec">📝 Düşünce kaydı</button><button class="chip" data-a="set">⚙︎</button><button class="chip" data-a="clear">Sohbeti sil</button></div></div>
-      <div class="dost-note">Dost bir psikolog değildir, tanı koymaz ve tedavinin yerini tutmaz. <b>Acil bir durumda 112'yi ara.</b></div>
-      <div class="dost-log" aria-live="polite"></div>
-      <div class="dost-quick"></div>
-      <form class="dost-form"><textarea rows="1" placeholder="Aklından geçenleri yaz…" maxlength="1500"></textarea><button class="pill">Gönder</button></form>
-    </section>`;
-    const f = el.querySelector('.dost-form'), ta = f.querySelector('textarea');
-    f.onsubmit = e => { e.preventDefault(); send(ta.value); ta.value = ''; ta.style.height = ''; };
-    ta.onkeydown = e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); f.requestSubmit(); } };
-    ta.oninput = () => { ta.style.height = ''; ta.style.height = Math.min(140, ta.scrollHeight) + 'px'; };
-    el.querySelector('[data-a=clear]').onclick = () => { if (confirm('Bu sohbet bu cihazdan silinsin mi?')) { S = fresh(); save(); draw(); greet(); } };
-    el.querySelector('[data-a=breath]').onclick = breath;
-    el.querySelector('[data-a=rec]').onclick = () => send('düşünce kaydı');
-    el.querySelector('[data-a=set]').onclick = settings;
-    draw(); if (!S.msgs.length) greet();
-  }
-  function greet() {
-    bot(`Merhaba, ben <b>Dost</b>. Burada acele yok; ne hissediyorsan, nasıl anlatmak istiyorsan öyle yazabilirsin. Konuştuklarımız sadece bu cihazda kalır.<br><br>Başlamadan önce: Bugün kendini <b>0 ile 10</b> arasında nasıl hissediyorsun?`, true);
-    quick(['0–3 · zor bir gün', '4–6 · idare eder', '7–10 · iyiyim'].map(x => [x, x]));
-  }
-  function quick(list) {
-    const q = el.querySelector('.dost-quick');
-    q.innerHTML = list.map(([t, v]) => `<button class="chip" data-v="${esc(v)}">${esc(t)}</button>`).join('');
-    q.querySelectorAll('button').forEach(b => b.onclick = () => send(b.dataset.v));
-  }
-  const DEFAULT_QUICK = [['Kaygılıyım', 'Son zamanlarda çok kaygılıyım'], ['Uyuyamıyorum', 'Uyuyamıyorum, kafam çok dolu'], ['İlişkim', 'Eşimle aramızda sorunlar var'], ['İş stresi', 'İşim beni çok yoruyor, stresliyim'], ['Sadece konuşmak istiyorum', 'Sadece biraz konuşmak istiyorum']];
-  function draw() {
-    const log = el.querySelector('.dost-log');
-    log.innerHTML = S.msgs.map(m => `<div class="msg ${m.me ? 'me' : 'bot'}"><div class="bub">${m.t}</div></div>`).join('');
-    log.scrollTop = log.scrollHeight;
-  }
-  function bot(t, nosave) { S.msgs.push({ me: false, t }); save(); draw(); }
-  async function send(raw) {
-    const text = String(raw || '').trim(); if (!text || busy) return;
-    S.msgs.push({ me: true, t: esc(text).replace(/\n/g, '<br>'), raw: text }); save(); draw();
-    el.querySelector('.dost-quick').innerHTML = '';
-    // ilk ruh hali
-    if (S.mood0 === null) { const m = text.match(/\b(10|[0-9])\b/); if (m) { S.mood0 = +m[1]; } }
-    busy = true; const log = el.querySelector('.dost-log');
-    log.insertAdjacentHTML('beforeend', '<div class="msg bot typing"><div class="bub"><i></i><i></i><i></i></div></div>'); log.scrollTop = log.scrollHeight;
-    let reply = null;
-    const lt = low(text), safety = has(lt, CRISIS) || has(lt, VIOLENCE) || has(lt, HARM_OTHERS);
-    if (S.msgs.filter(m => m.me).length === 1 && S.mood0 !== null && text.length < 30) reply = S.mood0 <= 3 ? 'Zor bir gün geçiriyorsun gibi; burada olman iyi. Bugün seni en çok ne zorladı?' : S.mood0 <= 6 ? 'İdare eder bir gün. Aklını en çok meşgul eden şey ne?' : 'Bunu duymak güzel. Yine de konuşmak istediğin bir şey varsa buradayım; bugün aklında ne var?';
-    if (!reply && !safety && !S.flow) { try { reply = await remote(); if (reply) S.apiOk = true; } catch (e) { console.warn('Dost gelişmiş mod:', e.message); if (!S.apiWarned) { S.apiWarned = true; bot(`<small>⚠︎ Claude'a bağlanılamadı (${esc(e.message)}). Anahtarı ⚙︎ ile kontrol et; 401 = anahtar hatalı, 400/403 = anahtarı "Default" workspace'e bağlı oluştur, 402/429 = kredi/limit. Şimdilik cihaz içi Dost yanıt veriyor.</small>`); } } }
-    if (!reply) { await new Promise(r => setTimeout(r, 500 + Math.random() * 700)); reply = local(text); } else S.turn++;
-    busy = false; const ty = log.querySelector('.typing'); if (ty) ty.remove();
-    bot(reply);
-    if (S.msgs.length <= 4 && !S.flow) quick(DEFAULT_QUICK);
-  }
-  function breath() {
-    const ov = document.createElement('div'); ov.className = 'dost-breath';
-    ov.innerHTML = `<div class="db-c"><div class="db-ring"></div><b class="db-t">Hazır ol</b><small class="db-n"></small><button class="pill ghost" data-x>Bitir</button></div>`;
-    document.body.appendChild(ov);
-    const st = [['Nefes al', 'in'], ['Tut', 'hold'], ['Ver', 'out'], ['Bekle', 'rest']]; let i = 0, cyc = 0, stopped = false;
-    const ring = ov.querySelector('.db-ring'), tt = ov.querySelector('.db-t'), nn = ov.querySelector('.db-n');
-    const step = () => { if (stopped) return; if (cyc >= 5) { tt.textContent = 'Güzel 🌿'; nn.textContent = '5 tur tamam'; return; } const [t, c] = st[i]; tt.textContent = t; ring.className = 'db-ring ' + c; let s = 4; nn.textContent = s; const iv = setInterval(() => { s--; if (s > 0) nn.textContent = s; else clearInterval(iv); }, 1000); i = (i + 1) % 4; if (!i) cyc++; setTimeout(step, 4000); };
-    setTimeout(step, 600);
-    ov.querySelector('[data-x]').onclick = () => { stopped = true; ov.remove(); bot('Nefes egzersizinden sonra kendini 0–10 arası nasıl hissediyorsun?'); };
-  }
-  function settings() {
-    const cur = ls.get('dost_key', '');
-    const v = prompt('İsteğe bağlı gelişmiş mod: kendi Claude API anahtarını yapıştırırsan Dost daha doğal yanıt verir.\nAnahtar YALNIZCA bu cihazda saklanır; mesajların Anthropic API\'sine gider.\nKapatmak için boş bırak.', cur ? '•••• kayıtlı (değiştirmek için yenisini yaz, silmek için boş bırak)' : '');
-    if (v === null) return;
-    if (!v.trim()) { ls.del('dost_key'); bot('Gelişmiş mod kapalı. Cihaz içi Dost ile devam ediyoruz.'); }
-    else if (!v.startsWith('••••')) { ls.set('dost_key', v.trim()); S.apiWarned = false; bot('Gelişmiş mod açık: artık Claude ile konuşuyorsun. Güvenlik kontrolleri yine cihaz içinde yapılır.'); }
-  }
-  return { open, _reply: t => local(t), _reset: () => { S = fresh(); }, get state() { return S; } };
+  return { open, articles: A, _body: body };
 })();

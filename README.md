@@ -44,3 +44,6 @@ CBN artık sahibine ve davetli herkese açık. Her kullanıcı kendi adıyla kar
 
 ### Hesap ve cihazlar arası eşitleme (sürüm 23)
 CBN > Ayarlar > "Hesap": e-posta + şifreyle hesap oluşturma / giriş (Supabase, ücretsiz katman). Yerel-öncelikli eşitleme: notlar, klasörler, görevler, etkinlikler, proje/aile/finans/hedef/iş kayıtları, ayarlar ve avatar eşitlenir; not ekleri ve sürüm geçmişi cihazda kalır. Tablo ve güvenlik kuralları: `supabase/setup.sql` (SQL Editor'de bir kez çalıştırılır). Depodaki anahtar herkese açık "publishable" anahtardır; veriyi satır düzeyi güvenlik korur. Kod: `js/cbn/sync.js`.
+
+### Dost okuma alanı (sürüm 24)
+Sohbet botu kaldırıldı; Dost artık bir psikoloji okuma alanı: 12 yazı (kaygı, düşünce çarpıtmaları, duygular, tükenmişlik, uyku, öz-şefkat, ebeveynlik, "ben dili", yalnızlık, erteleme, öfke, destek almak), "Bugün nasılsın?" yazı önerileri, başlık süzgeci, rehberli nefes molası, okundu işaretleri ve yazı boyutu ayarı. İçerik `js/dost.js` içinde, stil `css/dost.css`. Rotalar: `#dost`, `#dost/<yazı>`.

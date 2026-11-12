@@ -1,0 +1,121 @@
+/* =====================================================================
+   DOST — okuma alanı. Yapı nalakun.com'dan esinlenildi:
+   kelime kelime dizilen büyük açılış, büyük harfli iki satırlı bölüm başlıkları,
+   üçlü tanıtım kartları, alıntılı okuma listesi ve "Oku +" bağlantıları.
+   Renkler: krem kâğıt, gece moru mürekkep, menekşe vurgu.
+   ===================================================================== */
+.ds{--paper:#F4EFE7;--ink:#1C1433;--mute:#6C6380;--line:#DCD3E8;--vio:#6A4BFF;--lil:#E7DFFF;--peach:#FFB38A;--mint:#BFEBD9;
+  color:var(--ink);font-family:var(--sans);padding:18px 0 40px}
+.ds *{box-sizing:border-box}
+.ds a{color:inherit}
+.ds :focus-visible{outline:3px solid var(--vio);outline-offset:3px;border-radius:8px}
+.ds-eye{font:600 11.5px/1.4 ui-monospace,Menlo,monospace;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);margin:0 0 14px}
+
+/* açılış */
+.ds-hero{padding:clamp(28px,6vw,80px) 0 clamp(24px,4vw,48px);border-bottom:1px solid var(--line)}
+.ds-title{font-size:clamp(84px,18vw,240px);font-weight:800;letter-spacing:-.07em;line-height:.82;margin:0;text-transform:uppercase}
+.ds-title i{font-style:normal;color:var(--vio)}
+.ds-stack{display:flex;flex-wrap:wrap;gap:.05em .32em;margin:28px 0 0;font-family:var(--serif);font-style:italic;font-size:clamp(34px,6vw,76px);line-height:1;letter-spacing:-.02em}
+.ds-stack span{display:inline-block;opacity:0;transform:translateY(.4em);animation:dsup .7s cubic-bezier(.2,.8,.2,1) forwards;animation-delay:var(--d)}
+.ds-stack span:nth-child(3),.ds-stack span:nth-child(4){color:var(--vio)}
+@keyframes dsup{to{opacity:1;transform:none}}
+.ds-lede{max-width:640px;font-size:clamp(17px,1.6vw,20px);line-height:1.55;color:var(--mute);margin:26px 0 0}
+
+/* bölüm başlıkları: büyük harf, kelimeler alt alta */
+.ds-sec{padding:clamp(36px,6vw,80px) 0 0}
+.ds-h{display:flex;flex-direction:column;margin:0 0 26px;font-size:clamp(40px,7vw,96px);font-weight:800;letter-spacing:-.055em;line-height:.88;text-transform:uppercase}
+.ds-h span:nth-child(2){padding-left:.9em;font-family:var(--serif);font-style:italic;font-weight:400;text-transform:none;letter-spacing:-.02em;color:var(--vio)}
+.ds-h.sm{font-size:clamp(30px,4.4vw,56px)}
+.ds-h.light,.ds-h.light span:nth-child(2){color:#fff}
+
+/* tanıtım kartları */
+.ds-trio{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.ds-trio.two{grid-template-columns:repeat(2,minmax(0,1fr))}
+.ds-card{display:flex;flex-direction:column;gap:10px;min-height:250px;padding:24px;border-radius:28px;text-decoration:none;transition:transform .35s cubic-bezier(.2,.8,.2,1)}
+.ds-card:hover{transform:translateY(-6px) rotate(-.6deg)}
+.ds-card.c1{background:var(--lil)}.ds-card.c2{background:var(--mint)}.ds-card.c3{background:var(--peach)}
+.ds-card em{font:600 11.5px ui-monospace,Menlo,monospace;letter-spacing:.12em;text-transform:uppercase;font-style:normal;opacity:.7}
+.ds-card b{font-size:clamp(24px,2.6vw,34px);font-weight:800;letter-spacing:-.04em;line-height:1.02}
+.ds-card p{margin:0;flex:1;font-size:15px;line-height:1.5;opacity:.82}
+.ds-card span{font-weight:800;font-size:15px}
+
+/* bugün nasılsın */
+.ds-chips,.ds-filter{display:flex;flex-wrap:wrap;gap:8px}
+.ds-chip,.ds-f,.ds-o{border:1.5px solid var(--ink);background:transparent;color:var(--ink);border-radius:999px;padding:10px 18px;font:inherit;font-weight:700;font-size:15px;cursor:pointer;transition:background .2s,color .2s,transform .15s}
+.ds-chip:hover,.ds-f:hover{background:var(--lil)}
+.ds-chip.on,.ds-f.on{background:var(--ink);color:var(--paper)}
+.ds-f{padding:7px 14px;font-size:13.5px;border-color:var(--line)}.ds-f.on{border-color:var(--ink)}
+.ds-hint{margin:14px 0 0;color:var(--mute)}
+.ds-link{border:none;background:none;color:var(--vio);font:inherit;font-weight:700;text-decoration:underline;cursor:pointer;padding:0}
+
+/* okuma listesi */
+.ds-filter{margin-bottom:12px}
+.ds-list{border-top:1.5px solid var(--ink)}
+.ds-item{display:grid;grid-template-columns:200px minmax(0,1fr) auto;gap:24px;align-items:start;padding:26px 0;border-bottom:1px solid var(--line);text-decoration:none;transition:padding .3s,background .3s}
+.ds-item:hover{padding-left:14px;padding-right:14px;background:#fff;border-radius:18px}
+.ds-meta{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--mute)}
+.ds-meta em{font-family:var(--serif);font-size:44px;line-height:1;color:var(--vio);font-style:italic}
+.ds-done{color:#14915F;font-weight:700}
+.ds-main b{display:block;font-size:clamp(22px,2.4vw,32px);font-weight:800;letter-spacing:-.035em;line-height:1.08}
+.ds-main q{display:block;margin:10px 0 0;font-family:var(--serif);font-style:italic;font-size:clamp(18px,1.7vw,22px);line-height:1.35;quotes:"“" "”"}
+.ds-main p{margin:8px 0 0;color:var(--mute);font-size:15px;line-height:1.5;max-width:60ch}
+.ds-go{font-weight:800;white-space:nowrap;padding-top:8px}
+.ds-item:hover .ds-go{color:var(--vio)}
+.ds-more{margin-top:20px;border:none;background:none;font:inherit;font-weight:800;font-size:17px;color:var(--ink);cursor:pointer;padding:6px 0;border-bottom:2px solid var(--ink)}
+
+/* nefes */
+.ds-breath{margin-top:clamp(36px,6vw,80px);padding:clamp(28px,5vw,64px);border-radius:36px;background:var(--ink);color:#fff}
+.ds-bw{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:clamp(20px,4vw,56px);align-items:center}
+.ds-orb-w{display:flex;flex-direction:column;align-items:center;gap:14px}
+.ds-orb{width:clamp(170px,26vw,280px);aspect-ratio:1;border-radius:50%;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 35% 30%,#9C86FF,var(--vio) 60%,#3B22B8);transform:scale(.62);transition:transform 1.2s ease-in-out;box-shadow:0 0 0 18px rgba(106,75,255,.16),0 0 0 40px rgba(106,75,255,.07)}
+.ds-orb.big{transform:scale(1)}
+.ds-orb i{width:18%;aspect-ratio:1;border-radius:50%;background:rgba(255,255,255,.85)}
+.ds-phase{margin:0;font-family:var(--serif);font-style:italic;font-size:clamp(26px,3vw,38px);text-align:center;min-height:1.2em}
+.ds-left{margin:0;font:600 14px ui-monospace,Menlo,monospace;letter-spacing:.1em;opacity:.7;min-height:1.2em}
+.ds-bctl p{margin:0 0 16px;font-size:16px;line-height:1.55;opacity:.85}
+.ds-opts{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.ds-o{border-color:rgba(255,255,255,.5);color:#fff;padding:8px 14px;font-size:14px}
+.ds-o.on{background:#fff;color:var(--ink);border-color:#fff}
+.ds-start{margin-top:8px;border:none;border-radius:999px;background:var(--peach);color:var(--ink);font:inherit;font-weight:800;font-size:18px;padding:14px 34px;cursor:pointer;transition:transform .15s}
+.ds-start:hover{transform:translateY(-2px)}
+.ds-small{font-size:13px!important;opacity:.6!important;margin-top:14px!important}
+
+/* alt bilgi / kriz notu */
+.ds-foot{margin-top:40px}
+.ds-crisis{margin:0;padding:18px 22px;border-radius:20px;background:#fff;border:1.5px solid var(--ink);font-size:15px;line-height:1.55}
+.ds-crisis a{color:var(--vio);font-weight:800}
+
+/* yazı sayfası */
+.ds-prog{position:fixed;left:0;top:0;right:0;height:4px;z-index:60;background:transparent}
+.ds-prog i{display:block;height:100%;width:0;background:var(--vio);transition:width .1s linear}
+.ds-top{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.ds-back{font-weight:800;text-decoration:none;font-size:15px}.ds-back:hover{color:var(--vio)}
+.ds-fs{display:flex;gap:4px}
+.ds-fs button{width:42px;height:38px;border:1.5px solid var(--line);background:#fff;border-radius:12px;font:inherit;font-weight:800;cursor:pointer;color:var(--ink)}
+.ds-fs button:hover{border-color:var(--ink)}
+.ds-ahead{max-width:900px;margin:0 auto;padding:clamp(28px,6vw,72px) 0 clamp(20px,3vw,36px);text-align:center}
+.ds-ahead h1{margin:0;font-size:clamp(38px,6.4vw,80px);font-weight:800;letter-spacing:-.055em;line-height:.98}
+.ds-alede{margin:22px auto 0;max-width:620px;font-family:var(--serif);font-style:italic;font-size:clamp(20px,2.2vw,27px);line-height:1.35;color:var(--mute)}
+.ds-body{--fs:19px;max-width:680px;margin:0 auto;font-family:Georgia,"Iowan Old Style","Times New Roman",serif;font-size:var(--fs);line-height:1.72}
+.ds-body p{margin:0 0 1.1em}
+.ds-body>p:first-child::first-letter{float:left;font-family:var(--serif);font-size:4.4em;line-height:.82;padding:.06em .1em 0 0;color:var(--vio)}
+.ds-body h2{font-family:var(--sans);font-size:1.05em;font-weight:800;letter-spacing:.06em;text-transform:uppercase;margin:2em 0 .7em}
+.ds-body ul{margin:0 0 1.2em;padding:0;list-style:none}
+.ds-body li{position:relative;padding-left:1.4em;margin:0 0 .6em}
+.ds-body li::before{content:'';position:absolute;left:.15em;top:.62em;width:.42em;height:.42em;border-radius:50%;background:var(--vio)}
+.ds-body b{font-family:var(--sans);font-weight:700}
+.ds-pull{margin:1.6em -6% 1.6em;padding:0;border:none;font-family:var(--serif);font-style:italic;font-size:1.65em;line-height:1.22;color:var(--vio);text-align:center}
+.ds-pull::before{content:'“';display:block;font-size:2em;line-height:.6;margin-bottom:.1em}
+.ds-tip{margin:2em 0 0;padding:20px 22px;border-radius:22px;background:var(--lil);font-family:var(--sans);font-size:.86em;line-height:1.6}
+.ds-tip b{display:block;font-size:.8em;letter-spacing:.12em;text-transform:uppercase;margin-bottom:6px}
+.ds-tip p{margin:0}
+.ds-endnote{margin-top:28px;font-size:16px}
+.ds-endnote .ds-crisis{font-family:var(--sans)}
+.ds-next{max-width:900px;margin:0 auto}
+
+@media(max-width:900px){.ds-trio{grid-template-columns:minmax(0,1fr)}.ds-card{min-height:0}.ds-item{grid-template-columns:minmax(0,1fr);gap:10px}.ds-meta{flex-direction:row;flex-wrap:wrap;align-items:baseline;gap:4px 12px}.ds-meta em{font-size:32px}.ds-go{padding:0}.ds-bw{grid-template-columns:minmax(0,1fr)}.ds-pull{margin-left:0;margin-right:0}}
+@media(max-width:600px){.ds-trio.two{grid-template-columns:minmax(0,1fr)}.ds-h span:nth-child(2){padding-left:.5em}}
+@media(prefers-reduced-motion:reduce){.ds-stack span{animation:none;opacity:1;transform:none}.ds *{transition:none!important}}
+
+/* BABA. ana sayfa kartı */
+.hub-card.c-dost{background:#1C1433;color:#F4EFE7;background-image:radial-gradient(circle at 92% 12%,#6A4BFF 0 70px,transparent 71px),radial-gradient(circle at 78% 92%,#FFB38A 0 46px,transparent 47px)}
