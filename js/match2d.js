@@ -98,10 +98,10 @@ const Match2D = (() => {
       // Reuse actual possession pass participants and target locations for simulated goals.
       if(Array.isArray(c.trail)&&c.trail.some(x=>x.type==='pass')){
         const passes=c.trail.filter(x=>x.type==='pass').slice(-3);
-        const actual=passes.map(x=>({p:find(att,x.to),at:{x:x.tx,y:x.ty}}));
+        const actual=passes.map(x=>({p:find(att,x.to),at:{x:dir[att]===1?x.tx:105-x.tx,y:dir[att]===1?x.ty:68-x.ty}}));
         const shot=c.trail.findLast?c.trail.findLast(x=>x.type==='shot'):c.trail.filter(x=>x.type==='shot').pop();
-        if(shot)actual.push({p:shooter,at:{x:shot.x,y:shot.y}});
-        if(actual.length>1){pts.splice(0,pts.length,{p:find(att,passes[0].player),at:{x:passes[0].x,y:passes[0].y}},...actual.filter((v,i,a)=>i===0||v.p!==a[i-1].p));}
+        if(shot)actual.push({p:shooter,at:{x:dir[att]===1?shot.x:105-shot.x,y:dir[att]===1?shot.y:68-shot.y}});
+        if(actual.length>1){pts.splice(0,pts.length,{p:find(att,passes[0].player),at:{x:dir[att]===1?passes[0].x:105-passes[0].x,y:dir[att]===1?passes[0].y:68-passes[0].y}},...actual.filter((v,i,a)=>i===0||v.p!==a[i-1].p));}
       }
       // herkesi formasyonuna yerleştir, topu ilk oyuncuya ver
       ['h', 'a'].forEach(s => P[s].forEach(p => { const f = toField(s, shapeFor(p, s, pts[0].at.x, pts[0].at.y)); p.x = p.tx = f.x; p.y = p.ty = f.y; }));
