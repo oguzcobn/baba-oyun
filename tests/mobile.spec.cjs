@@ -184,3 +184,18 @@ test.describe('Draft career and 2D match enhancements',()=>{
   expect(await page.evaluate(()=>[...document.styleSheets].some(x=>x.href?.includes('draft-analytics.css')))).toBeTruthy();
  });
 });
+
+test.describe('Draft event-driven physics',()=>{
+ test('simulates 22 players and coherent goal events',async({page})=>{
+  await page.goto(BASE+'#draft');
+  const result=await page.evaluate(()=>{
+   const xi=['KL','ST','ST','BK','BK','OS','OS','OS','KN','KN','FV'].map((pos,i)=>({name:pos+i,pos,r:76}));
+   const a=DraftPhysics.simulate({xi},{xi:xi.map(p=>({...p,name:'Away '+p.name}))});
+   return {score:a.gh+a.ga,events:a.ev.length,shots:a.stats.shots,passes:a.stats.passes,poss:a.stats.possession};
+  });
+  expect(result.events).toBe(result.score);
+  expect(result.shots[0]+result.shots[1]).toBeGreaterThan(0);
+  expect(result.passes[0]+result.passes[1]).toBeGreaterThan(0);
+  expect(result.poss[0]+result.poss[1]).toBe(100);
+ });
+});

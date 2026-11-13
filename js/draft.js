@@ -310,14 +310,25 @@ const Draft = (() => {
       // zayıf takımın gol beklentisine tavan: güç farkı büyüdükçe sürpriz olur ama gol yağmuru olmaz
       const capFor = d => d > 10 ? .85 : d > 6 ? 1.15 : d > 3 ? 1.6 : 4.2;
       lh = Math.min(lh, capFor(ad2 - ha)); la = Math.min(la, capFor(hd - aa));
-      let gh = poisson(lh), ga = poisson(la); const ev = [];
+      // Weekly career uses possession-driven outcomes; classic mode retains its established model.
+      const physical=weekly&&typeof DraftPhysics!=='undefined'?DraftPhysics.simulate(H,A,{homeBoost:.045,tempo:1}):null;
+      let gh = physical?physical.gh:poisson(lh), ga = physical?physical.ga:poisson(la); const ev = [];
       // fark 4'ü geçince öndeki takım tempoyu düşürür
-      while (Math.abs(gh - ga) > 4 && Math.random() < .65) { if (gh > ga) gh--; else ga--; }
-      goals(H, gh, ev); goals(A, ga, ev); ev.sort((x, y) => x.min - y.min);
+      while (!physical && Math.abs(gh - ga) > 4 && Math.random() < .65) { if (gh > ga) gh--; else ga--; }
+      if(physical){
+        physical.ev.forEach(e=>{
+          const t=e.t==='h'?H:A,sc=t.xi.find(p=>p.name===e.sc);
+          if(sc&&stats[key(t,sc)])stats[key(t,sc)].g++;
+          const as=t.xi.find(p=>p.name===e.as);
+          if(as&&stats[key(t,as)])stats[key(t,as)].a++;
+          ev.push({t:t.id,sc:e.sc,as:e.as,min:e.min,trail:e.trail,xg:e.xg});
+        });
+      }else{goals(H,gh,ev);goals(A,ga,ev);}
+      ev.sort((x,y)=>x.min-y.min);
       H.gf += gh; H.ga += ga; A.gf += ga; A.ga += gh;
       [[H, ga], [A, gh]].forEach(([T, conc]) => T.xi.forEach(p => { const s = stats[key(T, p)]; s.apps++; if (!conc && (p.pos === 'KL' || p.pos === 'ST' || p.pos === 'BK')) s.cs++; }));
       if (gh > ga) { H.w++; H.p += 3; A.l++; H.form.push('G'); A.form.push('M'); } else if (gh < ga) { A.w++; A.p += 3; H.l++; H.form.push('M'); A.form.push('G'); } else { H.d++; A.d++; H.p++; A.p++; H.form.push('B'); A.form.push('B'); }
-      return { h, a, gh, ga, ev, lh, la };
+      return { h, a, gh, ga, ev, lh, la, physics:physical&&physical.stats };
     }
     el.innerHTML = `<section class="dr-hero"><p class="eyebrow">${T('Sezon simülasyonu', 'Season simulation')} · ${T(`${esc(out.name)}'in yerini sen aldın`, `you have taken ${esc(out.name)}’s place`)}</p><h1 class="display">${T('Hafta', 'Week')} <em class="wk">0</em><span class="slash">/34</span></h1>
       <div class="dr-meta"><span class="chip">${T('Puan', 'Points')} <b class="pts">0</b></span><span class="chip">${T('G-B-M', 'W-D-L')} <b class="wdl">0-0-0</b></span><span class="chip">${T('Gol', 'Goals')} <b class="gl">0:0</b></span><button class="chip toggle" data-a="fast">⏩ ${T('Hızlandır', 'Speed up')}</button></div></section>
@@ -425,7 +436,7 @@ const Draft = (() => {
         const H=teams[mine.h],A=teams[mine.a],slotsOf=xi=>{const used={};return xi.map(p=>{const c=DRAFT_SLOTS.filter(x=>x.pos===p.pos);const k=used[p.pos]=(used[p.pos]||0)+1;return c[k-1]||c[0]||{x:50,y:50};});};
         const side=t=>({name:TN(t.name),short:t.short,c1:t.c1,c2:(DRAFT_CLUBS.find(c=>c.id===t.id)||{}).c2,xi:t.xi.map(p=>({name:p.name,pos:p.pos})),slots:slotsOf(t.xi)});
         const b=q('.dr-next-week');if(b)b.disabled=true;
-        Match2D.show({home:side(H),away:side(A),gh:mine.gh,ga:mine.ga,lh:mine.lh,la:mine.la,ev:mine.ev.map(e=>({t:e.t===H.id?'h':'a',sc:e.sc,as:e.as,min:e.min}))},()=>{if(b)b.disabled=false;after();});
+        Match2D.show({home:side(H),away:side(A),gh:mine.gh,ga:mine.ga,lh:mine.lh,la:mine.la,physics:mine.physics,ev:mine.ev.map(e=>({t:e.t===H.id?'h':'a',sc:e.sc,as:e.as,min:e.min,trail:e.trail,xg:e.xg}))},()=>{if(b)b.disabled=false;after();});
       } else after();
     }
     function finish() {
