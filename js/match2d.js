@@ -77,6 +77,11 @@ const Match2D = (() => {
     // Stable formations: opponents keep their own half; possession drives compact defensive shifts.
     const ball = { x: W / 2, y: H / 2, z: 0, tx: W / 2, ty: H / 2 };
     let dir = { h: 1, a: -1 }, att = 'h', holder = null, beats = [], beat = null, bt = 0, flash = '';
+    // Opt-in diagnostics for real-browser Playwright checks; never enabled for normal players.
+    const diagnostics=window.__BABA_MATCH_TEST__===true?{frames:[],goals:[],passes:[],runs:[],stadium:{margin:STAND,width:cv.width,height:cv.height},done:false}:null;
+    if(diagnostics)window.__BABA_MATCH_DIAGNOSTICS__=diagnostics;
+    let lastSample=0;
+
 
     const toField = (side, pt) => dir[side] > 0 ? pt : { x: W - pt.x, y: H - pt.y };
     const find = (side, name) => P[side].find(p => p.name === name) || wpick(P[side], p => SCW[p.pos] || .2);
@@ -140,7 +145,7 @@ const Match2D = (() => {
     function startBeat() {
       beat = beats.shift(); bt = 0; if (!beat) return nextClip();
       if (beat.txt) com(clips[ci].min, beat.txt);
-      if (beat.k === 'pass' || beat.k === 'carry') { const f = toField(att, beat.at); beat.from = { x: ball.x, y: ball.y }; beat.dest = f; beat.to.tx = f.x; beat.to.ty = f.y; beat.to.rs = Math.min(11,Math.hypot(f.x - beat.to.x, f.y - beat.to.y) / beat.d); holder = beat.k === 'carry' ? beat.to : null; }
+      if (beat.k === 'pass' || beat.k === 'carry') { const f = toField(att, beat.at); beat.from = { x: ball.x, y: ball.y }; beat.dest = f; beat.to.tx = f.x; beat.to.ty = f.y; beat.to.rs = Math.min(11,Math.hypot(f.x - beat.to.x, f.y - beat.to.y) / beat.d); holder = beat.k === 'carry' ? beat.to : null; if(diagnostics&&beat.k==='pass')diagnostics.passes.push({duration:beat.d,distance:Math.hypot(f.x-ball.x,f.y-ball.y),start:performance.now(),end:null}); }
       if (beat.k === 'shot') { const gx = dir[att] > 0 ? W - (beat.out === 'goal' ? -1.1 : beat.out === 'miss' ? -.4 : .5) : (beat.out === 'goal' ? -1.1 : beat.out === 'miss' ? -.4 : .5), gy = dir[att] > 0 ? beat.gy : H - beat.gy;
         beat.from = { x: ball.x, y: ball.y }; beat.dest = { x: gx, y: gy };
         const kp = P[att === 'h' ? 'a' : 'h'].find(p => p.pos === 'KL');
@@ -149,7 +154,7 @@ const Match2D = (() => {
         holder = null; }
       if (beat.k === 'result') {
         const c = beat.c, tn = surname(c.sc);
-        if (beat.out === 'goal') { if (att === 'h') score[0]++; else score[1]++; q('.m2d-sc').textContent = score[0] + ' – ' + score[1]; flash = 'GOL!'; showFlash(T('GOOOL!', 'GOAL!'), tn, att === 'h' ? hc : ac);
+        if (beat.out === 'goal') { if(diagnostics)diagnostics.goals.push({side:att,x:ball.x,y:ball.y,goalLine:dir[att]>0?W:0,valid:dir[att]>0?ball.x>=W:ball.x<=0}); if (att === 'h') score[0]++; else score[1]++; q('.m2d-sc').textContent = score[0] + ' – ' + score[1]; flash = 'GOL!'; showFlash(T('GOOOL!', 'GOAL!'), tn, att === 'h' ? hc : ac);
           com(c.min, T(`GOOOL! ${c.sc}${c.as ? ' (asist: ' + c.as + ')' : ''}! Skor ${score[0]}–${score[1]}`, `GOAL! ${c.sc}${c.as ? ' (assist: ' + c.as + ')' : ''}! It’s ${score[0]}–${score[1]}`), 'goal');
           if (typeof AdvAudio !== 'undefined') { AdvAudio.note(784, .15, 'triangle', .05); setTimeout(() => AdvAudio.note(1046, .25, 'triangle', .05), 140); } }
         else com(c.min, { save: T(`Kaleci müthiş bir kurtarışla gole izin vermiyor!`, `What a save from the goalkeeper!`), miss: T(`${tn} topu az farkla auta gönderdi.`, `${tn} drags it just wide.`), post: T(`Direkten döndü! ${tn} inanamıyor.`, `Off the post! ${tn} can’t believe it.`), block: T(`Son anda araya giren savunma topu blokladı.`, `Blocked at the last moment by the defence.`) }[beat.out], 'miss');
@@ -169,6 +174,7 @@ const Match2D = (() => {
     function fullTime() {
       cancelAnimationFrame(raf); score = [o.gh, o.ga]; q('.m2d-sc').textContent = o.gh + ' – ' + o.ga; q('.m2d-min').textContent = T('MS', 'FT');
       com(90, T(`Maç sona erdi: ${o.home.name} ${o.gh} – ${o.ga} ${o.away.name}`, `Full time: ${o.home.name} ${o.gh} – ${o.ga} ${o.away.name}`), 'end');
+      if(diagnostics)diagnostics.done=true;
       draw(); const b = q('[data-k=next]'); b.textContent = T('Devam ▶', 'Continue ▶'); b.classList.add('pr'); q('[data-k=end]').hidden = true; q('[data-k=spd]').hidden = true;
       b.onclick = close; b.focus();
     }
@@ -184,7 +190,7 @@ const Match2D = (() => {
         bt += dt; const k = clamp(bt / beat.d, 0, 1);
         if (beat.k === 'pass' || beat.k === 'shot' || beat.k === 'carry') { const e = k; ball.x = lerp(beat.from.x, beat.dest.x, e); ball.y = lerp(beat.from.y, beat.dest.y, e); ball.z = beat.lob ? Math.sin(k * Math.PI) * 4 : beat.k === 'shot' ? Math.sin(k * Math.PI) * 1.2 : 0; }
         else if (beat.k === 'result') { if (beat.out === 'post' || beat.out === 'save') { ball.x = lerp(ball.x, ball.tx, dt * 3); ball.y = lerp(ball.y, ball.ty, dt * 3); } ball.z = 0; }
-        if (k >= 1) { if (beat.k === 'pass' || beat.k === 'carry') { holder = beat.to; } startBeat(); }
+        if (k >= 1) { if(diagnostics&&beat.k==='pass')diagnostics.passes[diagnostics.passes.length-1].end=performance.now(); if (beat.k === 'pass' || beat.k === 'carry') { holder = beat.to; } startBeat(); }
       }
       if (holder && (!beat || (beat.k !== 'pass' && beat.k !== 'shot' && beat.k !== 'carry'))) { holder.tx += dir[att] * dt * 3; ball.x = lerp(ball.x, holder.x + dir[att] * .9, .4); ball.y = lerp(ball.y, holder.y, .4); }
       // takım şekilleri topa göre
@@ -202,6 +208,7 @@ const Match2D = (() => {
       // üst üste binmeyi önle (top sahibine dokunma)
       const all = P.h.concat(P.a);
       for (let i = 0; i < all.length; i++) for (let j = i + 1; j < all.length; j++) { const A = all[i], B = all[j], dx = B.x - A.x, dy = B.y - A.y, d = Math.hypot(dx, dy) || .01; if (d < 3) { const m = (3 - d) / 2, ux = dx / d, uy = dy / d; if (A !== holder) { A.x -= ux * m; A.y -= uy * m; } if (B !== holder) { B.x += ux * m; B.y += uy * m; } } }
+      if(diagnostics&&ts-lastSample>=120){lastSample=ts;diagnostics.frames.push({time:ts,beat:beat&&beat.k,ball:{x:ball.x,y:ball.y},players:P.h.concat(P.a).map(p=>({x:p.x,y:p.y,name:p.name}))});if(diagnostics.frames.length>1200)diagnostics.frames.shift();}
       draw();
       if (!closed && ci < clips.length) raf = requestAnimationFrame(tick);
     }
