@@ -216,3 +216,26 @@ test.describe('2D replay fixes',()=>{
   expect(await page.evaluate(()=>[...document.scripts].some(s=>s.src.includes('/js/match2d.js')))).toBeTruthy();
  });
 });
+
+test.describe('Manager career is a separate mode',()=>{
+ test.use({viewport:{width:390,height:844}});
+ test('career starts on its own route with its own save and leaves the draft untouched',async({page})=>{
+  await page.addInitScript(()=>sessionStorage.setItem('baba_ok','1'));
+  await page.goto(BASE+'#draft');
+  await expect(page.locator('#draft-section .mode-switch a[href="#career"]')).toBeVisible();
+  const draftBefore=await page.evaluate(()=>localStorage.getItem('draft_state'));
+  await page.goto(BASE+'#career');
+  await expect(page.locator('#career-section.cr-start')).toBeVisible();
+  await page.locator('[data-s="new"]').click();
+  await expect(page.locator('.cr-head')).toBeVisible();
+  await expect(page.locator('.cr-tabs button')).toHaveCount(5);
+  await page.locator('[data-sp="0"]').click();
+  await page.locator('[data-a="quick"]').click();
+  const save=await page.evaluate(()=>JSON.parse(localStorage.getItem('baba_career_save')));
+  expect(save.week).toBe(1);
+  expect(save.squad.length).toBeGreaterThan(15);
+  expect(await page.evaluate(()=>localStorage.getItem('draft_state'))).toBe(draftBefore);
+  await page.locator('[data-tab="league"]').click();
+  await expect(page.locator('.cr-table.league tr.me')).toBeVisible();
+ });
+});

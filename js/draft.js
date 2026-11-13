@@ -221,7 +221,7 @@ const Draft = (() => {
         <details class="tac-block cid-wrap" ${CID() && CID().name ? '' : 'open'}><summary><span class="cid-sum">${typeof ClubID !== 'undefined' ? ClubID.logo(CID() || {}, 34) : ''}<span><span class="eyebrow">${T('Kulüp kimliği', 'Club identity')}</span><b>${esc((CID() && CID().name) || T('İsim, renk, forma, şehir ve logo seç', 'Pick a name, colours, kit, city and crest'))}</b></span></span><em>${T('Düzenle', 'Edit')}</em></summary><div class="cid-host"></div></details>
         <div class="tac-block"><span class="eyebrow">${T('Teknik direktör', 'Manager')}</span><div class="coaches">${DRAFT_COACHES.map((c, i) => `<button class="coach ${S.coach === i ? 'on' : ''}" data-c="${i}"><b>${c.name}</b><small>${I18N.lang === 'en' ? (COACH_EN[c.note] || c.note) : c.note}</small><span>${T('H', 'A')} ${c.att >= 0 ? '+' : ''}${c.att} · ${T('S', 'D')} ${c.def >= 0 ? '+' : ''}${c.def}</span></button>`).join('')}</div></div>
         ${Object.entries(TACF()).map(([k, [lbl, opts]]) => `<div class="tac-block"><span class="eyebrow">${lbl}</span><div class="seg2">${opts.map(([v, t]) => `<button data-k="${k}" data-v="${v}" class="${S.tac[k] === v ? 'on' : ''}">${t}</button>`).join('')}</div></div>`).join('')}
-        <div class="dr-actions"><button class="pill ghost" data-a="back">← ${T('Kadroya dön', 'Back to squad')}</button><button class="pill big" data-a="play" ${S.coach === null ? 'disabled' : ''}>${T('SEZONU BAŞLAT', 'START SEASON')}</button></div><div class="dr-mode-switch"><label><input type="checkbox" data-a="weekly" ${S.managerMode === 'weekly' ? 'checked' : ''}> ${T('🎮 Kariyer modu: haftalık maç, kadro değişikliği, 2D maç özeti, transfer, form ve taktik','🎮 Career mode: weekly matches, squad changes, 2D highlights, transfers, form and tactics')}</label></div>
+        <div class="dr-actions"><button class="pill ghost" data-a="back">← ${T('Kadroya dön', 'Back to squad')}</button><button class="pill big" data-a="play" ${S.coach === null ? 'disabled' : ''}>${T('SEZONU BAŞLAT', 'START SEASON')}</button></div><div class="dr-mode-switch"><a class="dr-career-link" href="#career">🎮 ${T('Haftalık maçlar, transfer, kondisyon ve canlı maç için ayrı <b>Menajerlik Kariyeri</b> modunu aç →','For weekly matches, transfers, fitness and live matches, open the separate <b>Manager Career</b> mode →')}</a></div>
       </section>`;
     const cidHost = el.querySelector('.cid-host');
     if (cidHost && typeof ClubID !== 'undefined') ClubID.editor(cidHost, o => { const sm = el.querySelector('.cid-sum'); if (sm) sm.innerHTML = ClubID.logo(o, 34) + `<span><span class="eyebrow">${T('Kulüp kimliği', 'Club identity')}</span><b>${esc(o.name || T('İsim, renk, forma, şehir ve logo seç', 'Pick a name, colours, kit, city and crest'))}</b></span>`; });
@@ -229,7 +229,7 @@ const Draft = (() => {
     el.querySelectorAll('.coach').forEach(b => b.onclick = () => { S.coach = +b.dataset.c; renderTactics(); });
     el.querySelectorAll('.seg2 button').forEach(b => b.onclick = () => { S.tac[b.dataset.k] = b.dataset.v; renderTactics(); });
     el.querySelector('[data-a=back]').onclick = () => { S.phase = 'draft'; render(); };
-    el.querySelector('[data-a=play]').onclick = () => { if (S.coach !== null) season(S.managerMode === 'weekly'); };
+    el.querySelector('[data-a=play]').onclick = () => { if (S.coach !== null) season(false); };
     const ls2 = el.querySelector('[data-a=laststats]'); if (ls2) ls2.onclick = () => { S.phase = 'stats'; render(); };
   }
   function baseAD(xi) {
