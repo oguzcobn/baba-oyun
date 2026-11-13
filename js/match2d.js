@@ -427,6 +427,7 @@ const Match2D = (() => {
         if (typeof AdvAudio !== 'undefined') AdvAudio.note(2100, .35, 'square', .02);
       }
       if (beat.k === 'card') {
+        if (beat.red) fireShow(plan.c);
         setState('CARD_SHOWN'); const p = beat.p; fx.cards.push({ p, red: beat.red, t: performance.now() });
         bubble(beat.red ? (beat.dogso ? T('KIRMIZI KART! Son adam indirildi!', 'RED CARD! Last man brought down!') : T('KIRMIZI KART!', 'RED CARD!')) : T(`SARI KART — ${tn(p)}`, `YELLOW — ${tn(p)}`), p, beat.red ? '#c8102e' : '#c99a00');
         com(clips[ci].min, beat.red ? T(`🟥 ${p.name} kırmızı kartla oyun dışı! ${p.side === 'h' ? o.home.name : o.away.name} 10 kişi.`, `🟥 ${p.name} is sent off! ${p.side === 'h' ? o.home.name : o.away.name} are down to ten.`) : T(`🟨 ${p.name} sarı kart gördü.`, `🟨 ${p.name} is booked.`), beat.red ? 'red' : '');
@@ -459,7 +460,7 @@ const Match2D = (() => {
     function showResult(b) {
       const c = plan.c, S = plan.shooter, out = b.out;
       if (out === 'goal') {
-        needReset = true;
+        needReset = true; fireShow(plan.c);
         if (diagnostics) diagnostics.goals.push({ side: att, x: ball.x, y: ball.y, goalLine: dir[att] > 0 ? W : 0, valid: dir[att] > 0 ? ball.x >= W : ball.x <= 0 });
         c.counted = true; if (att === 'h') score[0]++; else score[1]++; q('.m2d-sc').textContent = score[0] + ' – ' + score[1]; flash = 'GOL!'; startCheer(att);
         showFlash(T('GOOOL!', 'GOAL!'), tn(S), att === 'h' ? hc : ac); shake(450);
@@ -490,8 +491,10 @@ const Match2D = (() => {
       const side = lastLoser ? (lastLoser === 'h' ? 'a' : 'h') : (Math.random() * 100 < momentum ? 'h' : 'a'); lastLoser = null;
       return { side, min: curMin, kind: 'idle', out: 'lost', kickoff: needReset };
     }
+    // canlı mod: skor / kart metni, olay sahada gerçekleştiği anda yazılır (hiç oynanmazsa klip biterken)
+    function fireShow(c) { if (c && c.onShow) { const f = c.onShow; c.onShow = null; try { f(); } catch (e) {} } }
     function nextClip() {
-      const prev = clips[ci]; if (prev && prev.cb) { const f = prev.cb; prev.cb = null; setTimeout(f, 0); }
+      const prev = clips[ci]; fireShow(prev); if (prev && prev.cb) { const f = prev.cb; prev.cb = null; setTimeout(f, 0); }
       ci++;
       if (ci >= clips.length) { if (LIVE && !ended) clips.push(filler()); else return fullTime(); }
       setupClip(clips[ci]); startBeat();
@@ -503,7 +506,7 @@ const Match2D = (() => {
       draw(); const b = q('[data-k=next]'); b.textContent = T('Devam ▶', 'Continue ▶'); b.classList.add('pr'); q('[data-k=end]').hidden = true; q('[data-k=spd]').hidden = true;
       b.onclick = close; b.focus();
     }
-    function close() { if (closed) return; closed = true; cancelAnimationFrame(raf); ov.remove(); if (!EMBED) document.body.classList.remove('m2d-open'); document.removeEventListener('keydown', onKey); onDone && onDone(); }
+    function close() { if (closed) return; closed = true; clips.forEach(fireShow); cancelAnimationFrame(raf); ov.remove(); if (!EMBED) document.body.classList.remove('m2d-open'); document.removeEventListener('keydown', onKey); onDone && onDone(); }
     function onKey(e) { if (e.key === 'Escape') { e.preventDefault(); ci = clips.length; fullTime(); } }
     if (!EMBED) document.addEventListener('keydown', onKey);
 
@@ -727,6 +730,7 @@ const Match2D = (() => {
         sub(side, outName, inName, inPos) { const p = P[side].find(x => x.name === outName && !x.off); if (p) { p.name = inName; if (inPos) p.pos = inPos; p.traits = typeof Traits !== 'undefined' ? Traits.of(inName, p.pos, 75) : []; bubble('🔁 ' + surname(inName), p, '#111'); } },
         sendOff(side, name) { const p = P[side].find(x => x.name === name); if (p) startLeaving(p); },
         end() { ended = true; },
+        flush() { clips.forEach(fireShow); },
         close
       };
       nextClip(); raf = requestAnimationFrame(tick);
