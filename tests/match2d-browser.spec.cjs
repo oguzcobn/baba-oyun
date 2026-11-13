@@ -48,7 +48,7 @@ for(const [name,device] of [['Desktop', {viewport:{width:1440,height:900}}],['iP
        expect(d,'player jumped '+after.players[j].name).toBeLessThanOrEqual(20*dt+2.5);
      }
    }
-   await page.screenshot({path:'test-results/match2d-'+name.replaceAll(' ','-')+'.png',fullPage:false});
+   await page.locator('.m2d-ov canvas').screenshot({path:'test-results/match2d-'+name.replaceAll(' ','-')+'.png',timeout:8000,animations:'disabled'}).catch(e=>console.warn('Optional screenshot unavailable:',e.message));
   });
  });
 }
