@@ -314,7 +314,7 @@ const Draft = (() => {
       const physical=weekly&&typeof DraftPhysics!=='undefined'?DraftPhysics.simulate(H,A,{homeBoost:.045,tempo:1}):null;
       let gh = physical?physical.gh:poisson(lh), ga = physical?physical.ga:poisson(la); const ev = [];
       // fark 4'ü geçince öndeki takım tempoyu düşürür
-      while (Math.abs(gh - ga) > 4 && Math.random() < .65) { if (gh > ga) gh--; else ga--; }
+      while (!physical && Math.abs(gh - ga) > 4 && Math.random() < .65) { if (gh > ga) gh--; else ga--; }
       if(physical){
         physical.ev.forEach(e=>{
           const t=e.t==='h'?H:A,sc=t.xi.find(p=>p.name===e.sc);
