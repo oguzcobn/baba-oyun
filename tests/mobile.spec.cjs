@@ -169,3 +169,18 @@ test.describe('HAYAT life simulation',()=>{
   await expect(page.locator('a[href="#hayat-oyunu"]')).toBeVisible();
  });
 });
+
+test.describe('Draft career and 2D match enhancements',()=>{
+ test.use({viewport:{width:390,height:844}});
+ test.beforeEach(async({page})=>page.addInitScript(()=>sessionStorage.setItem('baba_ok','1')));
+ test('career achievements render on draft screen',async({page})=>{
+  await page.goto(BASE+'#draft');
+  await expect(page.locator('.dr-achievements')).toBeVisible();
+  await expect(page.locator('.dr-achievement')).toHaveCount(6);
+ });
+ test('2D engine has responsive match analytics assets',async({page})=>{
+  await page.goto(BASE+'#draft');
+  expect(await page.evaluate(()=>typeof Match2D?.show==='function')).toBeTruthy();
+  expect(await page.evaluate(()=>[...document.styleSheets].some(x=>x.href?.includes('draft-analytics.css')))).toBeTruthy();
+ });
+});

@@ -44,12 +44,17 @@ const Match2D = (() => {
   function show(o, onDone) {
     const reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
     const clips = makeClips(o);
+    const matchStats={h:{shots:0,on:0,xg:0},a:{shots:0,on:0,xg:0}};
+    const shotQuality=c=>{const base=c.out==='goal'?.27:c.out==='save'?.19:c.out==='post'?.13:c.out==='block'?.09:.07;return Math.min(.65,base+(c.as?.035:0));};
+    clips.forEach(c=>{const st=matchStats[c.side];st.shots++;if(c.out==='goal'||c.out==='save')st.on++;st.xg+=shotQuality(c)});
+    const pct=clamp(Math.round(50+((o.lh||1)-(o.la||1))*7),30,70);
     let hc = o.home.c1 || '#c00', ac = o.away.c1 || '#036';
     if (cdist(hc, ac) < 120) ac = (o.away.c2 && cdist(hc, o.away.c2) > 120) ? o.away.c2 : (lum(hc) > 140 ? '#1d1d1d' : '#f4f4f4');
     const ov = document.createElement('div'); ov.className = 'm2d-ov';
     ov.innerHTML = `<div class="m2d" role="dialog" aria-modal="true" aria-label="${T('Maç özeti', 'Match highlights')}">
       <header class="m2d-top"><span class="m2d-tm"><i style="background:${hc}"></i>${esc(o.home.short || o.home.name)}</span><b class="m2d-sc">0 – 0</b><span class="m2d-tm r">${esc(o.away.short || o.away.name)}<i style="background:${ac}"></i></span><em class="m2d-min">0'</em></header>
       <div class="m2d-pitch"><canvas width="1050" height="680"></canvas><div class="m2d-flash" hidden></div></div>
+      <div class="m2d-analytics" aria-label="${T('Maç istatistikleri','Match statistics')}"><div class="m2d-analytics-row"><strong>${pct}%</strong><span>${T('Tahmini topa sahip olma','Estimated possession')}</span><strong>${100-pct}%</strong></div><div class="m2d-possession"><i style="width:${pct}%"></i></div><div class="m2d-analytics-row"><strong>${matchStats.h.shots}</strong><span>${T('Şut','Shots')}</span><strong>${matchStats.a.shots}</strong></div><div class="m2d-analytics-row"><strong>${matchStats.h.on}</strong><span>${T('İsabetli şut','Shots on target')}</span><strong>${matchStats.a.on}</strong></div><div class="m2d-analytics-row"><strong>${matchStats.h.xg.toFixed(2)}</strong><span>${T('Pozisyon xG (tahmini)','Highlight xG (estimate)')}</span><strong>${matchStats.a.xg.toFixed(2)}</strong></div></div>
       <div class="m2d-com" aria-live="polite"><span class="m2d-cm">0'</span><p>${T('Maç başlıyor…', 'Kick-off…')}</p></div>
       <div class="m2d-bar"><span class="m2d-cnt">0/${clips.length}</span><button data-k="spd">⏩ 2x</button><button data-k="next">⏭ ${T('Sonraki pozisyon', 'Next highlight')}</button><button data-k="end" class="pr">${T('Özeti bitir', 'Skip to full time')}</button></div></div>`;
     document.body.appendChild(ov); document.body.classList.add('m2d-open');
@@ -65,6 +70,7 @@ const Match2D = (() => {
     const mk = (team, side) => team.xi.map((p, i) => { const s = team.slots[i] || { x: 50, y: 50 }; const b = shape(s); return { name: p.name, pos: p.pos, num: num(p.pos, i), side, base: b, x: b.x, y: b.y, tx: b.x, ty: b.y }; });
     function num(pos, i) { return ({ KL: 1, BK: [2, 3][i % 2], ST: [4, 5][i % 2], OS: [6, 8, 10][i % 3], KN: [7, 11][i % 2], FV: 9 })[pos] || i + 1; }
     const P = { h: mk(o.home, 'h'), a: mk(o.away, 'a') };
+    // Stable formations: opponents keep their own half; possession drives compact defensive shifts.
     const ball = { x: W / 2, y: H / 2, z: 0, tx: W / 2, ty: H / 2 };
     let dir = { h: 1, a: -1 }, att = 'h', holder = null, beats = [], beat = null, bt = 0, flash = '';
 

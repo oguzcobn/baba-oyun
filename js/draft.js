@@ -54,8 +54,18 @@ const Draft = (() => {
   function careerHtml() {
     const rows = history();
     const titles = rows.filter(x => x.title).length, best = rows.length ? Math.max(...rows.map(x => x.pts)) : 0;
+    const wins=rows.reduce((a,x)=>a+(x.w||0),0), goals=rows.reduce((a,x)=>a+(x.gf||0),0);
+    const achievements=[
+      {name:T('İlk sezon','First season'),ok:rows.length>=1,icon:'🎟️'},
+      {name:T('İlk şampiyonluk','First title'),ok:titles>=1,icon:'🏆'},
+      {name:T('Üç şampiyonluk','Three titles'),ok:titles>=3,icon:'👑'},
+      {name:T('50 galibiyet','50 wins'),ok:wins>=50,icon:'⚽'},
+      {name:T('100 gol','100 goals'),ok:goals>=100,icon:'🥅'},
+      {name:T('80 puanlık sezon','80-point season'),ok:best>=80,icon:'⭐'}
+    ];
     return `<section class="dr-career"><div class="dr-career-head"><div><p class="eyebrow">${T('Draft kariyeri','Draft career')}</p><h2>${T('Sezon arşivi','Season history')}</h2></div><span class="chip">🏆 ${titles} ${T('şampiyonluk','titles')}</span></div>
       <div class="dr-career-kpis"><span><b>${rows.length}</b><small>${T('Sezon','Seasons')}</small></span><span><b>${best}</b><small>${T('En yüksek puan','Best points')}</small></span><span><b>${rows.length ? (rows.reduce((a,x)=>a+x.pts,0)/rows.length).toFixed(1) : '—'}</b><small>${T('Puan ortalaması','Average points')}</small></span></div>
+      <div class="dr-achievements" aria-label="${T('Kariyer başarıları','Career achievements')}">${achievements.map(a=>`<span class="dr-achievement ${a.ok?'earned':'locked'}" title="${a.ok?T('Kazanıldı','Unlocked'):T('Henüz kazanılmadı','Locked')}">${a.icon} ${a.name}</span>`).join('')}</div>
       ${rows.length ? `<div class="dr-career-list">${rows.slice(0,8).map(x=>`<div class="dr-career-row"><span>${new Date(x.date).toLocaleDateString(I18N.locale)}</span><strong>${x.pts} ${T('puan','pts')}</strong><span>#${x.rank}</span><small>${x.w}${T('G','W')} ${x.d}${T('B','D')} ${x.l}${T('M','L')}</small></div>`).join('')}</div>` : `<p class="muted">${T('İlk sezonunu tamamladığında sonuçların burada saklanacak.','Finish your first season to see results here.')}</p>`}
       </section>`;
   }
