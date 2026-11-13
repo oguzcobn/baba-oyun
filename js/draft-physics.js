@@ -26,7 +26,7 @@ const DraftPhysics=(()=>{
    const possession=[0,0];
    const tempo=clamp(opts.tempo||1,.7,1.4),press=clamp(opts.press||1,.65,1.5);
    // Independent attacking sequences over 90 minutes. Outcomes emerge from the actions.
-   const sequences=Math.round(46*tempo);
+   const sequences=Math.round(70*tempo);
    for(let seq=0;seq<sequences;seq++){
      const minute=clamp(Math.floor(seq*90/sequences+random()*3),1,90);
      const side=chance(clamp(.5+(strengths[0]-strengths[1])*.008+(opts.homeBoost||.035),.3,.7))?0:1;
