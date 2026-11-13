@@ -208,7 +208,7 @@ const Match2D = (() => {
       // üst üste binmeyi önle (top sahibine dokunma)
       const all = P.h.concat(P.a);
       for (let i = 0; i < all.length; i++) for (let j = i + 1; j < all.length; j++) { const A = all[i], B = all[j], dx = B.x - A.x, dy = B.y - A.y, d = Math.hypot(dx, dy) || .01; if (d < 3) { const m = (3 - d) / 2, ux = dx / d, uy = dy / d; if (A !== holder) { A.x -= ux * m; A.y -= uy * m; } if (B !== holder) { B.x += ux * m; B.y += uy * m; } } }
-      if(diagnostics&&ts-lastSample>=120){lastSample=ts;diagnostics.frames.push({time:ts,beat:beat&&beat.k,ball:{x:ball.x,y:ball.y},players:P.h.concat(P.a).map(p=>({x:p.x,y:p.y,name:p.name}))});if(diagnostics.frames.length>1200)diagnostics.frames.shift();}
+      if(diagnostics&&ts-lastSample>=120){lastSample=ts;diagnostics.frames.push({time:ts,clip:ci,beat:beat&&beat.k,ball:{x:ball.x,y:ball.y},players:P.h.concat(P.a).map(p=>({x:p.x,y:p.y,name:p.name}))});if(diagnostics.frames.length>1200)diagnostics.frames.shift();}
       draw();
       if (!closed && ci < clips.length) raf = requestAnimationFrame(tick);
     }
