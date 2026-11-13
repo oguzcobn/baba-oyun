@@ -47,3 +47,8 @@ body.m2d-open{overflow:hidden}
 .dr-squad-row em{font-style:normal;font-weight:800;font-variant-numeric:tabular-nums}
 .dr-squad h4{margin:10px 0 2px;font-size:12px;letter-spacing:.12em;text-transform:uppercase;opacity:.65}
 .dr-hl-toggle{display:flex;gap:8px;align-items:center;font-size:14px;font-weight:600;margin:6px 0}
+
+.m2d-state{position:absolute;top:12px;left:50%;transform:translateX(-50%);background:rgba(10,14,12,.82);color:#ffe45c;font-weight:900;letter-spacing:.18em;font-size:13px;padding:6px 14px;border-radius:999px;border:1px solid rgba(255,228,92,.5);pointer-events:none}
+.m2d-state[hidden]{display:none}
+.m2d-style{display:block;font-size:11px;font-weight:700;opacity:.8;white-space:nowrap}
+.m2d-pitch canvas{transition:none}

@@ -41,6 +41,19 @@ const Career = (() => {
     FV: [['bitirici', T('Bitirici', 'Poacher'), 1, 0], ['hedef', T('Hedef santrfor', 'Target man'), .8, .2], ['sahte9', T('Sahte 9', 'False nine'), .6, .4]]
   });
   const MENT = () => ({ savunma: [T('Otobüsü çek', 'Park the bus'), -4, 4], temkinli: [T('Temkinli', 'Cautious'), -2, 2], dengeli: [T('Dengeli', 'Balanced'), 0, 0], hucum: [T('Hücuma kalk', 'Attack'), 3, -3], tumhucum: [T('Topyekûn hücum', 'All-out attack'), 5, -5] });
+  const PLANS = () => (typeof Match2D !== 'undefined' && Match2D.STYLES ? Match2D.STYLES() : { dengeli: T('Dengeli', 'Balanced'), kisa: T('Kısa pasla çık', 'Play out short'), kanat: T('Kanatlardan orta', 'Cross from wide'), arapas: T('Ara pas & derin koşu', 'Through balls'), uzun: T('Uzun top & pivot', 'Long ball to target'), kontra: T('Kontra atak', 'Counter-attack') });
+  const traitsOf = p => p.traits || (typeof Traits !== 'undefined' ? Traits.of(p.name, p.pos, p.r) : []);
+  // plan × kadro özellikleri → gol beklentisi çarpanları (plan kadroya uyuyorsa işe yarar)
+  function planMod(style, xiIds, oppStronger) {
+    const xi = xiIds.map(id => P(id)).filter(Boolean), cnt = (t, pos) => xi.filter(p => (!pos || pos.includes(p.pos)) && traitsOf(p).includes(t)).length;
+    const aer = cnt('AERIAL_THREAT', ['FV', 'ST', 'OS']), aerFV = cnt('AERIAL_THREAT', ['FV']), pm = cnt('PLAYMAKER'), spd = cnt('SPEED_DRIBBLER', ['FV', 'KN']), fin = cnt('FINESSE_SHOT');
+    const m = { dengeli: [1, 1], kisa: [1 + .02 * pm, .9], kanat: [.95 + .07 * aer + .03 * spd, 1], arapas: [.94 + .06 * (pm + spd), 1.05], uzun: [.9 + .09 * aerFV + .03 * aer, 1], kontra: [oppStronger ? 1.1 : .94, .9] }[style] || [1, 1];
+    if (style === 'kanat' || style === 'dengeli') m[0] += .02 * fin;
+    return { me: clamp(m[0], .85, 1.25), op: clamp(m[1], .85, 1.15) };
+  }
+  // gol şekilleri: plana göre olasılık
+  const GOALS = () => ({ long: T('ceza sahası dışından müthiş bir şutla', 'with a stunning strike from outside the box'), cross: T('kanattan gelen ortada kafayla', 'with a header from a cross'), through: T('ara pasla kaleciyle karşı karşıya kalıp soğukkanlı bir vuruşla', 'one-on-one after a through ball, coolly'), corner: T('kornerden gelen topta', 'from a corner'), pen: T('penaltıdan', 'from the penalty spot'), rebound: T('dönen topu tamamlayarak', 'by tucking in the rebound'), fk: T('frikikten kavisli bir vuruşla', 'with a curling free kick'), cutin: T('içeri kat edip uzak köşeye plase vuruşla', 'cutting inside and curling into the far corner'), cutback: T('çizgiden geri çıkan topa vurarak', 'from a cutback'), target: T('pivotun indirdiği topa ilk vuruşla', 'first time from the target man’s lay-off') });
+  const GW = { dengeli: { long: 1, cross: 1, through: 1.2, corner: .6, pen: .4, rebound: .8, fk: .3, cutin: .8, cutback: 1, target: .6 }, kisa: { through: 1.8, cutback: 1.4, rebound: 1, cutin: 1, long: .6, cross: .5, corner: .5, pen: .5, fk: .3, target: .3 }, kanat: { cross: 2.6, cutback: 2, corner: .9, cutin: 1.2, through: .6, long: .5, rebound: .9, pen: .4, fk: .3, target: .5 }, arapas: { through: 3, cutin: .8, long: .6, cutback: .8, cross: .5, rebound: .6, corner: .5, pen: .5, fk: .3, target: .4 }, uzun: { target: 2.6, cross: 1.6, corner: 1, rebound: 1.2, long: 1, through: .5, cutback: .4, pen: .4, fk: .4, cutin: .3 }, kontra: { through: 2.8, cutin: 1, long: .8, cutback: 1, cross: .5, rebound: .5, corner: .4, pen: .5, fk: .3, target: .4 } };
   const clubs = () => (typeof DRAFT_CLUBS !== 'undefined' ? DRAFT_CLUBS : []);
   const CLUB = id => clubs().find(c => c.id === id);
   const NAT = n => (typeof DRAFT_NAT !== 'undefined' && DRAFT_NAT[n]) || 'TR';
@@ -202,12 +215,15 @@ const Career = (() => {
   function liveMatch(onEnd, quick) {
     const fx = myFixture(S.week); if (!fx) return;
     const F = FORMATIONS[S.formation];
-    const st = { min: 0, gm: 0, go: 0, ment: S.ment, xi: S.xi.slice(), played: new Set(S.xi.filter(Boolean)), subs: 0, red: 0, oppRed: 0, ev: [], lines: [], paused: false, speed: 1, done: false, cards: {}, injured: [], ga: {} };
+    const st = { min: 0, gm: 0, go: 0, ment: S.ment, style: S.style || 'dengeli', reds: [], xi: S.xi.slice(), played: new Set(S.xi.filter(Boolean)), subs: 0, red: 0, oppRed: 0, ev: [], lines: [], paused: false, speed: 1, done: false, cards: {}, injured: [], ga: {} };
     const opp = fx.opp, oAD = oppAD(opp), oXI = clubXI(CLUB(opp.id) || { players: [] });
     const meName = me().name, line = (txt, cls) => { st.lines.unshift({ m: st.min, txt, cls }); if (!quick) drawLines(); };
-    const lams = () => { const mAD = myAD(st.xi, st.ment, st.red * 3.5), o = { att: oAD.att - st.oppRed * 3.5, def: oAD.def - st.oppRed * 3.5 }; const [lh, la] = fx.home ? lambdas(mAD, o) : lambdas(o, mAD); return fx.home ? { me: lh, op: la } : { me: la, op: lh }; };
-    const scorerMe = () => { const ps = st.xi.map((id, i) => ({ p: P(id), pos: F[i][0] })).filter(x => x.p); const s = wpick(ps, x => (SCW[x.pos] || .2) * Math.pow(1.06, x.p.r - 70)); const as = chance(.78) ? wpick(ps.filter(x => x !== s), x => (ASW[x.pos] || .2) * Math.pow(1.04, x.p.r - 70)) : null; return [s, as]; };
-    const scorerOp = () => { const s = wpick(oXI, x => (SCW[x.pos] || .2) * Math.pow(1.06, x.r - 70)); const as = chance(.75) ? wpick(oXI.filter(x => x !== s), x => ASW[x.pos] || .2) : null; return [s, as]; };
+    const lams = () => { const mAD = myAD(st.xi, st.ment, st.red * 3.5), o = { att: oAD.att - st.oppRed * 3.5, def: oAD.def - st.oppRed * 3.5 }; const [lh, la] = fx.home ? lambdas(mAD, o) : lambdas(o, mAD); const pm = planMod(st.style, st.xi, (oAD.att + oAD.def) > (mAD.att + mAD.def) + 2); return fx.home ? { me: lh * pm.me, op: la * pm.op } : { me: la * pm.me, op: lh * pm.op }; };
+    // gol şekli: plana ve golcünün mevkisine uygun (stoper ara pasla değil kafayla / kornerden atar)
+    const POSHOW = { ST: ['corner', 'cross', 'rebound', 'long', 'fk'], BK: ['cross', 'rebound', 'long', 'cutback', 'corner'], OS: ['long', 'through', 'rebound', 'cutback', 'target', 'fk', 'pen', 'corner'], KN: ['cutin', 'through', 'cutback', 'cross', 'long', 'pen', 'rebound'], FV: ['through', 'cross', 'cutback', 'pen', 'rebound', 'corner', 'target', 'long'] };
+    const howFor = (p, styleKey) => { const w = GW[styleKey] || GW.dengeli, ok = (POSHOW[p.pos] || Object.keys(w)).filter(k => k !== 'fk' || traitsOf(p).includes('FREEKICK_MASTER') || p.pos === 'OS'); return wpick(ok, k => (w[k] || .3) * (k === 'cross' && traitsOf(p).includes('AERIAL_THREAT') ? 2 : 1) * (k === 'cutin' && traitsOf(p).includes('FINESSE_SHOT') ? 2.5 : 1)); };
+    const scorerMe = () => { const ps = st.xi.map((id, i) => ({ p: P(id), pos: F[i][0] })).filter(x => x.p); const s = wpick(ps.filter(x => x.pos !== 'KL'), x => (SCW[x.pos] || .2) * Math.pow(1.06, x.p.r - 70) * (traitsOf(x.p).includes('AERIAL_THREAT') && (st.style === 'kanat' || st.style === 'uzun') ? 1.4 : 1)); const as = chance(.78) ? wpick(ps.filter(x => x !== s), x => (ASW[x.pos] || .2) * Math.pow(1.04, x.p.r - 70)) : null; return [s, as]; };
+    const scorerOp = () => { const s = wpick(oXI.filter(x => x.pos !== 'KL'), x => (SCW[x.pos] || .2) * Math.pow(1.06, x.r - 70)); const as = chance(.75) ? wpick(oXI.filter(x => x !== s), x => ASW[x.pos] || .2) : null; return [s, as]; };
     const HOW = () => [T('ceza sahası dışından müthiş bir şutla', 'with a stunning strike from outside the box'), T('sağ kanattan gelen ortada kafayla', 'with a header from a right-wing cross'), T('kaleciyle karşı karşıya kalıp soğukkanlı bir vuruşla', 'one-on-one with the keeper, coolly'), T('kısa korner organizasyonunda', 'from a short corner routine'), T('penaltıdan', 'from the penalty spot'), T('kafa vuruşunda dönen topu tamamlayarak', 'by tucking in the rebound'), T('serbest vuruştan', 'from a free kick')];
     let ov = null;
     const minuteTick = () => {
@@ -215,15 +231,18 @@ const Career = (() => {
       st.min++;
       const L = lams(), m = st.min;
       // goller
-      if (Math.random() < L.me / 90) { st.gm++; let [s, a] = scorerMe(); const hi = rnd(HOW().length), how = HOW()[hi]; if (hi === 4 || hi === 6) a = null; s.p.g++; s.p.sg++; if (a) { a.p.a++; a.p.sa++; } st.ev.push({ t: 'me', sc: s.p.name, as: a && a.p.name, min: m }); line(`⚽ ${m}' ${T('GOL!', 'GOAL!')} ${s.p.name} ${how}${a ? ' — ' + T('asist', 'assist') + ': ' + a.p.name : ''}. ${meName} ${st.gm}–${st.go}`, 'goal'); }
-      if (Math.random() < L.op / 90) { st.go++; let [s, a] = scorerOp(); const hi = rnd(HOW().length); if (hi === 4 || hi === 6) a = null; st.ev.push({ t: 'op', sc: s.name, as: a && a.name, min: m }); line(`⚽ ${m}' ${opp.name}: ${s.name} ${HOW()[hi]}. ${st.gm}–${st.go}`, 'conc'); }
+      if (Math.random() < L.me / 90) { st.gm++; let [s, a] = scorerMe(); const how = howFor(s.p, st.style); if (how === 'pen' || how === 'fk') a = null;
+        if (how === 'pen') line(`🟨 ${m}' ${T(`Penaltı! ${s.p.name} ceza sahasında düşürüldü, ${pick(oXI).name} sarı kart gördü.`, `Penalty! ${s.p.name} is brought down in the box; ${pick(oXI).name} is booked.`)}`);
+        if (how === 'fk') line(`${m}' ${T(`Ceza sahası önünde faul, baraj kuruluyor.`, `Foul on the edge of the box; the wall is set.`)}`);
+        s.p.g++; s.p.sg++; if (a) { a.p.a++; a.p.sa++; } st.ev.push({ t: 'me', sc: s.p.name, as: a && a.p.name, min: m, how, style: st.style }); line(`⚽ ${m}' ${T('GOL!', 'GOAL!')} ${s.p.name} ${GOALS()[how]}${a ? ' — ' + T('asist', 'assist') + ': ' + a.p.name : ''}. ${meName} ${st.gm}–${st.go}`, 'goal'); }
+      if (Math.random() < L.op / 90) { st.go++; let [s, a] = scorerOp(); const how = howFor(s, 'dengeli'); if (how === 'pen' || how === 'fk') a = null; if (how === 'pen') line(`${m}' ${T(`${opp.name} lehine penaltı!`, `Penalty to ${opp.name}!`)}`); st.ev.push({ t: 'op', sc: s.name, as: a && a.name, min: m, how }); line(`⚽ ${m}' ${opp.name}: ${s.name} ${GOALS()[how]}. ${st.gm}–${st.go}`, 'conc'); }
       // büyük fırsatlar ve olaylar (renk katar)
       if (Math.random() < .035) { const mine = Math.random() < L.me / (L.me + L.op); const nm = mine ? (scorerMe()[0].p.name) : scorerOp()[0].name; line(`${m}' ${pick([T(`${nm} direğe nişanladı, top auta çıktı.`, `${nm} aims for the far post — just wide.`), T(`${nm}'nin şutunu kaleci son anda çeldi!`, `Great save to deny ${nm}!`), T(`${nm} ofsayta takıldı.`, `${nm} is caught offside.`), T(`${nm} vuruşunda top üst direği yalayarak dışarı çıktı!`, `${nm} clips the bar!`)])}`, 'ch'); }
       // kartlar
-      if (Math.random() < .011) { const cand = st.xi.map((id, i) => ({ p: P(id), pos: F[i][0] })).filter(x => x.p && x.pos !== 'KL'); const x = wpick(cand, c => ({ ST: 2, BK: 1.6, OS: 1.6, KN: .8, FV: .7 })[c.pos] || 1); if (x) { const n = (st.cards[x.p.id] || 0) + 1; st.cards[x.p.id] = n; if (n >= 2) { line(`🟥 ${m}' ${x.p.name} ${T('ikinci sarıdan kırmızı kart gördü! 10 kişi kaldık.', 'is sent off for a second yellow! Down to ten.')}`, 'red'); sendOff(x.p); } else { x.p.yc++; line(`🟨 ${m}' ${x.p.name} ${T('sarı kart gördü.', 'is booked.')}`); } } }
-      if (Math.random() < .0009) { const cand = st.xi.map(id => P(id)).filter(p => p && p.pos !== 'KL'); const p = pick(cand); if (p) { line(`🟥 ${m}' ${p.name} ${T('direkt kırmızı kart gördü!', 'is shown a straight red!')}`, 'red'); p.sus = 2; sendOff(p); } }
+      if (Math.random() < .011) { const cand = st.xi.map((id, i) => ({ p: P(id), pos: F[i][0] })).filter(x => x.p && x.pos !== 'KL'); const x = wpick(cand, c => ({ ST: 2, BK: 1.6, OS: 1.6, KN: .8, FV: .7 })[c.pos] || 1); if (x) { const n = (st.cards[x.p.id] || 0) + 1; st.cards[x.p.id] = n; if (n >= 2) { line(`🟥 ${m}' ${x.p.name} ${T('ikinci sarıdan kırmızı kart gördü! 10 kişi kaldık.', 'is sent off for a second yellow! Down to ten.')}`, 'red'); st.reds.push({ t: 'me', name: x.p.name, min: m, red: true, dogso: false }); sendOff(x.p); } else { x.p.yc++; line(`🟨 ${m}' ${x.p.name} ${T('sarı kart gördü.', 'is booked.')}`); } } }
+      if (Math.random() < .0009) { const cand = st.xi.map(id => P(id)).filter(p => p && p.pos !== 'KL'); const p = pick(cand); if (p) { line(`🟥 ${m}' ${p.name} ${T('son adam olarak rakibi düşürdü — direkt kırmızı kart!', 'brings down the last man — straight red!')}`, 'red'); st.reds.push({ t: 'me', name: p.name, min: m, red: true, dogso: true }); p.sus = 2; sendOff(p); } }
       if (Math.random() < .011) line(`🟨 ${m}' ${opp.name}: ${pick(oXI).name} ${T('sarı kart gördü.', 'is booked.')}`);
-      if (Math.random() < .0008 && !st.oppRed) { st.oppRed = 1; line(`🟥 ${m}' ${opp.name} ${T('10 kişi kaldı!', 'are down to ten!')}`, 'red'); }
+      if (Math.random() < .0008 && !st.oppRed) { st.oppRed = 1; const rp = pick(oXI.filter(x => x.pos !== 'KL' && x.pos !== 'FV')); st.reds.push({ t: 'op', name: rp.name, min: m, red: true, dogso: true }); line(`🟥 ${m}' ${rp.name} ${T(`kırmızı kart gördü, ${opp.name} 10 kişi kaldı!`, `is sent off — ${opp.name} are down to ten!`)}`, 'red'); }
       // kondisyon ve sakatlık
       st.xi.forEach(id => { const p = P(id); if (!p) return; p.cond = clamp(p.cond - (.22 + (p.age > 30 ? .05 : 0) + (st.ment === 'tumhucum' || st.ment === 'hucum' ? .03 : 0)), 0, 100);
         const risk = .00012 * (p.cond < 55 ? 3.2 : p.cond < 70 ? 1.8 : 1) * (1 - S.fac.med * .08);
@@ -264,10 +283,12 @@ const Career = (() => {
         <div class="cr-feed" aria-live="polite"></div>
         ${st.done ? `<div class="cr-live-bar">${typeof Match2D !== 'undefined' && st.ev.length ? `<button class="pill ghost" data-l="hl">📺 ${T('2D özet izle', 'Watch 2D highlights')}</button>` : ''}<button class="pill" data-l="close">${T('Devam ▶', 'Continue ▶')}</button></div>`
           : `<div class="cr-live-bar"><button class="pill ghost" data-l="pause">${st.paused ? '▶ ' + T('Devam et', 'Resume') : '⏸ ' + T('Durdur', 'Pause')}</button><button class="pill ghost" data-l="spd">⏩ ${st.speed}x</button><button class="pill ghost" data-l="sub">🔁 ${T('Oyuncu değiştir', 'Substitute')} (${5 - st.subs})</button><button class="pill ghost" data-l="skip">⏭ ${T('Sona atla', 'Skip to end')}</button></div>
-          <div class="cr-ment">${Object.entries(MENT()).map(([k, v]) => `<button data-m="${k}" class="${st.ment === k ? 'on' : ''}">${v[0]}</button>`).join('')}</div>`}
+          <div class="cr-ment" aria-label="${T('Mentalite', 'Mentality')}">${Object.entries(MENT()).map(([k, v]) => `<button data-m="${k}" class="${st.ment === k ? 'on' : ''}">${v[0]}</button>`).join('')}</div>
+          <p class="cr-plan-lbl">📋 ${T('Hücum planı', 'Attacking plan')}</p><div class="cr-ment cr-plan">${Object.entries(PLANS()).map(([k, v]) => `<button data-pl="${k}" class="${st.style === k ? 'on' : ''}">${v}</button>`).join('')}</div>`}
         <div class="cr-sub" hidden></div></div>`;
       drawLines();
       ov.querySelectorAll('[data-m]').forEach(b => b.onclick = () => { st.ment = b.dataset.m; line(`📋 ${st.min}' ${T('Taktik değişti', 'Tactical change')}: ${MENT()[st.ment][0]}`); renderLive(); });
+      ov.querySelectorAll('[data-pl]').forEach(b => b.onclick = () => { st.style = b.dataset.pl; const pm = planMod(st.style, st.xi); line(`📋 ${st.min}' ${T('Hücum planı', 'Attacking plan')}: ${PLANS()[st.style]}${pm.me >= 1.06 ? T(' — kadroya çok uygun!', ' — a great fit for this squad!') : pm.me < .97 ? T(' — kadro bu plana pek uygun değil.', ' — the squad doesn’t really suit this plan.') : ''}`); renderLive(); });
       const on = (k, f) => { const b = ov.querySelector(`[data-l=${k}]`); if (b) b.onclick = f; };
       on('pause', () => { st.paused = !st.paused; renderLive(); });
       on('spd', () => { st.speed = st.speed === 1 ? 2 : st.speed === 2 ? 4 : 1; restart(); renderLive(); });
@@ -291,13 +312,14 @@ const Career = (() => {
     }
     function watch2D() {
       const myXI = st.xi.map((id, i) => ({ p: P(id) || P(S.xi[i]), slot: { x: F[i][1], y: F[i][2] } })).filter(x => x.p);
-      const meSide = { name: meName, short: me().short, c1: me().c1, c2: me().c2, kit: me().kit, logo: me().identity && typeof ClubID !== 'undefined' && ClubID.get() ? ClubID.logo(ClubID.get(), 22) : '', xi: myXI.map(x => ({ name: x.p.name, pos: x.p.pos })), slots: myXI.map(x => x.slot) };
+      const meSide = { name: meName, short: me().short, c1: me().c1, c2: me().c2, kit: me().kit, logo: me().identity && typeof ClubID !== 'undefined' && ClubID.get() ? ClubID.logo(ClubID.get(), 22) : '', xi: myXI.map(x => ({ name: x.p.name, pos: x.p.pos, r: x.p.r, traits: traitsOf(x.p) })), slots: myXI.map(x => x.slot), style: st.style };
       const DS = { KL: [[50, 94]], ST: [[37, 80], [63, 80]], BK: [[12, 74], [88, 74]], OS: [[28, 54], [50, 60], [72, 54]], KN: [[14, 24], [86, 24]], FV: [[50, 14]] }, used = {};
-      const opSide = { name: opp.name, short: opp.short, c1: opp.c1, c2: opp.c2, kit: 'duz', xi: oXI.map(p => ({ name: p.name, pos: p.pos })), slots: oXI.map(p => { const k = used[p.pos] = (used[p.pos] || 0) + 1; const c = (DS[p.pos] || [[50, 50]])[k - 1] || [50, 50]; return { x: c[0], y: c[1] }; }) };
-      const ev = st.ev.map(e => ({ t: (e.t === 'me') === fx.home ? 'h' : 'a', sc: e.sc, as: e.as, min: e.min }));
+      const opSide = { name: opp.name, short: opp.short, c1: opp.c1, c2: opp.c2, kit: 'duz', xi: oXI.map(p => ({ name: p.name, pos: p.pos, r: p.r })), slots: oXI.map(p => { const k = used[p.pos] = (used[p.pos] || 0) + 1; const c = (DS[p.pos] || [[50, 50]])[k - 1] || [50, 50]; return { x: c[0], y: c[1] }; }) };
+      const ev = st.ev.map(e => ({ t: (e.t === 'me') === fx.home ? 'h' : 'a', sc: e.sc, as: e.as, min: e.min, how: e.how, style: e.style }));
+      const cards = st.reds.map(c => ({ t: (c.t === 'me') === fx.home ? 'h' : 'a', name: c.name, min: c.min, red: true, dogso: c.dogso }));
       const r = S.matchLog.res;
       ov.style.display = 'none';
-      Match2D.show({ home: fx.home ? meSide : opSide, away: fx.home ? opSide : meSide, gh: r.gh, ga: r.ga, lh: r.lh, la: r.la, ev }, () => { ov.style.display = ''; });
+      Match2D.show({ home: fx.home ? meSide : opSide, away: fx.home ? opSide : meSide, gh: r.gh, ga: r.ga, lh: r.lh, la: r.la, ev, cards }, () => { ov.style.display = ''; });
     }
     function close() { clearInterval(timer); ov.remove(); document.body.classList.remove('cr-live-open'); render(); }
     const restart = () => { clearInterval(timer); timer = setInterval(() => { if (!st.paused) minuteTick(); }, 160 / st.speed); };
@@ -439,7 +461,7 @@ const Career = (() => {
   /* ---------------- ekranlar ---------------- */
   const logoOf = (t, px) => t.identity && typeof ClubID !== 'undefined' && ClubID.get() ? ClubID.logo(ClubID.get(), px) : `<span class="cr-crest" style="--a:${t.c1};--b:${t.c2 || '#fff'};width:${px}px;height:${px}px">${esc((t.short || t.name).slice(0, 3))}</span>`;
   const condBar = p => `<i class="cr-cond ${p.cond < 60 ? 'low' : p.cond < 80 ? 'mid' : ''}"><b style="width:${p.cond}%"></b></i>`;
-  const badge = p => (p.inj ? `<span class="cr-b inj" title="${T('Sakat', 'Injured')}">🚑 ${p.inj}h</span>` : '') + (p.sus ? `<span class="cr-b sus" title="${T('Cezalı', 'Suspended')}">🟥 ${p.sus}</span>` : '') + (p.yc >= 4 ? `<span class="cr-b">🟨${p.yc}</span>` : '') + (p.listed ? `<span class="cr-b">💼</span>` : '') + (p.age <= 21 && p.pot - p.r >= 8 ? `<span class="cr-b pot">⭐ ${p.pot}</span>` : '');
+  const badge = p => (p.inj ? `<span class="cr-b inj" title="${T('Sakat', 'Injured')}">🚑 ${p.inj}h</span>` : '') + (p.sus ? `<span class="cr-b sus" title="${T('Cezalı', 'Suspended')}">🟥 ${p.sus}</span>` : '') + (p.yc >= 4 ? `<span class="cr-b">🟨${p.yc}</span>` : '') + (p.listed ? `<span class="cr-b">💼</span>` : '') + (p.age <= 21 && p.pot - p.r >= 8 ? `<span class="cr-b pot">⭐ ${p.pot}</span>` : '') + (typeof Traits !== 'undefined' ? traitsOf(p).map(t => `<span class="cr-b tr" title="${esc(Traits.LABEL()[t])}">${Traits.ICON[t]}</span>`).join('') : '');
 
   function startScreen() {
     let ds = null; try { ds = JSON.parse(localStorage.getItem('draft_state')); } catch (e) {}
@@ -508,6 +530,7 @@ const Career = (() => {
     const sel = selSlot != null ? F[selSlot] : null;
     return `<div class="cr-row wrap"><div class="cr-seg">${Object.keys(FORMATIONS).map(f => `<button data-f="${f}" class="${S.formation === f ? 'on' : ''}">${f}</button>`).join('')}</div>
         <div class="cr-seg">${Object.entries(MENT()).map(([k, v]) => `<button data-ment="${k}" class="${S.ment === k ? 'on' : ''}">${v[0]}</button>`).join('')}</div><button class="pill sm" data-a="auto">✨ ${T('Otomatik en iyi 11', 'Auto-pick best XI')}</button></div>
+      <div class="cr-row wrap"><span class="eyebrow" style="margin:0">📋 ${T('Hücum planı', 'Attacking plan')}</span><div class="cr-seg">${Object.entries(PLANS()).map(([k, v]) => `<button data-plan="${k}" class="${(S.style || 'dengeli') === k ? 'on' : ''}">${v}</button>`).join('')}</div><small class="muted">${(() => { const pm = planMod(S.style || 'dengeli', S.xi); return pm.me >= 1.06 ? T('Kadroya çok uygun', 'Great fit for the squad') : pm.me < .97 ? T('Kadro bu plana uygun değil', 'Squad doesn’t suit it') : T('Uyum: normal', 'Fit: normal'); })()}</small></div>
       <p class="muted sm">${T('Sahadan bir mevkiye dokun, sonra yedeklerden oyuncu seç. Yorgun (%60 altı) oyuncuların sakatlanma riski yüksektir — rotasyon yap.', 'Tap a slot on the pitch, then pick a player from the list. Tired players (under 60%) are injury-prone — rotate.')}</p>
       <div class="cr-squad">
         <div class="cr-pitch">${F.map(([pos, x, y], i) => { const p = P(S.xi[i]); const pen = p ? fit(p, pos) : 0;
@@ -571,6 +594,7 @@ const Career = (() => {
     $('[data-ev]').forEach(b => b.onclick = () => resolve(b.dataset.ev));
     $('[data-f]').forEach(b => b.onclick = () => { S.formation = b.dataset.f; S.roles = {}; selSlot = null; autoXI(); save(); render(); });
     $('[data-ment]').forEach(b => b.onclick = () => { S.ment = b.dataset.ment; save(); render(); });
+    $('[data-plan]').forEach(b => b.onclick = () => { S.style = b.dataset.plan; save(); render(); });
     $('[data-slot]').forEach(b => b.onclick = () => { selSlot = selSlot === +b.dataset.slot ? null : +b.dataset.slot; render(); });
     $('[data-pick]').forEach(b => b.onclick = () => { if (selSlot == null) return toast(T('Önce sahadan bir mevki seç', 'Pick a slot on the pitch first')); const p = P(b.dataset.pick); if (!avail(p)) return; S.xi[selSlot] = p.id; save(); selSlot = null; render(); });
     $('[data-role]').forEach(s => s.onchange = () => { S.roles[+s.dataset.role] = s.value; save(); });

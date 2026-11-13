@@ -2,7 +2,12 @@
    BABA. Draft — 2D maç özeti motoru (FM2006 tarzı, kuşbakışı)
    Sadece önemli pozisyonlar: goller + büyük fırsatlar. Tüm maçı izleme yok.
    Match2D.show(opts, onDone)
-     opts: { home:{name,short,c1,c2,xi:[{name,pos}], slots:[{x,y}]}, away:{…}, gh, ga, ev:[{t:'h'|'a',sc,as,min}], lh, la }
+     opts: { home:{name,short,c1,c2,kit,logo,style,xi:[{name,pos,r,traits?}], slots:[{x,y}]}, away:{…}, gh, ga,
+             ev:[{t:'h'|'a',sc,as,min,how?,style?}], cards:[{t,name,min,red,dogso}], lh, la }
+   Motor: bölgesel karar ağacı (getZone/decidePlayerAction), baskı algılama (isUnderPressure),
+          top sürme hız cezası, destek koşuları, ip gibi savunma çizgisi + tek kişilik pres ve kademe,
+          ver-kaç, ters top, bindirme + cutback/orta, ara pas, pivot istasyonu, içe kat edip plase,
+          durum makinesi PLAYING / CORNER / FREEKICK / PENALTY / CARD_SHOWN, kart ve efektler
    ===================================================================== */
 const Match2D = (() => {
   'use strict';
@@ -21,9 +26,15 @@ const Match2D = (() => {
   const cdist = (a, b) => { const x = hex2rgb(a), y = hex2rgb(b); return Math.hypot(x[0] - y[0], x[1] - y[1], x[2] - y[2]); };
   const lum = c => { const [r, g, b] = hex2rgb(c); return (r * 299 + g * 587 + b * 114) / 1000; };
 
-  /* --------- klipleri oluştur: goller + kaçan / kurtarılan büyük fırsatlar --------- */
+  /* =====================================================================
+     KLİPLER — goller, büyük fırsatlar, kırmızı kartlar
+     Her klibin bir "plan"ı vardır: hangi hücum seti (overlap, through, target, cutin, counter,
+     corner, fk, pen, red) ile hangi oyuncunun hangi sonuca (goal/save/miss/post/block) ulaşacağı.
+     ===================================================================== */
+  const HOWSET = { pen: 'pen', fk: 'fk', corner: 'corner', header: 'cross', cross: 'cross', through: 'through', long: 'target', rebound: 'overlap', cutin: 'cutin', target: 'target', counter: 'counter', cutback: 'overlap', one: 'through' };
   function makeClips(o) {
-    const clips = o.ev.map(e => ({ side: e.t, min: e.min, sc: e.sc, as: e.as, trail:e.trail, out: 'goal' })), ch = [];
+    const clips = o.ev.map(e => ({ side: e.t, min: e.min, sc: e.sc, as: e.as, trail: e.trail, out: 'goal', how: e.how, style: e.style })), ch = [];
+    (o.cards || []).filter(c => c.red).forEach(c => clips.push({ side: c.t === 'h' ? 'a' : 'h', min: c.min, kind: 'red', fouler: c.name, dogso: c.dogso !== false, out: pick(['save', 'miss', 'block']) }));
     ['h', 'a'].forEach(side => {
       const team = o[side === 'h' ? 'home' : 'away'], n = Math.min(3, poisson((side === 'h' ? o.lh : o.la) * 1.15 + .35));
       for (let i = 0; i < n; i++) {
@@ -33,158 +44,415 @@ const Match2D = (() => {
     });
     ch.sort(() => Math.random() - .5).slice(0, Math.max(2, 10 - clips.length)).forEach(c => clips.push(c));
     clips.sort((a, b) => a.min - b.min);
-    // aynı dakikaya düşenleri ayır
     for (let i = 1; i < clips.length; i++) if (clips[i].min <= clips[i - 1].min) clips[i].min = Math.min(90, clips[i - 1].min + 1);
     return clips;
   }
+  // Hücum planları (maç içi taktik): kısa pas, kanat ortası, ara pas, uzun top, kontra, dengeli
+  const STYLES = () => ({ dengeli: T('Dengeli', 'Balanced'), kisa: T('Kısa pasla çık', 'Play out short'), kanat: T('Kanatlardan orta', 'Cross from wide'), arapas: T('Ara pas & derin koşu', 'Through balls'), uzun: T('Uzun top & pivot', 'Long ball to target'), kontra: T('Kontra atak', 'Counter-attack') });
+  const BUILD = { kisa: [4, 6], dengeli: [2, 3], kanat: [2, 3], arapas: [2, 3], uzun: [0, 1], kontra: [0, 1] };
 
   /* --------- dizilişler --------- */
-  // slot (x: 0-100 genişlik, y: 0 hücum – 100 kale) → sahaya göre, sağa hücum eden takım için
+  // slot (x: 0-100 genişlik, y: 0 hücum – 100 kale) → sağa hücum eden takım için saha koordinatı
   const shape = s => ({ x: 3 + (100 - s.y) / 100 * 52, y: 4 + s.x / 100 * 60 });
+  const zoneOf = x => x < 35 ? 1 : x < 70 ? 2 : 3; // getZone(): 1 savunma, 2 orta saha, 3 hücum (hücum yönü sağa)
+  const RUN = 8.2, JOG = 6.4, DRIB = .78; // m/s; top sürerken hız %22 düşer (DRIB)
+  const has = (p, t) => p && p.traits && p.traits.includes(t);
+  const runSp = p => RUN * (has(p, 'SPEED_DRIBBLER') ? 1.18 : 1);
+  const dribSp = p => RUN * DRIB * (has(p, 'SPEED_DRIBBLER') ? 1.3 : 1);
+  const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 
   function show(o, onDone) {
     const reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
     const clips = makeClips(o);
-    const matchStats={h:{shots:0,on:0,xg:0},a:{shots:0,on:0,xg:0}};
-    const shotQuality=c=>{const base=c.out==='goal'?.27:c.out==='save'?.19:c.out==='post'?.13:c.out==='block'?.09:.07;return Math.min(.65,base+(c.as?.035:0));};
-    clips.forEach(c=>{const st=matchStats[c.side];st.shots++;if(c.out==='goal'||c.out==='save')st.on++;st.xg+=shotQuality(c)});
-    if(o.physics){['h','a'].forEach((side,i)=>{matchStats[side]={shots:o.physics.shots[i],on:o.physics.on[i],xg:o.physics.xg[i]};});}
-    const pct=o.physics?o.physics.possession[0]:clamp(Math.round(50+((o.lh||1)-(o.la||1))*7),30,70);
+    const matchStats = { h: { shots: 0, on: 0, xg: 0 }, a: { shots: 0, on: 0, xg: 0 } };
+    const shotQuality = c => { const base = c.out === 'goal' ? .27 : c.out === 'save' ? .19 : c.out === 'post' ? .13 : c.out === 'block' ? .09 : .07; return Math.min(.65, base + (c.as ? .035 : 0)); };
+    clips.forEach(c => { const st = matchStats[c.side]; st.shots++; if (c.out === 'goal' || c.out === 'save') st.on++; st.xg += shotQuality(c); });
+    if (o.physics) { ['h', 'a'].forEach((side, i) => { matchStats[side] = { shots: o.physics.shots[i], on: o.physics.on[i], xg: o.physics.xg[i] }; }); }
+    const pct = o.physics ? o.physics.possession[0] : clamp(Math.round(50 + ((o.lh || 1) - (o.la || 1)) * 7), 30, 70);
     let hc = o.home.c1 || '#c00', ac = o.away.c1 || '#036';
     if (cdist(hc, ac) < 120) ac = (o.away.c2 && cdist(hc, o.away.c2) > 120) ? o.away.c2 : (lum(hc) > 140 ? '#1d1d1d' : '#f4f4f4');
+    const styleOf = side => (side === 'h' ? o.home.style : o.away.style) || 'dengeli';
     const ov = document.createElement('div'); ov.className = 'm2d-ov';
     ov.innerHTML = `<div class="m2d" role="dialog" aria-modal="true" aria-label="${T('Maç özeti', 'Match highlights')}">
       <header class="m2d-top"><span class="m2d-tm">${o.home.logo || `<i style="background:${hc}"></i>`}${esc(o.home.short || o.home.name)}</span><b class="m2d-sc">0 – 0</b><span class="m2d-tm r">${esc(o.away.short || o.away.name)}${o.away.logo || `<i style="background:${ac}"></i>`}</span><em class="m2d-min">0'</em></header>
-      <div class="m2d-pitch"><canvas width="1050" height="680"></canvas><div class="m2d-flash" hidden></div></div>
-      <div class="m2d-analytics" aria-label="${T('Maç istatistikleri','Match statistics')}"><div class="m2d-analytics-row"><strong>${pct}%</strong><span>${T('Tahmini topa sahip olma','Estimated possession')}</span><strong>${100-pct}%</strong></div><div class="m2d-possession"><i style="width:${pct}%"></i></div><div class="m2d-analytics-row"><strong>${matchStats.h.shots}</strong><span>${T('Şut','Shots')}</span><strong>${matchStats.a.shots}</strong></div><div class="m2d-analytics-row"><strong>${matchStats.h.on}</strong><span>${T('İsabetli şut','Shots on target')}</span><strong>${matchStats.a.on}</strong></div><div class="m2d-analytics-row"><strong>${matchStats.h.xg.toFixed(2)}</strong><span>${T('Pozisyon xG (tahmini)','Highlight xG (estimate)')}</span><strong>${matchStats.a.xg.toFixed(2)}</strong></div></div>
+      <div class="m2d-pitch"><canvas width="1050" height="680"></canvas><div class="m2d-flash" hidden></div><span class="m2d-state" hidden></span></div>
+      <div class="m2d-analytics" aria-label="${T('Maç istatistikleri', 'Match statistics')}"><div class="m2d-analytics-row"><strong>${pct}%</strong><span>${T('Tahmini topa sahip olma', 'Estimated possession')}</span><strong>${100 - pct}%</strong></div><div class="m2d-possession"><i style="width:${pct}%"></i></div><div class="m2d-analytics-row"><strong>${matchStats.h.shots}</strong><span>${T('Şut', 'Shots')}</span><strong>${matchStats.a.shots}</strong></div><div class="m2d-analytics-row"><strong>${matchStats.h.on}</strong><span>${T('İsabetli şut', 'Shots on target')}</span><strong>${matchStats.a.on}</strong></div><div class="m2d-analytics-row"><strong>${matchStats.h.xg.toFixed(2)}</strong><span>${T('Pozisyon xG (tahmini)', 'Highlight xG (estimate)')}</span><strong>${matchStats.a.xg.toFixed(2)}</strong></div></div>
       <div class="m2d-com" aria-live="polite"><span class="m2d-cm">0'</span><p>${T('Maç başlıyor…', 'Kick-off…')}</p></div>
       <div class="m2d-bar"><span class="m2d-cnt">0/${clips.length}</span><button data-k="spd">⏩ 2x</button><button data-k="next">⏭ ${T('Sonraki pozisyon', 'Next highlight')}</button><button data-k="end" class="pr">${T('Özeti bitir', 'Skip to full time')}</button></div></div>`;
     document.body.appendChild(ov); document.body.classList.add('m2d-open');
     const cv = ov.querySelector('canvas'), ctx = cv.getContext('2d'), q = s => ov.querySelector(s);
-    // dar ve dikey ekranlarda saha dikey çizilir (oyuncular daha büyük görünür)
     const vert = innerWidth < 640 && innerHeight > innerWidth;
-    if (vert) { cv.width = 680; cv.height = 1050; ov.querySelector('.m2d').classList.add('vert'); }
+    if (vert) ov.querySelector('.m2d').classList.add('vert');
     const SC = 10, proj = (x, y) => vert ? [(H - y + STAND) * SC, (x + STAND) * SC] : [(x + STAND) * SC, (y + STAND) * SC];
     cv.width = (vert ? H : W) * SC + STAND * 2 * SC;
     cv.height = (vert ? W : H) * SC + STAND * 2 * SC;
     let speed = 1, score = [0, 0], ci = -1, raf = 0, closed = false;
     const com = (min, txt, cls) => { q('.m2d-cm').textContent = min + "'"; const p = q('.m2d-com p'); p.textContent = txt; p.className = cls || ''; };
 
-    // oyuncu nesneleri
-    const mk = (team, side) => team.xi.map((p, i) => { const s = team.slots[i] || { x: 50, y: 50 }; const b = shape(s); return { name: p.name, pos: p.pos, num: num(p.pos, i), side, base: b, x: b.x, y: b.y, tx: b.x, ty: b.y }; });
+    /* --------- oyuncu nesneleri (Player) ---------
+       { name, pos, num, side, base, x, y, tx, ty, traits:[...], off:false, run:{x,y,sp}|null } */
     function num(pos, i) { return ({ KL: 1, BK: [2, 3][i % 2], ST: [4, 5][i % 2], OS: [6, 8, 10][i % 3], KN: [7, 11][i % 2], FV: 9 })[pos] || i + 1; }
+    const mk = (team, side) => team.xi.map((p, i) => { const s = team.slots[i] || { x: 50, y: 50 }, b = shape(s); return { name: p.name, pos: p.pos, r: p.r || 75, num: num(p.pos, i), side, base: b, x: b.x, y: b.y, tx: b.x, ty: b.y, traits: p.traits || (typeof Traits !== 'undefined' ? Traits.of(p.name, p.pos, p.r || 75) : []), off: false, run: null }; });
     const P = { h: mk(o.home, 'h'), a: mk(o.away, 'a') };
-    // Stable formations: opponents keep their own half; possession drives compact defensive shifts.
-    const ball = { x: W / 2, y: H / 2, z: 0, tx: W / 2, ty: H / 2 };
-    let dir = { h: 1, a: -1 }, att = 'h', holder = null, beats = [], beat = null, bt = 0, flash = '';
-    // Opt-in diagnostics for real-browser Playwright checks; never enabled for normal players.
-    const diagnostics=window.__BABA_MATCH_TEST__===true?{frames:[],goals:[],passes:[],runs:[],stadium:{margin:STAND,width:cv.width,height:cv.height},done:false}:null;
-    if(diagnostics)window.__BABA_MATCH_DIAGNOSTICS__=diagnostics;
-    let lastSample=0;
+    const ball = { x: W / 2, y: H / 2, z: 0, tx: W / 2, ty: H / 2, trail: [] };
+    let dir = { h: 1, a: -1 }, att = 'h', holder = null, beats = [], beat = null, bt = 0, flash = '', plan = null, seg = 0, state = 'PLAYING', carryDist = 0;
+    const fx = { bubbles: [], cards: [], shakeUntil: 0, aim: null };
+    // Playwright testleri için isteğe bağlı tanılama (normal oyuncularda kapalı)
+    const diagnostics = window.__BABA_MATCH_TEST__ === true ? { frames: [], goals: [], passes: [], runs: [], states: [], stadium: { margin: STAND, width: cv.width, height: cv.height }, done: false } : null;
+    if (diagnostics) window.__BABA_MATCH_DIAGNOSTICS__ = diagnostics;
+    let lastSample = 0;
 
+    const toField = (side, pt) => dir[side] > 0 ? { x: pt.x, y: pt.y } : { x: W - pt.x, y: H - pt.y }; // kendi-hücum çerçevesi ↔ saha (kendinin tersi)
+    const AF = p => toField(att, p); // saha → hücum çerçevesi (ve tersi)
+    const def = () => att === 'h' ? 'a' : 'h';
+    const live = side => P[side].filter(p => !p.off);
+    const find = (side, name) => live(side).find(p => p.name === name) || null;
+    const nearest = (side, pt, ex) => live(side).filter(p => p.pos !== 'KL' && !(ex || []).includes(p)).sort((a, b) => dist(a, pt) - dist(b, pt));
+    const tn = p => surname(p.name);
+    const bubble = (txt, at, col) => fx.bubbles.push({ txt, x: at.x, y: at.y, t: performance.now(), col: col || '#111' });
+    const shake = ms => { fx.shakeUntil = performance.now() + (ms || 380); };
+    const setState = s => { state = s; const el = q('.m2d-state'); el.hidden = s === 'PLAYING'; el.textContent = { CORNER: T('KORNER', 'CORNER'), FREEKICK: T('FRİKİK', 'FREE KICK'), PENALTY: T('PENALTI', 'PENALTY'), CARD_SHOWN: T('KART', 'CARD') }[s] || ''; if (diagnostics) diagnostics.states.push(s); };
 
-    const toField = (side, pt) => dir[side] > 0 ? pt : { x: W - pt.x, y: H - pt.y };
-    const find = (side, name) => P[side].find(p => p.name === name) || wpick(P[side], p => SCW[p.pos] || .2);
+    /* --------- baskı algılama: önündeki 45° koni içinde 5 m'den yakın rakip ya da 2,5 m içinde herhangi bir rakip --------- */
+    function isUnderPressure(p) {
+      const a = AF(p);
+      return live(def()).some(d => { const b = AF(d), dx = b.x - a.x, dy = Math.abs(b.y - a.y), dd = Math.hypot(dx, dy); return dd < 2.5 || (dx > 0 && dy <= dx && dd < 5); });
+    }
+    // pas kanalı açık mı? rakip, pas çizgisine 1,6 m'den yakınsa kanal kapalıdır
+    function laneOpen(a, b) {
+      return !live(def()).some(d => { const vx = b.x - a.x, vy = b.y - a.y, L = vx * vx + vy * vy || 1, t = clamp(((d.x - a.x) * vx + (d.y - a.y) * vy) / L, 0, 1); return Math.hypot(a.x + vx * t - d.x, a.y + vy * t - d.y) < 1.6 && t > .1 && t < .95; });
+    }
 
+    /* --------- plan kurulumu --------- */
+    function setFor(c, shooter) {
+      if (c.kind === 'red') return 'red';
+      if (c.how && HOWSET[c.how]) return HOWSET[c.how];
+      const st = styleOf(c.side), pos = shooter ? shooter.pos : 'FV';
+      const W8 = { overlap: 2, through: 2, target: 1.1, cutin: 1, cross: 1, counter: .5, corner: .55, fk: .35, pen: .2 };
+      const mul = { kisa: { through: 1.4, overlap: 1.2 }, kanat: { overlap: 2.3, cross: 2.5, cutin: 1.3 }, arapas: { through: 2.6, counter: 1.3 }, uzun: { target: 2.6, cross: 1.6 }, kontra: { counter: 4, through: 1.3 } }[st] || {};
+      const ok = { FV: ['through', 'cross', 'overlap', 'counter', 'pen', 'corner'], KN: ['cutin', 'through', 'overlap', 'counter', 'pen'], OS: ['target', 'overlap', 'through', 'fk', 'pen'], ST: ['corner', 'fk'], BK: ['corner', 'overlap', 'fk'], KL: ['pen'] }[pos] || ['through'];
+      const list = ok.filter(s => s !== 'fk' || has(shooter, 'FREEKICK_MASTER') || pos === 'OS');
+      return wpick(list, s => (W8[s] || .5) * (mul[s] || 1) * (s === 'cross' && has(shooter, 'AERIAL_THREAT') ? 2.4 : 1) * (s === 'cutin' && has(shooter, 'FINESSE_SHOT') ? 3 : 1) * (s === 'through' && has(shooter, 'SPEED_DRIBBLER') ? 1.6 : 1) * (s === 'target' && live(c.side).some(p => p.pos === 'FV' && has(p, 'AERIAL_THREAT')) ? 1.8 : 1));
+    }
     function setupClip(c) {
-      att = c.side; const def = att === 'h' ? 'a' : 'h', second = c.min > 45;
-      dir = { h: second ? -1 : 1, a: second ? 1 : -1 };
-      const shooter = find(att, c.sc), assister = c.as ? find(att, c.as) : null;
-      // atak hattı: derinden başlayan oyuncu → ara pas(lar) → asist → şut
-      const deep = wpick(P[att].filter(p => p !== shooter && p !== assister && p.pos !== 'KL'), p => ({ ST: 1.5, BK: 1.5, OS: 3, KN: 1, FV: .2 })[p.pos] || .5);
-      const mid = wpick(P[att].filter(p => p !== shooter && p !== assister && p !== deep && p.pos !== 'KL'), p => ({ OS: 3, KN: 2, BK: 1, FV: .6, ST: .4 })[p.pos] || .5);
-      const lane = 8 + Math.random() * 52, wide = assister && (assister.pos === 'KN' || assister.pos === 'BK');
-      const pts = [
-        { p: deep, at: { x: 34 + rnd(12), y: clamp(lane + (Math.random() - .5) * 20, 6, 62) } },
-        { p: mid, at: { x: 55 + rnd(10), y: clamp(lane + (Math.random() - .5) * 24, 6, 62) } },
-        { p: assister || mid, at: wide ? { x: 84 + rnd(12), y: Math.random() < .5 ? 6 + rnd(8) : 54 + rnd(8) } : { x: 74 + rnd(8), y: 18 + rnd(32) } },
-        { p: shooter, at: { x: 86 + rnd(10), y: 22 + rnd(24) } }
-      ].filter((x, i, a) => i === 0 || x.p !== a[i - 1].p);
-      // Reuse actual possession pass participants and target locations for simulated goals.
-      if(Array.isArray(c.trail)&&c.trail.some(x=>x.type==='pass')){
-        const passes=c.trail.filter(x=>x.type==='pass').slice(-3);
-        const actual=passes.map(x=>({p:find(att,x.to),at:{x:dir[att]===1?x.tx:105-x.tx,y:dir[att]===1?x.ty:68-x.ty}}));
-        const shot=c.trail.findLast?c.trail.findLast(x=>x.type==='shot'):c.trail.filter(x=>x.type==='shot').pop();
-        if(shot)actual.push({p:shooter,at:{x:dir[att]===1?shot.x:105-shot.x,y:dir[att]===1?shot.y:68-shot.y}});
-        if(actual.length>1){pts.splice(0,pts.length,{p:find(att,passes[0].player),at:{x:dir[att]===1?passes[0].x:105-passes[0].x,y:dir[att]===1?passes[0].y:68-passes[0].y}},...actual.filter((v,i,a)=>i===0||v.p!==a[i-1].p));}
-      }
-      // herkesi formasyonuna yerleştir, topu ilk oyuncuya ver
-      ['h', 'a'].forEach(s => P[s].forEach(p => { const f = toField(s, shapeFor(p, s, pts[0].at.x, pts[0].at.y)); p.x = p.tx = f.x; p.y = p.ty = f.y; }));
-      const f0 = toField(att, pts[0].at); Object.assign(pts[0].p, { x: f0.x, y: f0.y, tx: f0.x, ty: f0.y });
-      // pas alacak oyuncular zaten koşuya başlamış olsun
-      for (let i = 1; i < pts.length; i++) { const p = pts[i].p, f = toField(att, pts[i].at), k = .45 + i * .1; p.x = p.tx = lerp(p.x, f.x, k); p.y = p.ty = lerp(p.y, f.y, k); }
-      holder = pts[0].p; ball.x = f0.x; ball.y = f0.y; ball.z = 0;
-      beats = [];
-      const tn = n => surname(n.name);
-      beats.push({ k: 'hold', d: .9, txt: c.min + "' " + T(`${tn(holder)} topla ileri çıkıyor`, `${tn(holder)} brings the ball forward`) });
-      for (let i = 1; i < pts.length; i++) {
-        const last = i === pts.length - 1, cross = last && wide;
-        beats.push({ k: 'pass', d: cross ? 1.0 : .75, to: pts[i].p, at: pts[i].at, lob: cross, txt: cross ? T(`${tn(pts[i - 1].p)} ortayı yapıyor…`, `${tn(pts[i - 1].p)} whips in a cross…`) : i === pts.length - 1 ? T(`${tn(pts[i - 1].p)} ara pası attı, ${tn(pts[i].p)} kaleyle karşı karşıya!`, `${tn(pts[i - 1].p)} slides it through — ${tn(pts[i].p)} is clean through!`) : T(`${tn(pts[i - 1].p)} → ${tn(pts[i].p)}`, `${tn(pts[i - 1].p)} finds ${tn(pts[i].p)}`) });
-        beats.push({ k: 'hold', d: last ? .35 : .55 });
-      }
-      const gy = c.out === 'miss' ? (Math.random() < .5 ? GY0 - 2 - Math.random() * 4 : GY1 + 2 + Math.random() * 4) : c.out === 'post' ? (Math.random() < .5 ? GY0 : GY1) : GY0 + 1 + Math.random() * 5.3;
-      // Do not animate implausible full-pitch shots: carry possession into the final third first.
-      const finalPoint=pts[pts.length-1].at;
-      if(finalPoint.x<72){
-        const strikerPoint={x:clamp(82+Math.random()*9,82,94),y:clamp(finalPoint.y,22,46)};
-        beats.push({k:'carry',d:Math.max(1.5,(strikerPoint.x-finalPoint.x)/9),at:strikerPoint,to:shooter,txt:T('Hücum üçüncü bölgeye taşınıyor…','The attack advances into the final third…')});
-      }
-      beats.push({ k: 'shot', d: .85, out: c.out, gy, txt: T(`${tn(shooter)} vuruyor…`, `${tn(shooter)} shoots…`) });
-      beats.push({ k: 'result', d: c.out === 'goal' ? 2.4 : 1.6, out: c.out, shooter, assister, c });
+      att = c.side; seg++; setState('PLAYING');
+      const second = c.min > 45; dir = { h: second ? -1 : 1, a: second ? 1 : -1 };
+      P.h.concat(P.a).forEach(p => { p.run = null; });
+      let shooter = c.sc ? find(att, c.sc) : null;
+      if (!shooter) shooter = wpick(live(att).filter(p => p.pos !== 'KL'), p => SCW[p.pos] || .2);
+      const assister = c.as ? find(att, c.as) : null;
+      plan = { c, set: setFor(c, shooter), shooter, assister, out: c.out, stage: 'build', dec: 0, style: styleOf(att) };
+      if (c.kind === 'red') { plan.fouler = find(def(), c.fouler) || nearest(def(), AF({ x: 85, y: 34 }))[0]; plan.shooter = wpick(live(att).filter(p => p.pos === 'FV' || p.pos === 'KN'), p => has(p, 'SPEED_DRIBBLER') ? 3 : 1) || shooter; }
+      const br = BUILD[plan.set === 'counter' ? 'kontra' : plan.style] || BUILD.dengeli; plan.maxBuild = br[0] + rnd(br[1] - br[0] + 1);
+      // başlangıç: kısa pasla çıkışta kaleci/stoper, kontra ve kırmızı kart pozisyonunda geriden top kazanımı
+      const startPool = plan.set === 'counter' ? live(att).filter(p => p.pos === 'ST' || p.pos === 'OS') : plan.style === 'kisa' ? live(att).filter(p => p.pos === 'KL' || p.pos === 'ST') : live(att).filter(p => p.pos === 'ST' || p.pos === 'BK' || p.pos === 'OS');
+      const starter = pick(startPool.length ? startPool : live(att));
+      const sa = { x: starter.base.x, y: starter.base.y }; // base zaten takımın kendi hücum çerçevesinde
+      const startAt = { x: clamp(starter.pos === 'KL' ? 8 : plan.set === 'counter' ? 26 + rnd(10) : sa.x + 6, 6, 50), y: clamp(sa.y, 8, 60) };
+      // herkes formasyonunda, top ilk oyuncuda
+      ['h', 'a'].forEach(s => P[s].forEach(p => { if (p.off) return; const f = toField(s, shapeFor(p, s, startAt.x, startAt.y)); p.x = p.tx = f.x; p.y = p.ty = f.y; }));
+      const f0 = toField(att, startAt); Object.assign(starter, { x: f0.x, y: f0.y, tx: f0.x, ty: f0.y });
+      holder = starter; ball.x = f0.x + dir[att] * .9; ball.y = f0.y; ball.z = 0; ball.trail = []; carryDist = 0;
+      beats = [{ k: 'hold', d: .8, txt: c.min + "' " + (plan.set === 'counter' ? T(`${tn(holder)} topu kaptı — kontra atak!`, `${tn(holder)} wins it back — counter-attack!`) : plan.style === 'kisa' ? T(`${tn(holder)} kısa pasla oyunu kuruyor`, `${tn(holder)} plays out from the back`) : T(`${tn(holder)} topla buluştu`, `${tn(holder)} picks up the ball`)) }];
+      if (plan.set === 'counter') bubble(T('KONTRA!', 'COUNTER!'), f0, '#ff4d00');
       beat = null; bt = 0; flash = ''; q('.m2d-flash').hidden = true;
       q('.m2d-min').textContent = c.min + "'"; q('.m2d-cnt').textContent = (ci + 1) + '/' + clips.length;
     }
-    // ballX: atak takımının top konumu (hücum yönü sağa); savunma takımı geriye çekilir
+
+    /* --------- takım şekilleri: hücumda yayılma, savunmada ip gibi hareket eden çizgi --------- */
     function shapeFor(p, side, bx, by) {
-      const s = p.base, attacking = side === att;
-      if (attacking) { const push = clamp((bx - 30) * .6, 0, 34) * (p.pos === 'KL' ? .3 : 1); return { x: clamp(s.x + push, 2, 100), y: s.y }; }
-      // savunan takım için koordinatlar kendi yönüne göre: önce kendi çerçevesinde hesapla
-      const own = 105 - bx, back = clamp((own - 52) * .4, -12, 8);
-      return { x: clamp(s.x + back + (p.pos === 'KL' ? 0 : 6), 2, 55), y: p.pos === 'KL' ? s.y : lerp(lerp(s.y, 34, .3), H - by, .22) };
+      const s = p.base;
+      if (side === att) { const push = clamp((bx - 30) * .6, 0, 34) * (p.pos === 'KL' ? .3 : 1); return { x: clamp(s.x + push, 2, 100), y: s.y }; }
+      const own = W - bx, oy = H - by, line = clamp(own - 18, 6, 40); // savunma çizgisi: topun 18 m gerisi
+      const off = { KL: 0, ST: 0, BK: 1, OS: p.base.x < 26 ? 9 : 16, KN: 24, FV: 33 }[p.pos] || 14, pull = { ST: .28, BK: .28, OS: .38, KN: .22, FV: .2 }[p.pos] || .25;
+      if (p.pos === 'KL') return { x: s.x, y: s.y };
+      return { x: clamp(line + off, 4, 70), y: clamp(lerp(lerp(s.y, 34, .25), oy, pull), 3, 65) };
     }
+    // Pres ve kademe: yalnızca en yakın 1 savunmacı baskı yapar, ikinci adam kademede durur
+    function defenseUpdate() {
+      const d = def(), outfield = live(d).filter(p => p.pos !== 'KL'), ord = outfield.slice().sort((a, b) => dist(a, ball) - dist(b, ball));
+      const presser = ord[0], cover = ord[1], goalSide = dir[att];
+      if (presser && state === 'PLAYING') { presser.tx = ball.x + goalSide * 1.7; presser.ty = ball.y; presser.sp = 7.4; }
+      if (cover && state === 'PLAYING') { cover.tx = lerp(ball.x + goalSide * 8, cover.tx, .4); cover.ty = lerp(ball.y, 34, .35); cover.sp = 6.8; }
+      // bölge 3'te ve orta ihtimalinde stoperler ceza sahasındaki hücumculara yapışır
+      const bA = AF(ball);
+      if (bA.x > 76 && state === 'PLAYING') {
+        const box = live(att).filter(p => { const a = AF(p); return a.x > 86 && a.y > 18 && a.y < 50; });
+        live(d).filter(p => p.pos === 'ST' || p.pos === 'BK').forEach(m => { if (m === presser) return; const t = box.sort((a, b) => dist(a, m) - dist(b, m))[0]; if (t && dist(t, m) < 14) { m.tx = t.x + goalSide * 1.1; m.ty = t.y + (m.y < t.y ? -.6 : .6); m.sp = 7.2; } });
+      }
+      return { presser, cover };
+    }
+    // destek koşuları: top sahibine en yakın 2 takım arkadaşı boş alana açılır (üçgen)
+    function supportRuns(ex) {
+      if (!holder) return;
+      const h = AF(holder), mates = live(att).filter(p => p !== holder && p.pos !== 'KL' && !(ex || []).includes(p) && !p.run).sort((a, b) => dist(a, holder) - dist(b, holder)).slice(0, 2);
+      mates.forEach((m, i) => {
+        const side = h.y < 34 ? 1 : -1, cand = [{ x: h.x + 9, y: h.y + side * 10 }, { x: h.x + 4, y: h.y - side * 12 }, { x: h.x - 6, y: h.y + side * 13 }, { x: h.x + 14, y: h.y }];
+        const best = cand.map(c => ({ c: { x: clamp(c.x, 4, 100), y: clamp(c.y, 4, 64) } })).map(o => Object.assign(o, { s: Math.min(...live(def()).map(d => dist(AF(d), o.c))) })).sort((a, b) => b.s - a.s)[i] || { c: cand[0] };
+        const f = toField(att, best.c); m.run = { x: f.x, y: f.y, sp: JOG + 1 };
+      });
+    }
+
+    /* --------- karar mekanizması: decidePlayerAction() --------- */
+    const passTo = (to, at, o2) => Object.assign({ k: 'pass', to, at }, o2 || {});
+    const towards = (p, at, m) => { const a = AF(p), dx = at.x - a.x, dy = at.y - a.y, L = Math.hypot(dx, dy) || 1, k = Math.min(1, m / L); return { x: a.x + dx * k, y: a.y + dy * k }; };
+    function decidePlayerAction() {
+      plan.dec++;
+      const a = AF(ball), z = zoneOf(a.x), mates = live(att).filter(p => p !== holder), pressed = isUnderPressure(holder);
+      if (plan.stage === 'build' && (plan.dec > plan.maxBuild || z === 3)) plan.stage = 'final';
+      if (plan.stage === 'final') return finalPhase();
+      // 1. BÖLGE — geriden oyun kurma: topla depar yok, kısa pas / bek / stoper / kaleci
+      if (z === 1) {
+        const longOk = (plan.style === 'uzun' || has(holder, 'PLAYMAKER')) && !pressed;
+        if (longOk) { const tgt = wpick(mates.filter(p => p.pos === 'FV' || p.pos === 'KN'), p => has(p, 'AERIAL_THREAT') ? 3 : 1); if (tgt) return [passTo(tgt, { x: clamp(AF(tgt).x + 6, 55, 84), y: AF(tgt).y }, { lob: true, txt: T(`${tn(holder)} uzun diyagonal topu gönderdi`, `${tn(holder)} sends a long diagonal`) })]; }
+        if (pressed) { const back = mates.filter(p => (p.pos === 'KL' || p.pos === 'ST') && laneOpen(holder, p)).sort((x, y) => dist(x, holder) - dist(y, holder))[0]; if (back) return [passTo(back, AF(back), { txt: T(`${tn(holder)} baskı altında, geri döndü`, `${tn(holder)} under pressure, plays it back`) })]; }
+        const opts = mates.filter(p => (p.pos === 'OS' || p.pos === 'BK' || p.pos === 'ST') && laneOpen(holder, p) && AF(p).x > a.x - 8);
+        const t = wpick(opts.length ? opts : mates.filter(p => p.pos !== 'KL'), p => ({ OS: 3, BK: 2, ST: 1 })[p.pos] || .5);
+        return [passTo(t, { x: clamp(AF(t).x + 3, 6, 60), y: AF(t).y }, { txt: T(`${tn(holder)} → ${tn(t)}`, `${tn(holder)} finds ${tn(t)}`) })];
+      }
+      // 2. BÖLGE — oyunun yönünü değiştirme, ver-kaç, ters top
+      const crowd = live(def()).filter(d => dist(d, holder) < 9).length;
+      const near = mates.filter(p => p.pos !== 'KL' && dist(p, holder) < 16 && laneOpen(holder, p)).sort((x, y) => dist(x, holder) - dist(y, holder))[0];
+      if (crowd >= 2 && near && plan.dec < plan.maxBuild + 2) {
+        // Ver-kaç (one-two): pas ver, hemen ileri koş, top boşlukta seni bulsun
+        const runTo = { x: clamp(a.x + 13, 40, 88), y: clamp(a.y + (a.y < 34 ? 3 : -3), 6, 62) }, me = holder;
+        return [passTo(near, AF(near), { txt: T(`${tn(holder)} ile ${tn(near)} arasında duvar pas…`, `${tn(holder)} plays a one-two with ${tn(near)}…`), runs: [{ p: me, at: runTo, sp: runSp(me) }] }), { k: 'call', fn: () => [passTo(me, runTo, { through: true, txt: T(`…ve top geri ${tn(me)}'de!`, `…and it comes back to ${tn(me)}!`) })] }];
+      }
+      const central = a.y > 22 && a.y < 46, centerClosed = live(def()).filter(d => { const b = AF(d); return b.x > a.x && b.x < a.x + 18 && b.y > 22 && b.y < 46; }).length >= 3;
+      if (central && centerClosed) {
+        const far = mates.filter(p => (p.pos === 'BK' || p.pos === 'KN') && Math.abs(AF(p).y - a.y) > 18).sort((x, y) => AF(y).x - AF(x).x)[0];
+        if (far) return [passTo(far, { x: clamp(AF(far).x + 5, 45, 80), y: AF(far).y < 34 ? 7 : 61 }, { lob: true, txt: T(`Merkez kapalı: ${tn(holder)} oyunu ${tn(far)}'a çevirdi`, `Centre blocked: ${tn(holder)} switches play to ${tn(far)}`) })];
+      }
+      if (!pressed && carryDist < 8 && Math.random() < .35) return [{ k: 'carry', to: holder, at: towards(holder, { x: a.x + 8, y: a.y }, 7), txt: T(`${tn(holder)} topu taşıyor`, `${tn(holder)} drives forward`) }];
+      const fwd = mates.filter(p => p.pos !== 'KL' && AF(p).x > a.x - 2 && laneOpen(holder, p));
+      const t = wpick(fwd.length ? fwd : mates.filter(p => p.pos !== 'KL'), p => (AF(p).x - a.x + 12) * (p === plan.assister ? 1.6 : 1));
+      return [passTo(t, { x: clamp(AF(t).x + 4, 30, 82), y: AF(t).y }, { txt: T(`${tn(holder)} → ${tn(t)}`, `${tn(holder)} finds ${tn(t)}`) })];
+    }
+
+    /* --------- 3. BÖLGE — hücum setleri (evaluateAttackOptions) --------- */
+    function wideMan() { const pref = plan.assister && (plan.assister.pos === 'KN' || plan.assister.pos === 'BK') ? plan.assister : null; return pref || wpick(live(att).filter(p => p.pos === 'KN' && p !== plan.shooter), p => has(p, 'SPEED_DRIBBLER') ? 2 : 1) || live(att).find(p => p.pos === 'BK'); }
+    function getTo(p, at, txt) {
+      if (p !== holder) return [passTo(p, at, { txt })];
+      if (dist(AF(holder), at) <= 14) return [];
+      // top zaten bu oyuncudaysa ve hedef uzaksa: solo koşu yerine ver-kaç ile ilerle
+      const mate = live(att).filter(m => m !== holder && m.pos !== 'KL' && laneOpen(holder, m)).sort((a, b) => dist(a, holder) - dist(b, holder))[0];
+      if (!mate) return [];
+      return [passTo(mate, AF(mate), { txt: T(`${tn(holder)} verdi ve koştu`, `${tn(holder)} gives and goes`), runs: [{ p: holder, at, sp: runSp(holder) }] }), { k: 'call', fn: () => [passTo(p, at, { follow: true, txt })] }];
+    }
+    function finalPhase() {
+      const S = plan.shooter, set = plan.set, out = plan.out; plan.stage = 'done';
+      const gy = out === 'miss' ? (Math.random() < .5 ? GY0 - 1.5 - Math.random() * 3 : GY1 + 1.5 + Math.random() * 3) : out === 'post' ? (Math.random() < .5 ? GY0 : GY1) : GY0 + .8 + Math.random() * 5.7;
+      const shot = (o2) => Object.assign({ k: 'shot', out, gy, txt: T(`${tn(S)} vuruyor…`, `${tn(S)} shoots…`) }, o2 || {});
+      const L = [];
+      if (set === 'overlap' || set === 'cross') {
+        const Wm = wideMan() || plan.assister || S, flank = AF(Wm).y < 34 ? 6 : 62, fb = live(att).find(p => p.pos === 'BK' && Math.abs(AF(p).y - flank) < 26 && p !== Wm);
+        L.push(...getTo(Wm, { x: 76 + rnd(6), y: flank }, T(`Top kanatta ${tn(Wm)}'de`, `It's out wide to ${tn(Wm)}`)));
+        const runs = [{ p: S, at: { x: 92 + rnd(3), y: set === 'cross' ? (flank < 34 ? 40 : 28) : 34 + (Math.random() - .5) * 6 }, sp: runSp(S) }];
+        if (fb) runs.push({ p: fb, at: { x: 95, y: flank < 34 ? 3 : 65 }, sp: runSp(fb) });
+        L.push({ k: 'hold', d: .45, runs, txt: fb ? T(`${tn(fb)} bindirmeye çıkıyor!`, `${tn(fb)} overlaps!`) : '' });
+        let crosser = Wm;
+        if (fb && !has(Wm, 'SPEED_DRIBBLER') && Math.random() < .6) { L.push(passTo(fb, { x: 95, y: flank < 34 ? 3 : 65 }, { through: true, txt: T(`${tn(Wm)} bindiren ${tn(fb)}'i gördü`, `${tn(Wm)} releases the overlapping ${tn(fb)}`) })); crosser = fb; }
+        else L.push({ k: 'carry', to: Wm, at: { x: 96, y: flank < 34 ? 4 : 64 }, txt: T(`${tn(Wm)} çizgiye iniyor`, `${tn(Wm)} gets to the byline`) });
+        if (set === 'cross' || has(S, 'AERIAL_THREAT')) { L.push({ k: 'call', fn: () => [passTo(S, null, { lob: true, cross: true, follow: true, txt: T(`${tn(crosser)} arka direğe ortaladı…`, `${tn(crosser)} crosses to the back post…`) }), shot({ header: true, txt: T(`${tn(S)} kafayı vurdu!`, `${tn(S)} rises for the header!`) })] }); }
+        else L.push({ k: 'call', fn: () => [passTo(S, null, { follow: true, txt: T(`${tn(crosser)} geri çıkardı (cutback)!`, `${tn(crosser)} pulls it back!`) }), shot({ power: true })] });
+        return L;
+      }
+      if (set === 'through' || set === 'counter') {
+        const pm = (plan.assister && plan.assister.pos === 'OS' ? plan.assister : null) || live(att).filter(p => p.pos === 'OS' && p !== S).sort((a, b) => (has(b, 'PLAYMAKER') - has(a, 'PLAYMAKER')) || b.r - a.r)[0] || plan.assister;
+        if (pm && pm !== S) L.push(...getTo(pm, { x: set === 'counter' ? 58 : 66 + rnd(6), y: 30 + rnd(10) }, T(`${tn(pm)} topu ayağına aldı, kafasını kaldırdı`, `${tn(pm)} takes it, head up`)));
+        const lineX = (() => { const ds = live(def()).filter(p => p.pos === 'ST' || p.pos === 'BK').map(p => AF(p).x); return ds.length ? Math.max(...ds) : 88; })();
+        const spot = { x: clamp(Math.max(lineX + 6, 86), 84, 93), y: 30 + rnd(8) };
+        L.push({ k: 'hold', d: .35, runs: [{ p: S, at: towards(S, spot, 4), sp: runSp(S) }], txt: T(`${tn(S)} stoperlerin arasına çapraz koşuya başladı`, `${tn(S)} darts between the centre-backs`) });
+        L.push({ k: 'call', fn: () => { if (has(pm, 'PLAYMAKER')) bubble(T(`${tn(pm)}'ten kilit pas!`, `Killer ball from ${tn(pm)}!`), holder, '#0b3d91'); return [passTo(S, spot, { through: true, txt: T(`Savunma arkasına ara pas — ${tn(S)} kaleciyle karşı karşıya!`, `Through ball — ${tn(S)} is one-on-one!`) }), shot({ oneOnOne: true })]; } });
+        return L;
+      }
+      if (set === 'target') {
+        const tg = live(att).filter(p => p.pos === 'FV' && p !== S).sort((a, b) => has(b, 'AERIAL_THREAT') - has(a, 'AERIAL_THREAT'))[0] || plan.assister || live(att).find(p => p.pos === 'KN' && p !== S);
+        if (tg && tg !== S) {
+          const tAt = { x: 80 + rnd(4), y: 30 + rnd(8) };
+          L.push(...getTo(tg, tAt, T(`Uzun top pivot ${tn(tg)}'e`, `Long ball up to ${tn(tg)}`)).map(b => Object.assign(b, { lob: plan.style === 'uzun' || dist(AF(holder), tAt) > 28 })));
+          L.push({ k: 'hold', d: .9, hold: true, runs: [{ p: S, at: { x: 76 + rnd(3), y: tAt.y + (Math.random() < .5 ? -7 : 7) }, sp: runSp(S) }], txt: T(`${tn(tg)} stoperi sırtına aldı, topu saklıyor`, `${tn(tg)} holds it up with his back to goal`) });
+          L.push({ k: 'call', fn: () => [passTo(S, null, { follow: true, txt: T(`${tn(tg)} tek pasla ${tn(S)}'e indirdi`, `${tn(tg)} lays it off to ${tn(S)}`) }), shot({ power: true })] });
+          return L;
+        }
+      }
+      if (set === 'cutin' || set === 'target') {
+        const flank = AF(S).y < 34 ? 8 : 60;
+        L.push(...getTo(S, { x: 78 + rnd(5), y: flank }, T(`${tn(S)} sağ çaprazda topla buluştu`, `${tn(S)} picks it up out wide`)));
+        L.push({ k: 'carry', to: S, at: { x: 85, y: flank < 34 ? 24 : 44 }, txt: T(`${tn(S)} içeri kat ediyor…`, `${tn(S)} cuts inside…`) });
+        L.push(shot({ curve: true, far: true, txt: T(`${tn(S)} uzak köşeye plase!`, `${tn(S)} curls it towards the far corner!`) }));
+        return L;
+      }
+      if (set === 'corner') {
+        const sh = wpick(live(att).filter(p => p.pos === 'FV' || p.pos === 'KN' || p.pos === 'OS'), p => SCW[p.pos] || 1);
+        L.push(...getTo(sh, { x: 84, y: 30 + rnd(8) }, T(`${tn(sh)} ceza sahası önünde`, `${tn(sh)} on the edge of the box`)));
+        L.push({ k: 'shot', out: 'corner', gy: Math.random() < .5 ? GY0 + 1 : GY1 - 1, txt: T(`${tn(sh)}'in şutu savunmadan sekti…`, `${tn(sh)}'s shot is deflected…`) });
+        return L;
+      }
+      if (set === 'fk' || set === 'pen' || set === 'red') {
+        const victim = set === 'red' ? S : (live(att).filter(p => p.pos === 'KN' || p.pos === 'FV' || p.pos === 'OS').sort((a, b) => has(b, 'SPEED_DRIBBLER') - has(a, 'SPEED_DRIBBLER'))[0] || S);
+        const inBox = set === 'pen' || (set === 'red' && Math.random() < .35);
+        const at = inBox ? { x: 91 + rnd(3), y: 28 + rnd(12) } : { x: 79 + rnd(4), y: 24 + rnd(20) };
+        if (set === 'red') { const pm = live(att).find(p => p.pos === 'OS'); if (pm) L.push(...getTo(pm, { x: 62, y: 34 })); L.push(passTo(victim, towards(victim, at, 30), { through: true, txt: T(`${tn(victim)} savunma arkasına sarktı, kaleye gidiyor!`, `${tn(victim)} breaks clear and heads for goal!`) })); }
+        else { L.push(...getTo(victim, { x: at.x - 9, y: at.y }, T(`${tn(victim)} topla ceza sahasına yaklaşıyor`, `${tn(victim)} approaches the box`))); L.push({ k: 'carry', to: victim, at, txt: T(`${tn(victim)} çalıma gidiyor…`, `${tn(victim)} takes on his man…`) }); }
+        L.push({ k: 'foul', victim, fouler: plan.fouler || null, card: set === 'red' ? 'R' : (Math.random() < .55 ? 'Y' : null), dogso: set === 'red' && plan.c.dogso, next: inBox ? 'PENALTY' : 'FREEKICK' });
+        return L;
+      }
+      // yedek: düz bitiriş
+      L.push(...getTo(S, { x: 86, y: 34 }));
+      L.push(shot());
+      return L;
+    }
+
+    /* --------- duran toplar: CORNER / FREEKICK / PENALTY ve kart gösterimi --------- */
+    function place(p, at) { if (!p || p.off) return; const f = toField(p.side, p.side === att ? at : at); Object.assign(p, { x: f.x, y: f.y, tx: f.x, ty: f.y, run: null }); }
+    const placeAF = (p, at) => { const f = AF(at); Object.assign(p, { x: f.x, y: f.y, tx: f.x, ty: f.y, run: null }); }; // hücum çerçevesinde konumla (her iki takım için)
+    function setPiece(kind, spotAF, nextOut) {
+      seg++; setState(kind); holder = null; ball.trail = [];
+      const A = live(att), D = live(def()), kp = D.find(p => p.pos === 'KL'), S = plan.shooter;
+      const taker = kind === 'PENALTY' ? (A.find(p => has(p, 'FREEKICK_MASTER') && plan.c.out === 'goal' && !plan.c.sc) || S) : (A.filter(p => has(p, 'FREEKICK_MASTER'))[0] || (kind === 'CORNER' ? A.find(p => p.pos === 'KN') : null) || A.filter(p => p.pos === 'OS').sort((a, b) => b.r - a.r)[0] || S);
+      if (kind === 'FREEKICK' && plan.c.out === 'goal' && plan.c.sc) plan.shooter = taker === S ? S : (has(taker, 'FREEKICK_MASTER') ? S : S);
+      if (kp) placeAF(kp, { x: 104.3, y: 34 });
+      if (kind === 'CORNER') {
+        const fy = Math.random() < .5 ? .6 : 67.4; placeAF(taker, { x: 104.6, y: fy < 34 ? -.6 : 68.6 }); ball.x = AF({ x: 104.6, y: fy }).x; ball.y = AF({ x: 104.6, y: fy }).y;
+        const tall = A.filter(p => p !== taker && p.pos !== 'KL').sort((a, b) => (has(b, 'AERIAL_THREAT') - has(a, 'AERIAL_THREAT')) || ({ ST: 3, FV: 2, OS: 1 }[b.pos] || 0) - ({ ST: 3, FV: 2, OS: 1 }[a.pos] || 0));
+        const spots = [{ x: 96, y: 30 }, { x: 97.5, y: 37 }, { x: 94, y: 34 }, { x: 99, y: 33 }, { x: 93, y: 40 }, { x: 88, y: 26 }, { x: 87, y: 42 }, { x: 84, y: 34 }];
+        tall.forEach((p, i) => placeAF(p, i < spots.length ? spots[i] : { x: 55 + i * 2, y: 20 + (i % 3) * 14 }));
+        D.filter(p => p !== kp).forEach((d, i) => { const m = tall[i]; placeAF(d, m && i < 6 ? { x: Math.min(103, AF(m).x + 1.2), y: AF(m).y + .7 } : { x: 100 - (i - 6) * 9, y: i % 2 ? 26 : 42 }); });
+        const hd = tall.find(p => p === S) || tall[0]; plan.shooter = hd; plan.cornerTaker = taker;
+        beats = [{ k: 'hold', d: 1.3, txt: T(`Korner! ${tn(taker)} topun başında, uzun boylular ceza sahasında`, `Corner! ${tn(taker)} stands over it, the big men go up`) },
+          { k: 'aim', d: .7, at: AF(hd) },
+          passTo(hd, AF(hd), { lob: true, cross: true, curve: true, follow: true, txt: T(`${tn(taker)} ortayı açtı…`, `${tn(taker)} whips it in…`) }),
+          { k: 'shot', out: nextOut, header: true, gy: nextOut === 'miss' ? GY1 + 2 : nextOut === 'post' ? GY0 : GY0 + 1 + Math.random() * 5, txt: T(`${tn(hd)} kafayı vurdu!`, `${tn(hd)} heads it!`) }];
+        holder = null; ball.z = 0; return;
+      }
+      const sp = spotAF;
+      if (kind === 'PENALTY') {
+        placeAF(taker, { x: 91.5, y: 34 }); plan.shooter = taker;
+        A.concat(D).filter(p => p !== taker && p !== kp).forEach((p, i) => placeAF(p, i < 16 ? { x: 86 - (i % 2) * 3, y: 15 + i * 2.5 } : { x: 70 - (i - 16) * 6, y: 20 + (i % 2) * 24 }));
+        const f = AF({ x: 94, y: 34 }); ball.x = f.x; ball.y = f.y; ball.z = 0;
+        const gy = nextOut === 'miss' ? (Math.random() < .5 ? GY0 - 1.2 : GY1 + 1.2) : nextOut === 'post' ? GY1 : (Math.random() < .5 ? GY0 + 1 : GY1 - 1);
+        beats = [{ k: 'hold', d: 1.5, txt: T(`PENALTI! ${tn(taker)} topu noktaya koydu`, `PENALTY! ${tn(taker)} places the ball on the spot`) }, { k: 'aim', d: .8, at: { x: 105, y: gy } }, { k: 'shot', out: nextOut, gy, pen: true, txt: T(`${tn(taker)} vurdu…`, `${tn(taker)} strikes…`) }];
+        return;
+      }
+      // FREEKICK: baraj 9,15 m, frikik ustası kavisli şut
+      placeAF(taker, { x: sp.x - 2, y: sp.y + (sp.y < 34 ? -1 : 1) }); plan.shooter = (plan.c.out === 'goal' && plan.c.sc) ? S : taker; if (plan.shooter !== taker) placeAF(plan.shooter, { x: sp.x - 1.5, y: sp.y + (sp.y < 34 ? 1.5 : -1.5) });
+      const f = AF(sp); ball.x = f.x; ball.y = f.y; ball.z = 0;
+      const gx = 105, gyC = 34, vx = gx - sp.x, vy = gyC - sp.y, L = Math.hypot(vx, vy) || 1, wx = sp.x + vx / L * 9.15, wy = sp.y + vy / L * 9.15;
+      const wallers = D.filter(p => p !== kp).sort((a, b) => ({ ST: 0, OS: 1, FV: 2, KN: 2, BK: 1 }[a.pos] - { ST: 0, OS: 1, FV: 2, KN: 2, BK: 1 }[b.pos])).slice(0, 4);
+      wallers.forEach((p, i) => placeAF(p, { x: wx, y: wy + (i - 1.5) * 1.4 }));
+      const others = D.filter(p => p !== kp && !wallers.includes(p)), box = A.filter(p => p !== taker && p !== plan.shooter && p.pos !== 'KL');
+      box.forEach((p, i) => placeAF(p, i < 5 ? { x: 92 + (i % 2) * 2, y: 26 + i * 4 } : { x: 60 - i * 3, y: 20 + (i % 3) * 14 }));
+      others.forEach((d, i) => placeAF(d, i < 5 && box[i] ? { x: AF(box[i]).x + 1.2, y: AF(box[i]).y + .6 } : { x: 70 - i * 4, y: 24 + (i % 3) * 10 }));
+      plan.wall = wallers;
+      const gy = nextOut === 'miss' ? GY1 + 1.8 : nextOut === 'post' ? GY0 : (sp.y < 34 ? GY1 - 1 : GY0 + 1);
+      beats = [{ k: 'hold', d: 1.4, txt: T(`Frikik! Baraj kuruldu, ${tn(plan.shooter)} topun başında`, `Free kick! The wall is set, ${tn(plan.shooter)} over the ball`) }, { k: 'aim', d: .9, at: { x: 105, y: gy } }, { k: 'shot', out: nextOut, gy, curve: true, fk: true, txt: T(`${tn(plan.shooter)} kavisli vurdu!`, `${tn(plan.shooter)} bends it!`) }];
+    }
+
+    /* --------- beat başlatma --------- */
+    function applyRuns(runs) { (runs || []).forEach(r => { if (!r.p || r.p.off) return; const f = AF(r.at); r.p.run = { x: f.x, y: f.y, sp: Math.min(r.sp || RUN, 10) }; if (diagnostics) diagnostics.runs.push({ name: r.p.name, sp: r.sp }); }); }
     function startBeat() {
-      beat = beats.shift(); bt = 0; if (!beat) return nextClip();
+      beat = beats.shift(); bt = 0;
+      if (!beat) { if (plan && plan.stage !== 'over') { beats = decidePlayerAction() || []; if (!beats.length) return nextClip(); return startBeat(); } return nextClip(); }
+      if (beat.k === 'call') { const more = beat.fn() || []; beats = more.concat(beats); return startBeat(); }
       if (beat.txt) com(clips[ci].min, beat.txt);
-      if (beat.k === 'pass' || beat.k === 'carry') {
-        const f = toField(att, beat.at), r = beat.to, run = beat.k === 'carry' ? 7 : 8;
+      applyRuns(beat.runs);
+      if (beat.k === 'hold' && holder) supportRuns();
+      if (beat.k === 'pass') {
+        const r = beat.to; if (!r || r.off) { beat.k = 'hold'; beat.d = .3; return; }
+        let S = beat.at ? AF(beat.at) : { x: r.x, y: r.y };
+        if (beat.follow) S = { x: r.run ? r.run.x : r.x, y: r.run ? r.run.y : r.y }; // koşu yapan oyuncunun varacağı nokta
+        if (beat.cross) S = { x: S.x, y: S.y };
         beat.rFrom = { x: r.x, y: r.y };
-        if (beat.k === 'pass') {
-          // alıcı koşu hızıyla ulaşabileceği noktaya kadar koşar; pas o noktaya atılır (top ileri gidip geri dönmez)
-          let d = clamp(Math.hypot(f.x - ball.x, f.y - ball.y) / 17, .45, 1.3), end = f;
-          for (let it = 0; it < 2; it++) { const dx = f.x - r.x, dy = f.y - r.y, L = Math.hypot(dx, dy) || 1, m = Math.min(L, run * d); end = { x: r.x + dx / L * m, y: r.y + dy / L * m }; d = clamp(Math.hypot(end.x - ball.x, end.y - ball.y) / (beat.lob ? 14 : 17), .45, 1.4); }
-          beat.d = d; beat.rTo = end; beat.dest = { x: end.x + dir[att] * .9, y: end.y }; holder = null;
-        } else { beat.d = Math.max(.8, Math.hypot(f.x - r.x, f.y - r.y) / run); beat.rTo = f; beat.dest = { x: f.x + dir[att] * .9, y: f.y }; holder = r; }
-        beat.from = { x: ball.x, y: ball.y }; r.tx = beat.rTo.x; r.ty = beat.rTo.y;
-        if(diagnostics&&beat.k==='pass')diagnostics.passes.push({duration:beat.d,distance:Math.hypot(beat.dest.x-ball.x,beat.dest.y-ball.y),start:performance.now(),end:null}); }
-      if (beat.k === 'shot') { const gx = dir[att] > 0 ? W - (beat.out === 'goal' ? -1.1 : beat.out === 'miss' ? -.4 : .5) : (beat.out === 'goal' ? -1.1 : beat.out === 'miss' ? -.4 : .5), gy = dir[att] > 0 ? beat.gy : H - beat.gy;
-        beat.from = { x: ball.x, y: ball.y }; beat.dest = { x: gx, y: gy };
-        const kp = P[att === 'h' ? 'a' : 'h'].find(p => p.pos === 'KL');
-        if (beat.out === 'save' && kp) { const t = .82; beat.dest = { x: lerp(ball.x, gx, t), y: lerp(ball.y, gy, t) }; kp.tx = beat.dest.x; kp.ty = beat.dest.y; }
-        if (beat.out === 'block') { const dp = P[att === 'h' ? 'a' : 'h'].filter(p => p.pos === 'ST' || p.pos === 'BK').sort((a, b) => Math.hypot(a.x - ball.x, a.y - ball.y) - Math.hypot(b.x - ball.x, b.y - ball.y))[0]; beat.dest = { x: lerp(ball.x, gx, .25), y: lerp(ball.y, gy, .25) }; if (dp) { dp.tx = beat.dest.x; dp.ty = beat.dest.y; } }
-        holder = null; }
-      if (beat.k === 'result') {
-        const c = beat.c, tn = surname(c.sc);
-        if (beat.out === 'goal') { if(diagnostics)diagnostics.goals.push({side:att,x:ball.x,y:ball.y,goalLine:dir[att]>0?W:0,valid:dir[att]>0?ball.x>=W:ball.x<=0}); if (att === 'h') score[0]++; else score[1]++; q('.m2d-sc').textContent = score[0] + ' – ' + score[1]; flash = 'GOL!'; startCheer(att); showFlash(T('GOOOL!', 'GOAL!'), tn, att === 'h' ? hc : ac);
-          com(c.min, T(`GOOOL! ${c.sc}${c.as ? ' (asist: ' + c.as + ')' : ''}! Skor ${score[0]}–${score[1]}`, `GOAL! ${c.sc}${c.as ? ' (assist: ' + c.as + ')' : ''}! It’s ${score[0]}–${score[1]}`), 'goal');
-          if (typeof AdvAudio !== 'undefined') { AdvAudio.note(784, .15, 'triangle', .05); setTimeout(() => AdvAudio.note(1046, .25, 'triangle', .05), 140); } }
-        else com(c.min, { save: T(`Kaleci müthiş bir kurtarışla gole izin vermiyor!`, `What a save from the goalkeeper!`), miss: T(`${tn} topu az farkla auta gönderdi.`, `${tn} drags it just wide.`), post: T(`Direkten döndü! ${tn} inanamıyor.`, `Off the post! ${tn} can’t believe it.`), block: T(`Son anda araya giren savunma topu blokladı.`, `Blocked at the last moment by the defence.`) }[beat.out], 'miss');
-        // topun son hali
-        if (beat.out === 'post') { ball.tx = ball.x - dir[att] * 8; ball.ty = ball.y + (Math.random() - .5) * 14; }
-        if (beat.out === 'save') { ball.tx = ball.x - dir[att] * 6; ball.ty = clamp(ball.y + (Math.random() < .5 ? -10 : 10), 2, 66); }
-        // sevinç / hayal kırıklığı koşusu
-        if (beat.out === 'goal') { const s = beat.shooter; s.tx = dir[att] > 0 ? 96 : 9; s.ty = Math.random() < .5 ? 4 : 64; P[att].forEach(p => { if (p !== s && p.pos !== 'KL') { p.tx = lerp(p.x, s.tx, .5); p.ty = lerp(p.y, s.ty, .5); } }); }
+        const v = beat.lob ? 17 : beat.through ? 18 : 16, sp = runSp(r);
+        let d, end;
+        if (beat.through || beat.follow) { d = Math.max(dist(r, S) / sp, dist(ball, S) / 24, .5); end = S; }
+        else { d = clamp(dist(ball, S) / v, .45, 1.6); for (let it = 0; it < 2; it++) { const L = dist(r, S) || 1, m = Math.min(L, sp * d); end = { x: r.x + (S.x - r.x) / L * m, y: r.y + (S.y - r.y) / L * m }; d = clamp(dist(ball, end) / v, .45, 1.7); } }
+        beat.d = Math.min(d, 3.2); beat.rTo = end; beat.from = { x: ball.x, y: ball.y }; beat.dest = { x: end.x + dir[att] * (beat.cross ? .2 : .9), y: end.y };
+        if (beat.curve) { const mx = (beat.from.x + beat.dest.x) / 2, my = (beat.from.y + beat.dest.y) / 2; beat.ctrl = { x: mx - dir[att] * 3, y: my + (beat.dest.y > beat.from.y ? -6 : 6) }; }
+        r.run = null; r.tx = end.x; r.ty = end.y; holder = null; carryDist = 0;
+        if (diagnostics) diagnostics.passes.push({ duration: beat.d, distance: dist(beat.from, beat.dest), start: performance.now(), end: null, type: beat.through ? 'through' : beat.lob ? 'lob' : 'ground' });
+      }
+      if (beat.k === 'carry') {
+        const r = beat.to, f = AF(beat.at), L = dist(r, f), m = Math.min(L, 12); // kesintisiz top sürme en çok 12 m (solo koşu yok)
+        const end = { x: r.x + (f.x - r.x) / (L || 1) * m, y: r.y + (f.y - r.y) / (L || 1) * m };
+        // önünde rakip varsa (baskı) hız kesilir ve sürme kısalır
+        const k = isUnderPressure(r) ? .45 : 1;
+        beat.rFrom = { x: r.x, y: r.y }; beat.rTo = { x: lerp(r.x, end.x, k), y: lerp(r.y, end.y, k) }; beat.d = Math.max(.6, dist(r, beat.rTo) / dribSp(r)); holder = r; r.run = null;
+        carryDist += dist(r, beat.rTo);
+      }
+      if (beat.k === 'aim') { fx.aim = { from: { x: ball.x, y: ball.y }, to: AF(beat.at) }; }
+      if (beat.k === 'shot') startShot(beat);
+      if (beat.k === 'foul') {
+        const v = beat.victim, d = beat.fouler && !beat.fouler.off ? beat.fouler : wpick(nearest(def(), v).slice(0, 2), p => has(p, 'AGGRESSIVE_TACKLER') ? 3 : 1);
+        beat.fouler = d; beat.d = 1.1; holder = null;
+        if (d) { d.run = null; d.tx = v.x - dir[att] * .2; d.ty = v.y + .9; }
+        com(clips[ci].min, beat.card === 'R' ? T(`${tn(d)} arkadan sert kaydı — düdük!`, `${tn(d)} slides in from behind — whistle!`) : T(`${tn(d)} müdahale etti, ${tn(v)} yerde — faul!`, `${tn(d)} goes in, ${tn(v)} is down — foul!`), 'miss');
+        bubble(T('FAUL!', 'FOUL!'), v, '#111');
+        if (typeof AdvAudio !== 'undefined') AdvAudio.note(2100, .35, 'square', .02);
+      }
+      if (beat.k === 'card') {
+        setState('CARD_SHOWN'); const p = beat.p; fx.cards.push({ p, red: beat.red, t: performance.now() });
+        bubble(beat.red ? (beat.dogso ? T('KIRMIZI KART! Son adam indirildi!', 'RED CARD! Last man brought down!') : T('KIRMIZI KART!', 'RED CARD!')) : T(`SARI KART — ${tn(p)}`, `YELLOW — ${tn(p)}`), p, beat.red ? '#c8102e' : '#c99a00');
+        com(clips[ci].min, beat.red ? T(`🟥 ${p.name} kırmızı kartla oyun dışı! ${p.side === 'h' ? o.home.name : o.away.name} 10 kişi.`, `🟥 ${p.name} is sent off! ${p.side === 'h' ? o.home.name : o.away.name} are down to ten.`) : T(`🟨 ${p.name} sarı kart gördü.`, `🟨 ${p.name} is booked.`), beat.red ? 'red' : '');
+        if (beat.red) shake(300);
+      }
+      if (beat.k === 'result') showResult(beat);
+    }
+    function startShot(b) {
+      const S = plan.shooter, kp = live(def()).find(p => p.pos === 'KL'), out = b.out;
+      const gx = dir[att] > 0 ? (out === 'goal' ? W + 1.2 : out === 'miss' ? W + .5 : W - .4) : (out === 'goal' ? -1.2 : out === 'miss' ? -.5 : .4);
+      let gy = dir[att] > 0 ? b.gy : H - b.gy;
+      if (b.far && holder) { const fy = AF(ball).y < 34 ? GY1 - .7 : GY0 + .7; if (out === 'goal' || out === 'save') gy = dir[att] > 0 ? fy : H - fy; }
+      b.from = { x: ball.x, y: ball.y }; b.dest = { x: gx, y: gy }; holder = null;
+      const L = dist(b.from, b.dest); b.d = clamp(L / (b.header ? 15 : b.pen ? 26 : b.power ? 28 : 24), .35, 1.4);
+      if (b.curve) { const mx = (b.from.x + b.dest.x) / 2, my = (b.from.y + b.dest.y) / 2, side = (AF(ball).y < 34 ? 1 : -1) * dir[att]; b.ctrl = { x: mx, y: my - side * Math.min(7, L * .22) }; }
+      if (out === 'save' && kp) { const t = b.oneOnOne && has(kp, 'WALL_GK') ? .7 : .9; b.dest = b.ctrl ? bez(b.from, b.ctrl, { x: gx, y: gy }, .93) : { x: lerp(b.from.x, gx, t), y: lerp(b.from.y, gy, t) }; kp.run = null; kp.tx = b.dest.x; kp.ty = b.dest.y; kp.sp = 9.5; }
+      if (out === 'goal' && kp) { kp.run = null; kp.tx = kp.x; kp.ty = clamp(kp.y + (gy > kp.y ? -2.5 : 2.5), GY0 - 1, GY1 + 1); kp.sp = 8; } // ters köşeye uçar
+      if (out === 'block' || out === 'corner') {
+        const blk = (plan.wall && plan.wall[0]) || nearest(def(), ball)[0];
+        if (out === 'block') { b.dest = { x: lerp(b.from.x, gx, .22), y: lerp(b.from.y, gy, .22) }; b.ctrl = null; if (blk && !plan.wall) { blk.run = null; blk.tx = b.dest.x; blk.ty = b.dest.y; } }
+        else { b.dest = { x: dir[att] > 0 ? W + 1 : -1, y: gy < 34 ? GY0 - 6 : GY1 + 6 }; b.ctrl = { x: lerp(b.from.x, b.dest.x, .5), y: lerp(b.from.y, gy, .5) }; }
+      }
+      if (b.oneOnOne && kp && has(kp, 'WALL_GK')) { const towardsBall = { x: lerp(kp.x, ball.x, .3), y: lerp(kp.y, ball.y, .3) }; kp.tx = towardsBall.x; kp.ty = towardsBall.y; }
+      if (b.header || b.power || out === 'post') shake(b.header ? 340 : 240);
+      if (b.curve || b.fk) ball.trail = [{ x: ball.x, y: ball.y }];
+      fx.aim = null;
+    }
+    const bez = (a, c, b, t) => ({ x: (1 - t) * (1 - t) * a.x + 2 * (1 - t) * t * c.x + t * t * b.x, y: (1 - t) * (1 - t) * a.y + 2 * (1 - t) * t * c.y + t * t * b.y });
+
+    function showResult(b) {
+      const c = plan.c, S = plan.shooter, out = b.out;
+      if (out === 'goal') {
+        if (diagnostics) diagnostics.goals.push({ side: att, x: ball.x, y: ball.y, goalLine: dir[att] > 0 ? W : 0, valid: dir[att] > 0 ? ball.x >= W : ball.x <= 0 });
+        c.counted = true; if (att === 'h') score[0]++; else score[1]++; q('.m2d-sc').textContent = score[0] + ' – ' + score[1]; flash = 'GOL!'; startCheer(att);
+        showFlash(T('GOOOL!', 'GOAL!'), tn(S), att === 'h' ? hc : ac); shake(450);
+        const flair = b.header && has(S, 'AERIAL_THREAT') ? T(`${tn(S)} kule gibi yükseldi!`, `${tn(S)} towers above everyone!`) : b.curve && has(S, 'FINESSE_SHOT') ? T(`${tn(S)}'tan falsolu plase!`, `A curler from ${tn(S)}!`) : b.fk ? T('Barajın üstünden ağlara!', 'Over the wall and in!') : b.pen ? T('Penaltıyı gole çevirdi!', 'Penalty converted!') : null;
+        if (flair) bubble(flair, S, att === 'h' ? hc : ac);
+        com(c.min, T(`GOOOL! ${S.name}${c.as ? ' (asist: ' + c.as + ')' : ''}! Skor ${score[0]}–${score[1]}`, `GOAL! ${S.name}${c.as ? ' (assist: ' + c.as + ')' : ''}! It’s ${score[0]}–${score[1]}`), 'goal');
+        if (typeof AdvAudio !== 'undefined') { AdvAudio.note(784, .15, 'triangle', .05); setTimeout(() => AdvAudio.note(1046, .25, 'triangle', .05), 140); }
+        S.run = { x: dir[att] > 0 ? 97 : 8, y: Math.random() < .5 ? 5 : 63, sp: 7 }; live(att).forEach(p => { if (p !== S && p.pos !== 'KL') p.run = { x: lerp(p.x, S.run.x, .55), y: lerp(p.y, S.run.y, .55), sp: 6 }; });
+      } else {
+        com(c.min, { save: has(live(def()).find(p => p.pos === 'KL'), 'WALL_GK') ? T('Panter gibi uzandı! Kaleci gole izin vermiyor.', 'What a reflex save — like a panther!') : T('Kaleci müthiş bir kurtarışla gole izin vermiyor!', 'What a save from the goalkeeper!'), miss: T(`${tn(S)} topu az farkla auta gönderdi.`, `${tn(S)} drags it just wide.`), post: T(`Direkten döndü! ${tn(S)} inanamıyor.`, `Off the post! ${tn(S)} can’t believe it.`), block: plan.wall ? T('Top baraja çarptı.', 'It hits the wall.') : T('Son anda araya giren savunma topu blokladı.', 'Blocked at the last moment.') }[out] || '', 'miss');
+        if (out === 'post') bubble(T('DİREK!', 'POST!'), ball, '#111');
+        if (out === 'post') { ball.tx = ball.x - dir[att] * 8; ball.ty = ball.y + (Math.random() - .5) * 14; }
+        if (out === 'save') { ball.tx = ball.x - dir[att] * 6; ball.ty = clamp(ball.y + (Math.random() < .5 ? -10 : 10), 2, 66); }
       }
     }
     function showFlash(big, small, col) { const f = q('.m2d-flash'); f.innerHTML = `<b style="--c:${col}">${esc(big)}</b><span>${esc(small)}</span>`; f.hidden = false; }
-    function nextClip() {
-      ci++;
-      if (ci >= clips.length) return fullTime();
-      setupClip(clips[ci]); startBeat();
+    function endBeat(b) {
+      if (b.k === 'pass' || b.k === 'carry') { holder = b.to; if (diagnostics && b.k === 'pass') { const last = diagnostics.passes[diagnostics.passes.length - 1]; if (last) last.end = performance.now(); } }
+      if (b.k === 'foul') { const red = b.card === 'R'; if (b.card) beats.unshift({ k: 'card', p: b.fouler, red, dogso: b.dogso, d: 1.5 }); beats.splice(b.card ? 1 : 0, 0, { k: 'call', fn: () => { if (red && b.fouler) b.fouler.off = true; const v = AF(b.victim); setPiece(b.next, { x: clamp(v.x, 70, 92), y: clamp(v.y, 10, 58) }, plan.out); plan.stage = 'over'; return []; } }); }
+      if (b.k === 'shot') { if (b.out === 'corner') { beats = [{ k: 'hold', d: .6, txt: T('Kornere çıktı.', 'Out for a corner.') }, { k: 'call', fn: () => { setPiece('CORNER', null, plan.out); plan.stage = 'over'; return []; } }]; } else beats = [{ k: 'result', d: b.out === 'goal' ? 2.4 : 1.6, out: b.out, header: b.header, curve: b.curve, fk: b.fk, pen: b.pen }]; plan.stage = 'over'; }
+      if (b.k === 'card') setState(plan.set === 'pen' ? 'PENALTY' : state);
+      if (b.k === 'aim') fx.aim = null;
+      if (b.k === 'result') { plan.stage = 'over'; beats = []; }
     }
+    function nextClip() { ci++; if (ci >= clips.length) return fullTime(); setupClip(clips[ci]); startBeat(); }
     function fullTime() {
-      cancelAnimationFrame(raf); score = [o.gh, o.ga]; q('.m2d-sc').textContent = o.gh + ' – ' + o.ga; q('.m2d-min').textContent = T('MS', 'FT');
+      cancelAnimationFrame(raf); score = [o.gh, o.ga]; q('.m2d-sc').textContent = o.gh + ' – ' + o.ga; q('.m2d-min').textContent = T('MS', 'FT'); setState('PLAYING');
       com(90, T(`Maç sona erdi: ${o.home.name} ${o.gh} – ${o.ga} ${o.away.name}`, `Full time: ${o.home.name} ${o.gh} – ${o.ga} ${o.away.name}`), 'end');
-      if(diagnostics)diagnostics.done=true; ov.querySelector('.m2d').classList.add('ft');
+      if (diagnostics) diagnostics.done = true; ov.querySelector('.m2d').classList.add('ft');
       draw(); const b = q('[data-k=next]'); b.textContent = T('Devam ▶', 'Continue ▶'); b.classList.add('pr'); q('[data-k=end]').hidden = true; q('[data-k=spd]').hidden = true;
       b.onclick = close; b.focus();
     }
@@ -192,45 +460,59 @@ const Match2D = (() => {
     function onKey(e) { if (e.key === 'Escape') { e.preventDefault(); ci = clips.length; fullTime(); } }
     document.addEventListener('keydown', onKey);
 
-    /* --------- döngü --------- */
+    /* --------- ana döngü: updateMatch() + ballPhysics() --------- */
     let last = 0;
+    function ballPhysics(dt) {
+      if (!beat) return;
+      const k = clamp(bt / beat.d, 0, 1);
+      if (beat.k === 'pass') {
+        const r = beat.to; r.x = r.tx = lerp(beat.rFrom.x, beat.rTo.x, k); r.y = r.ty = lerp(beat.rFrom.y, beat.rTo.y, k);
+        // çim sürtünmesi: yerden pas yavaşlayarak gider; havadan top parabol çizer
+        const e = beat.lob ? k : 1 - Math.pow(1 - k, 1.7), p = beat.ctrl ? bez(beat.from, beat.ctrl, beat.dest, e) : { x: lerp(beat.from.x, beat.dest.x, e), y: lerp(beat.from.y, beat.dest.y, e) };
+        ball.x = p.x; ball.y = p.y; ball.z = beat.lob ? Math.sin(k * Math.PI) * (beat.cross ? 4.5 : 5.5) : 0;
+      } else if (beat.k === 'carry') {
+        const r = beat.to; r.x = r.tx = lerp(beat.rFrom.x, beat.rTo.x, k); r.y = r.ty = lerp(beat.rFrom.y, beat.rTo.y, k); ball.x = r.x + dir[att] * .9; ball.y = r.y; ball.z = 0;
+      } else if (beat.k === 'shot') {
+        const e = 1 - Math.pow(1 - k, 1.25), p = beat.ctrl ? bez(beat.from, beat.ctrl, beat.dest, e) : { x: lerp(beat.from.x, beat.dest.x, e), y: lerp(beat.from.y, beat.dest.y, e) };
+        ball.x = p.x; ball.y = p.y; ball.z = beat.header ? 1.6 * (1 - k) + .3 : beat.fk ? Math.sin(k * Math.PI) * 2.4 : Math.sin(k * Math.PI) * 1.1;
+        if (ball.trail.length) { ball.trail.push({ x: ball.x, y: ball.y }); if (ball.trail.length > 40) ball.trail.shift(); }
+      } else if (beat.k === 'result') { if (beat.out === 'post' || beat.out === 'save') { ball.x = lerp(ball.x, ball.tx, dt * 3); ball.y = lerp(ball.y, ball.ty, dt * 3); } ball.z = Math.max(0, ball.z - dt * 3); }
+      else if (beat.k === 'foul' || beat.k === 'card') ball.z = 0;
+    }
+    function updateMatch(ts, dt) {
+      if (beat) { bt += dt; ballPhysics(dt); if (bt >= beat.d) { const b = beat; endBeat(b); startBeat(); } }
+      // top ayakta: hafifçe ilerle (sürme hızı topsuzdan yavaş), top oyuncunun önünde
+      if (holder && beat && beat.k === 'hold' && state === 'PLAYING' && !beat.hold) { const a = AF(holder); if (!isUnderPressure(holder) && a.x < 96) { const f = AF({ x: a.x + dt * dribSp(holder) * .35, y: a.y }); holder.x = holder.tx = f.x; holder.y = holder.ty = f.y; } ball.x = holder.x + dir[att] * .9; ball.y = holder.y; }
+      if (!beat) return;
+      if (state !== 'PLAYING' && state !== 'CARD_SHOWN') { movePlayers(dt, ts); return; }
+      if (beat.k === 'result' || beat.k === 'foul' || beat.k === 'card') { movePlayers(dt, ts); return; }
+      const bA = AF(ball);
+      ['h', 'a'].forEach(s => live(s).forEach(p => {
+        if (locked(p)) return;
+        if (p.run) { p.tx = p.run.x; p.ty = p.run.y; p.sp = p.run.sp; return; }
+        if (s !== att && p.pos === 'KL') { const gx = dir[s] > 0 ? 1.5 : W - 1.5; if (!(beat.k === 'shot' && (beat.out === 'save' || beat.out === 'goal'))) { p.tx = gx + (dir[s] > 0 ? 1 : -1) * clamp(Math.abs(ball.x - gx) * .05, 0, 4); p.ty = clamp(lerp(34, ball.y, .55), GY0 - 1, GY1 + 1); p.sp = 6; } return; }
+        if (beat.k === 'shot' && Math.hypot(p.tx - beat.dest.x, p.ty - beat.dest.y) < .2) return;
+        const f = toField(s, shapeFor(p, s, bA.x, bA.y)); p.tx = f.x + Math.sin(ts / 900 + p.num) * .5; p.ty = f.y + Math.cos(ts / 1100 + p.num) * .5; p.sp = JOG;
+      }));
+      if (beat.k !== 'shot') defenseUpdate();
+      // pivot topu saklarken en yakın stoper sırtına yapışır
+      if (beat.hold && holder) { const m = nearest(def(), holder)[0]; if (m) { m.tx = holder.x + dir[att] * 1.3; m.ty = holder.y + .4; } }
+      movePlayers(dt, ts);
+    }
+    const locked = p => p === holder || (beat && (beat.k === 'pass' || beat.k === 'carry') && beat.to === p);
+    function movePlayers(dt) {
+      ['h', 'a'].forEach(s => live(s).forEach(p => { if (locked(p) && beat && beat.k !== 'result') return; const sp = Math.min(p.sp || JOG, 10) * dt, dx = p.tx - p.x, dy = p.ty - p.y, d = Math.hypot(dx, dy); if (d > .01) { const m = Math.min(d, sp); p.x += dx / d * m; p.y += dy / d * m; } if (p.run && Math.hypot(p.run.x - p.x, p.run.y - p.y) < .4 && !(beat && beat.k === 'result')) p.run = null; }));
+      const all = live('h').concat(live('a'));
+      for (let i = 0; i < all.length; i++) for (let j = i + 1; j < all.length; j++) { const A = all[i], B = all[j], dx = B.x - A.x, dy = B.y - A.y, d = Math.hypot(dx, dy) || .01; if (d < 2.6 && state === 'PLAYING') { const m = (2.6 - d) / 2, ux = dx / d, uy = dy / d; if (!locked(A)) { A.x -= ux * m; A.y -= uy * m; } if (!locked(B)) { B.x += ux * m; B.y += uy * m; } } }
+      P.h.concat(P.a).forEach(p => { p.x = clamp(p.x, -2, W + 2); p.y = clamp(p.y, -1.5, H + 1.5); });
+    }
     function tick(ts) {
       const dt = Math.min(.05, (ts - (last || ts)) / 1000) * speed; last = ts;
-      if (beat) {
-        bt += dt; const k = clamp(bt / beat.d, 0, 1);
-        if (beat.k === 'pass' || beat.k === 'carry') {
-          // top yerde yavaşlar (pas), taşımada oyuncunun ayağında kalır; alıcı tam varış anında topla buluşur
-          const e = beat.k === 'pass' && !beat.lob ? 1 - Math.pow(1 - k, 1.6) : k, r = beat.to;
-          r.x = r.tx = lerp(beat.rFrom.x, beat.rTo.x, k); r.y = r.ty = lerp(beat.rFrom.y, beat.rTo.y, k);
-          if (beat.k === 'carry') { ball.x = r.x + dir[att] * .9; ball.y = r.y; } else { ball.x = lerp(beat.from.x, beat.dest.x, e); ball.y = lerp(beat.from.y, beat.dest.y, e); }
-          ball.z = beat.lob ? Math.sin(k * Math.PI) * 4 : 0; }
-        else if (beat.k === 'shot') { const e = 1 - Math.pow(1 - k, 1.3); ball.x = lerp(beat.from.x, beat.dest.x, e); ball.y = lerp(beat.from.y, beat.dest.y, e); ball.z = Math.sin(k * Math.PI) * 1.2; }
-        else if (beat.k === 'result') { if (beat.out === 'post' || beat.out === 'save') { ball.x = lerp(ball.x, ball.tx, dt * 3); ball.y = lerp(ball.y, ball.ty, dt * 3); } ball.z = 0; }
-        if (k >= 1) { if(diagnostics&&beat.k==='pass')diagnostics.passes[diagnostics.passes.length-1].end=performance.now(); if (beat.k === 'pass' || beat.k === 'carry') { holder = beat.to; } startBeat(); }
-      }
-      if (holder && (!beat || (beat.k !== 'pass' && beat.k !== 'shot' && beat.k !== 'carry'))) { holder.x = holder.tx = clamp(holder.x + dir[att] * dt * 3, 1, W - 1); ball.x = holder.x + dir[att] * .9; ball.y = holder.y; }
-      // takım şekilleri topa göre
-      const bxAtt = dir[att] > 0 ? ball.x : W - ball.x, byAtt = dir[att] > 0 ? ball.y : H - ball.y;
-      if (beat && beat.k !== 'result') ['h', 'a'].forEach(s => P[s].forEach(p => {
-        if (p === holder || (beat && beat.to === p)) return;
-        if (s !== att && p.pos === 'KL') { const gx = dir[s] > 0 ? 2 : W - 2; if (!(beat.k === 'shot' && beat.out === 'save')) { p.tx = gx + (dir[s] > 0 ? 1 : -1) * clamp(Math.abs(ball.x - gx) * .06, 0, 4); p.ty = clamp(lerp(34, ball.y, .55), GY0 - 1, GY1 + 1); } return; }
-        if (beat.k === 'shot' && (beat.out === 'save' || beat.out === 'block') && Math.hypot(p.tx - beat.dest.x, p.ty - beat.dest.y) < .1) return;
-        const f = toField(s, shapeFor(p, s, bxAtt, byAtt));
-        p.tx = f.x + Math.sin(ts / 900 + p.num) * .6; p.ty = f.y + Math.cos(ts / 1100 + p.num) * .6;
-      }));
-      // en yakın savunmacı baskı yapar
-      if (beat && beat.k !== 'result' && beat.k !== 'shot') { const def = att === 'h' ? 'a' : 'h'; const pr = P[def].filter(p => p.pos !== 'KL').sort((a, b) => Math.hypot(a.x - ball.x, a.y - ball.y) - Math.hypot(b.x - ball.x, b.y - ball.y))[0]; if (pr) { pr.tx = lerp(pr.tx, ball.x - dir[att] * 1.8, .5); pr.ty = lerp(pr.ty, ball.y, .5); } }
-      const locked = p => p === holder || (beat && (beat.k === 'pass' || beat.k === 'carry') && beat.to === p);
-      ['h', 'a'].forEach(s => P[s].forEach(p => { if (locked(p)) return; const sp = 6.5 * dt, dx = p.tx - p.x, dy = p.ty - p.y, d = Math.hypot(dx, dy); if (d > .01) { const m = Math.min(d, sp); p.x += dx / d * m; p.y += dy / d * m; } }));
-      // üst üste binmeyi önle (top sahibine dokunma)
-      const all = P.h.concat(P.a);
-      for (let i = 0; i < all.length; i++) for (let j = i + 1; j < all.length; j++) { const A = all[i], B = all[j], dx = B.x - A.x, dy = B.y - A.y, d = Math.hypot(dx, dy) || .01; if (d < 3) { const m = (3 - d) / 2, ux = dx / d, uy = dy / d; if (!locked(A)) { A.x -= ux * m; A.y -= uy * m; } if (!locked(B)) { B.x += ux * m; B.y += uy * m; } } }
-      if(diagnostics&&ts-lastSample>=120){lastSample=ts;diagnostics.frames.push({time:ts,clip:ci,beat:beat&&beat.k,ball:{x:ball.x,y:ball.y},players:P.h.concat(P.a).map(p=>({x:p.x,y:p.y,name:p.name}))});if(diagnostics.frames.length>1200)diagnostics.frames.shift();}
+      updateMatch(ts, dt);
+      if (diagnostics && ts - lastSample >= 120) { lastSample = ts; diagnostics.frames.push({ time: ts, clip: seg, beat: beat && beat.k, state, ball: { x: ball.x, y: ball.y }, players: P.h.concat(P.a).map(p => ({ x: p.x, y: p.y, name: p.name, off: p.off })) }); if (diagnostics.frames.length > 1500) diagnostics.frames.shift(); }
       draw();
       if (!closed && ci < clips.length) raf = requestAnimationFrame(tick);
     }
-
-    /* --------- çizim --------- */
     function draw() {
       const s = SC;
       const now = performance.now();
@@ -246,8 +528,13 @@ const Match2D = (() => {
         const gx0 = d > 0 ? x - .5 - 2.2 : x + .5, gx1 = gx0 + 2.2; ctx.fillStyle = 'rgba(255,255,255,.12)'; ctx.fillRect(gx0, GY0, 2.2, GY1 - GY0);
         ctx.save(); ctx.strokeStyle = 'rgba(255,255,255,.45)'; ctx.lineWidth = .07; for (let yy = GY0; yy <= GY1; yy += .45) { ctx.beginPath(); ctx.moveTo(gx0, yy); ctx.lineTo(gx1, yy); ctx.stroke(); } for (let xx = gx0; xx <= gx1; xx += .45) { ctx.beginPath(); ctx.moveTo(xx, GY0); ctx.lineTo(xx, GY1); ctx.stroke(); }
         ctx.strokeStyle = '#fff'; ctx.lineWidth = .32; ctx.beginPath(); const lx = d > 0 ? x - .5 : x + .5, bx2 = d > 0 ? gx0 : gx1; ctx.moveTo(lx, GY0); ctx.lineTo(bx2, GY0); ctx.lineTo(bx2, GY1); ctx.lineTo(lx, GY1); ctx.stroke(); ctx.restore(); ctx.fillStyle = '#fff'; });
+      // kavisli şut / frikik izi
+      if (ball.trail.length > 1) { ctx.save(); for (let i = 1; i < ball.trail.length; i++) { const a = ball.trail[i - 1], b = ball.trail[i]; ctx.strokeStyle = `rgba(255,255,255,${(i / ball.trail.length) * .75})`; ctx.lineWidth = .18 + (i / ball.trail.length) * .35; ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke(); } ctx.restore(); }
+      // duran top çizgisi
+      if (fx.aim) { ctx.save(); ctx.setLineDash([.9, .7]); ctx.strokeStyle = 'rgba(255,240,120,.9)'; ctx.lineWidth = .22; ctx.beginPath(); ctx.moveTo(fx.aim.from.x, fx.aim.from.y); ctx.lineTo(fx.aim.to.x, fx.aim.to.y); ctx.stroke(); ctx.restore(); }
+      if (plan && plan.wall && state === 'FREEKICK') { ctx.save(); ctx.strokeStyle = 'rgba(255,255,255,.55)'; ctx.setLineDash([.5, .5]); ctx.lineWidth = .14; ctx.beginPath(); ctx.arc(ball.x, ball.y, 9.15, 0, 7); ctx.stroke(); ctx.restore(); }
       // oyuncular
-      ['h', 'a'].forEach(sd => P[sd].forEach(p => {
+      ['h', 'a'].forEach(sd => live(sd).forEach(p => {
         const col = p.pos === 'KL' ? (sd === 'h' ? '#f6d32d' : '#9be15d') : sd === 'h' ? hc : ac;
         ctx.beginPath(); ctx.arc(p.x + .25, p.y + .35, 1.55, 0, 7); ctx.fillStyle = 'rgba(0,0,0,.28)'; ctx.fill();
         ctx.beginPath(); ctx.arc(p.x, p.y, 1.55, 0, 7); ctx.fillStyle = col; ctx.fill();
@@ -263,12 +550,21 @@ const Match2D = (() => {
       }));
       // yazılar ekran koordinatında (döndürülmüş sahada da düz okunur)
       ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ['h', 'a'].forEach(sd => P[sd].forEach(p => { const col = p.pos === 'KL' ? (sd === 'h' ? '#f6d32d' : '#9be15d') : sd === 'h' ? hc : ac, [X, Y] = proj(p.x, p.y);
+      ['h', 'a'].forEach(sd => live(sd).forEach(p => { const col = p.pos === 'KL' ? (sd === 'h' ? '#f6d32d' : '#9be15d') : sd === 'h' ? hc : ac, [X, Y] = proj(p.x, p.y);
         ctx.font = `bold ${1.6 * SC}px system-ui,sans-serif`; const tm = sd === 'h' ? o.home : o.away, striped = p.pos !== 'KL' && tm.kit && tm.kit !== 'duz';
         if (striped) { ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,.6)'; ctx.strokeText(p.num, X, Y + 1); ctx.fillStyle = '#fff'; } else ctx.fillStyle = lum(col) > 150 ? '#111' : '#fff'; ctx.fillText(p.num, X, Y + 1); }));
       // top sahibi / hedef oyuncunun adı
       const lab = holder || (beat && beat.to);
       if (lab) { const t = surname(lab.name), [X, Y] = proj(lab.x, lab.y); ctx.font = `600 ${1.8 * SC}px system-ui,sans-serif`; const w = ctx.measureText(t).width + 14; ctx.fillStyle = 'rgba(0,0,0,.65)'; ctx.fillRect(X - w / 2, Y - 46, w, 24); ctx.fillStyle = '#fff'; ctx.fillText(t, X, Y - 34); }
+      // kart simgeleri
+      fx.cards = fx.cards.filter(c => now - c.t < 2200); fx.cards.forEach(c => { const [X, Y] = proj(c.p.x, c.p.y), up = Math.min(1, (now - c.t) / 250); ctx.save(); ctx.translate(X + 18, Y - 30 - up * 14); ctx.rotate(.18); ctx.fillStyle = c.red ? '#d0021b' : '#f8d000'; ctx.strokeStyle = '#111'; ctx.lineWidth = 2; ctx.fillRect(-9, -13, 18, 26); ctx.strokeRect(-9, -13, 18, 26); ctx.restore(); });
+      // aksiyon baloncukları
+      fx.bubbles = fx.bubbles.filter(b => now - b.t < 2000); fx.bubbles.forEach(b => { const [X, Y] = proj(b.x, b.y), a = Math.min(1, (2000 - (now - b.t)) / 400), rise = Math.min(1, (now - b.t) / 300) * 18;
+        ctx.save(); ctx.globalAlpha = a; ctx.font = `800 ${2.1 * SC}px system-ui,sans-serif`; const w = ctx.measureText(b.txt).width + 28, bx = clamp(X, w / 2 + 6, cv.width - w / 2 - 6), by = Math.max(40, Y - 70 - rise);
+        ctx.fillStyle = '#fff'; ctx.strokeStyle = b.col; ctx.lineWidth = 4; ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(bx - w / 2, by - 22, w, 44, 22); else ctx.rect(bx - w / 2, by - 22, w, 44); ctx.fill(); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(bx - 8, by + 20); ctx.lineTo(clamp(X, bx - 30, bx + 30), by + 36); ctx.lineTo(bx + 8, by + 20); ctx.fill(); ctx.fillStyle = b.col; ctx.fillText(b.txt, bx, by + 1); ctx.restore(); });
+      // ekran titremesi
+      cv.style.transform = now < fx.shakeUntil ? `translate(${(Math.random() - .5) * 9}px,${(Math.random() - .5) * 7}px)` : '';
       if (vert) ctx.setTransform(0, s, -s, 0, (H+STAND)*s, STAND*s); else ctx.setTransform(s, 0, 0, s, STAND*s, STAND*s);
       // top
       ctx.beginPath(); ctx.arc(ball.x + .3 + ball.z * .3, ball.y + .4 + ball.z * .3, .6, 0, 7); ctx.fillStyle = 'rgba(0,0,0,.3)'; ctx.fill();
@@ -352,14 +648,25 @@ const Match2D = (() => {
       ctx.globalAlpha = 1;
     }
 
-    q('[data-k=next]').onclick = () => { cancelAnimationFrame(raf); if (ci >= 0 && clips[ci] && beats.length + (beat ? 1 : 0)) { // kalan gol varsa skora işle
-        const c = clips[ci]; if (c.out === 'goal' && !(beat && beat.k === 'result')) { if (c.side === 'h') score[0]++; else score[1]++; q('.m2d-sc').textContent = score[0] + ' – ' + score[1]; } }
-      beats = []; beat = null; nextClip(); if (ci < clips.length) { last = 0; raf = requestAnimationFrame(tick); } };
+
+    /* --------- kontroller --------- */
+    q('[data-k=next]').onclick = () => {
+      cancelAnimationFrame(raf);
+      const c = clips[ci];
+      if (c) { // atlanan pozisyonun sonucunu uygula: gol skora, kırmızı kart sahaya
+        if (c.out === 'goal' && !c.counted) { c.counted = true; if (c.side === 'h') score[0]++; else score[1]++; q('.m2d-sc').textContent = score[0] + ' – ' + score[1]; }
+        if (c.kind === 'red') { const f = (plan && plan.fouler) || find(c.side === 'h' ? 'a' : 'h', c.fouler); if (f) f.off = true; }
+      }
+      beats = []; beat = null; nextClip(); if (ci < clips.length) { last = 0; raf = requestAnimationFrame(tick); }
+    };
     q('[data-k=end]').onclick = () => { ci = clips.length; fullTime(); };
     q('[data-k=spd]').onclick = e => { speed = speed === 1 ? 2 : speed === 2 ? 4 : 1; e.target.textContent = speed === 1 ? '⏩ 2x' : speed === 2 ? '⏩ 4x' : '▶ 1x'; };
+    // hücum planı etiketleri (canlı maçta seçilen taktik)
+    const tag = side => { const s = styleOf(side); return s !== 'dengeli' ? `<small class="m2d-style">📋 ${esc(STYLES()[s] || s)}</small>` : ''; };
+    q('.m2d-tm').insertAdjacentHTML('beforeend', tag('h')); q('.m2d-tm.r').insertAdjacentHTML('afterbegin', tag('a'));
     if (!clips.length) { com(1, T('Maçta kayda değer bir pozisyon olmadı.', 'There were no notable chances in this match.')); fullTime(); return; }
     if (reduce) speed = 2;
     nextClip(); raf = requestAnimationFrame(tick);
   }
-  return { show };
+  return { show, STYLES };
 })();

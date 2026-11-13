@@ -161,3 +161,6 @@ body.dark-mode .cr-card.event{background:#26170f}body.dark-mode .cr-card.gold{ba
 body.dark-mode .cr-choice select,body.dark-mode .cr-lbl select,body.dark-mode .cr-filters input,body.dark-mode .cr-filters select{background:#0d111c;color:#e8ecf5;border-color:#1a2033}
 body.dark-mode .cr-table tr.me td{background:#e8ecf5;color:#06080f}
 body.dark-mode .mode-switch{background:#0d111c;border-color:#1a2033}body.dark-mode .mode-switch a.on{background:#e8ecf5;color:#06080f}
+.cr-plan-lbl{margin:2px 0 -2px;font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;opacity:.75}
+.cr-plan button{font-size:12.5px}
+.cr-b.tr{background:transparent;padding:0 1px;font-size:13px}
