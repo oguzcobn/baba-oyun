@@ -213,6 +213,6 @@ test.describe('2D replay fixes',()=>{
  test('2D engine loads and stadium viewport supports outer stands',async({page})=>{
   await page.goto(BASE+'#draft');
   expect(await page.evaluate(()=>typeof Match2D?.show==='function')).toBeTruthy();
-  expect(await page.evaluate(()=>[...document.scripts].some(s=>/match2d\\.js\\?v=\\d+/.test(s.src)))).toBeTruthy();
+  expect(await page.evaluate(()=>[...document.scripts].some(s=>s.src.includes('/js/match2d.js')))).toBeTruthy();
  });
 });
