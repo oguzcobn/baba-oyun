@@ -54,7 +54,7 @@ const Match2D = (() => {
     if (cdist(hc, ac) < 120) ac = (o.away.c2 && cdist(hc, o.away.c2) > 120) ? o.away.c2 : (lum(hc) > 140 ? '#1d1d1d' : '#f4f4f4');
     const ov = document.createElement('div'); ov.className = 'm2d-ov';
     ov.innerHTML = `<div class="m2d" role="dialog" aria-modal="true" aria-label="${T('Maç özeti', 'Match highlights')}">
-      <header class="m2d-top"><span class="m2d-tm"><i style="background:${hc}"></i>${esc(o.home.short || o.home.name)}</span><b class="m2d-sc">0 – 0</b><span class="m2d-tm r">${esc(o.away.short || o.away.name)}<i style="background:${ac}"></i></span><em class="m2d-min">0'</em></header>
+      <header class="m2d-top"><span class="m2d-tm">${o.home.logo || `<i style="background:${hc}"></i>`}${esc(o.home.short || o.home.name)}</span><b class="m2d-sc">0 – 0</b><span class="m2d-tm r">${esc(o.away.short || o.away.name)}${o.away.logo || `<i style="background:${ac}"></i>`}</span><em class="m2d-min">0'</em></header>
       <div class="m2d-pitch"><canvas width="1050" height="680"></canvas><div class="m2d-flash" hidden></div></div>
       <div class="m2d-analytics" aria-label="${T('Maç istatistikleri','Match statistics')}"><div class="m2d-analytics-row"><strong>${pct}%</strong><span>${T('Tahmini topa sahip olma','Estimated possession')}</span><strong>${100-pct}%</strong></div><div class="m2d-possession"><i style="width:${pct}%"></i></div><div class="m2d-analytics-row"><strong>${matchStats.h.shots}</strong><span>${T('Şut','Shots')}</span><strong>${matchStats.a.shots}</strong></div><div class="m2d-analytics-row"><strong>${matchStats.h.on}</strong><span>${T('İsabetli şut','Shots on target')}</span><strong>${matchStats.a.on}</strong></div><div class="m2d-analytics-row"><strong>${matchStats.h.xg.toFixed(2)}</strong><span>${T('Pozisyon xG (tahmini)','Highlight xG (estimate)')}</span><strong>${matchStats.a.xg.toFixed(2)}</strong></div></div>
       <div class="m2d-com" aria-live="polite"><span class="m2d-cm">0'</span><p>${T('Maç başlıyor…', 'Kick-off…')}</p></div>
@@ -250,12 +250,22 @@ const Match2D = (() => {
       ['h', 'a'].forEach(sd => P[sd].forEach(p => {
         const col = p.pos === 'KL' ? (sd === 'h' ? '#f6d32d' : '#9be15d') : sd === 'h' ? hc : ac;
         ctx.beginPath(); ctx.arc(p.x + .25, p.y + .35, 1.55, 0, 7); ctx.fillStyle = 'rgba(0,0,0,.28)'; ctx.fill();
-        ctx.beginPath(); ctx.arc(p.x, p.y, 1.55, 0, 7); ctx.fillStyle = col; ctx.fill(); ctx.lineWidth = .22; ctx.strokeStyle = lum(col) > 150 ? '#222' : '#fff'; ctx.stroke();
+        ctx.beginPath(); ctx.arc(p.x, p.y, 1.55, 0, 7); ctx.fillStyle = col; ctx.fill();
+        const tm = sd === 'h' ? o.home : o.away, kit = tm.kit, k2 = tm.c2;
+        if (p.pos !== 'KL' && kit && kit !== 'duz' && k2 && !(sd === 'a' && ac !== (o.away.c1 || ac))) { ctx.save(); ctx.beginPath(); ctx.arc(p.x, p.y, 1.55, 0, 7); ctx.clip(); ctx.fillStyle = k2;
+          // ekranda dikey görünsün: dikey sahada eksenler döner
+          const V = (a, b, w, h) => vert ? ctx.fillRect(p.x + b, p.y + a, h, w) : ctx.fillRect(p.x + a, p.y + b, w, h);
+          if (kit === 'dikey') { V(-1.05, -2, .5, 4); V(.15, -2, .5, 4); } else if (kit === 'ince') { [-1, -.35, .3, .95].forEach(a => V(a, -2, .14, 4)); } else if (kit === 'yatay') { V(-2, -.95, 4, .55); V(-2, .4, 4, .55); }
+          else if (kit === 'yarim') V(0, -2, 2, 4); else if (kit === 'bant') V(-2, -.45, 4, .7); else if (kit === 'kol') { ctx.lineWidth = .7; ctx.strokeStyle = k2; ctx.beginPath(); ctx.arc(p.x, p.y, 1.5, 0, 7); ctx.stroke(); }
+          else if (kit === 'capraz') { ctx.beginPath(); ctx.moveTo(p.x - 2, p.y - 1.2); ctx.lineTo(p.x - 1.2, p.y - 2); ctx.lineTo(p.x + 2, p.y + 1.2); ctx.lineTo(p.x + 1.2, p.y + 2); ctx.fill(); }
+          ctx.restore(); }
+        ctx.beginPath(); ctx.arc(p.x, p.y, 1.55, 0, 7); ctx.lineWidth = .22; ctx.strokeStyle = lum(col) > 150 ? '#222' : '#fff'; ctx.stroke();
       }));
       // yazılar ekran koordinatında (döndürülmüş sahada da düz okunur)
       ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ['h', 'a'].forEach(sd => P[sd].forEach(p => { const col = p.pos === 'KL' ? (sd === 'h' ? '#f6d32d' : '#9be15d') : sd === 'h' ? hc : ac, [X, Y] = proj(p.x, p.y);
-        ctx.fillStyle = lum(col) > 150 ? '#111' : '#fff'; ctx.font = `bold ${1.6 * SC}px system-ui,sans-serif`; ctx.fillText(p.num, X, Y + 1); }));
+        ctx.font = `bold ${1.6 * SC}px system-ui,sans-serif`; const tm = sd === 'h' ? o.home : o.away, striped = p.pos !== 'KL' && tm.kit && tm.kit !== 'duz';
+        if (striped) { ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,.6)'; ctx.strokeText(p.num, X, Y + 1); ctx.fillStyle = '#fff'; } else ctx.fillStyle = lum(col) > 150 ? '#111' : '#fff'; ctx.fillText(p.num, X, Y + 1); }));
       // top sahibi / hedef oyuncunun adı
       const lab = holder || (beat && beat.to);
       if (lab) { const t = surname(lab.name), [X, Y] = proj(lab.x, lab.y); ctx.font = `600 ${1.8 * SC}px system-ui,sans-serif`; const w = ctx.measureText(t).width + 14; ctx.fillStyle = 'rgba(0,0,0,.65)'; ctx.fillRect(X - w / 2, Y - 46, w, 24); ctx.fillStyle = '#fff'; ctx.fillText(t, X, Y - 34); }

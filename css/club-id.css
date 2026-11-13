@@ -1,0 +1,36 @@
+/* BABA. Draft — kulüp kimliği düzenleyici */
+.cid-wrap{padding:0!important;overflow:hidden}
+.cid-wrap>summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px}
+.cid-wrap>summary::-webkit-details-marker{display:none}
+.cid-wrap>summary em{font-style:normal;font-weight:700;font-size:13px;color:#ff4d00}
+.cid-wrap[open]>summary em{opacity:.5}
+.cid-sum{display:flex;align-items:center;gap:12px;min-width:0}
+.cid-sum b{display:block;font-size:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cid-sum .eyebrow{display:block;margin:0}
+.cid-host{padding:0 16px 16px}
+.cid{display:flex;flex-direction:column;gap:12px}
+.cid .eyebrow{margin:6px 0 0}
+.cid-preview{display:flex;align-items:center;gap:18px;padding:16px;border-radius:18px;background:radial-gradient(circle at 20% 30%,rgba(255,255,255,.12),transparent 60%),linear-gradient(135deg,#14202b,#1f3242);color:#fff;flex-wrap:wrap}
+.cid-preview h3{margin:2px 0;font-size:clamp(22px,4vw,30px);letter-spacing:-.02em;overflow-wrap:anywhere}
+.cid-preview .eyebrow{color:rgba(255,255,255,.7);margin:0}
+.cid-short{margin:0;font-weight:900;letter-spacing:.2em;opacity:.8}
+.cid-art{display:flex;align-items:flex-end;gap:10px}
+.cid-art svg{filter:drop-shadow(0 8px 18px rgba(0,0,0,.45))}
+.cid-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
+.cid-grid label,.cid-colors label{display:flex;flex-direction:column;gap:5px;font-size:13px;font-weight:700}
+.cid input:not([type=checkbox]):not([type=color]){font:inherit;font-weight:500;padding:10px 12px;border-radius:12px;border:1px solid var(--line,rgba(0,0,0,.15));background:var(--card,#fff);color:inherit;min-width:0}
+.cid-check{flex-direction:row!important;align-items:center;gap:8px!important;font-weight:600!important}
+.cid-colors{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end}
+.cid-colors input[type=color]{width:64px;height:40px;border:1px solid var(--line,rgba(0,0,0,.15));border-radius:12px;padding:2px;background:var(--card,#fff);cursor:pointer}
+.cid-presets{display:flex;flex-wrap:wrap;gap:6px}
+.cid-presets button{width:34px;height:34px;border-radius:50%;border:2px solid var(--line,rgba(0,0,0,.15));background:linear-gradient(135deg,var(--a) 50%,var(--b) 50%);cursor:pointer;padding:0}
+.cid-presets button.on{outline:3px solid #ff4d00;outline-offset:2px}
+.cid-opts{display:flex;flex-wrap:wrap;gap:8px}
+.cid-opts button{display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 10px;border-radius:14px;border:1px solid var(--line,rgba(0,0,0,.12));background:var(--card,#fff);color:inherit;font:inherit;cursor:pointer;min-width:74px}
+.cid-opts button.on{border-color:#ff4d00;box-shadow:0 0 0 2px rgba(255,77,0,.35)}
+.cid-opts small{font-size:11.5px;font-weight:600;text-align:center;line-height:1.2}
+.cid-opts.syms button span{font-size:22px;line-height:1}
+.cid-head{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+.cid-head b{display:block;font-size:20px;letter-spacing:-.01em}
+.cid-head small{opacity:.7;font-size:13px}
+.m2d-tm .cid-logo{flex:none;filter:drop-shadow(0 1px 2px rgba(0,0,0,.5))}
