@@ -52,3 +52,10 @@ body.m2d-open{overflow:hidden}
 .m2d-state[hidden]{display:none}
 .m2d-style{display:block;font-size:11px;font-weight:700;opacity:.8;white-space:nowrap}
 .m2d-pitch canvas{transition:none}
+
+/* gömülü canlı görünüm (kariyer canlı maçı) */
+.m2d-ov.m2d-embed{position:relative;inset:auto;z-index:auto;background:none;backdrop-filter:none;padding:0;height:100%;display:block;overflow:hidden;animation:none}
+.m2d-embed .m2d{height:100%;width:100%;gap:0}
+.m2d-embed .m2d-top,.m2d-embed .m2d-analytics,.m2d-embed .m2d-com,.m2d-embed .m2d-bar{display:none!important}
+.m2d-embed .m2d-pitch{height:100%}
+.m2d-embed .m2d-flash b{font-size:clamp(30px,7vw,64px)}

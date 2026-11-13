@@ -217,8 +217,11 @@ const Career = (() => {
     const F = FORMATIONS[S.formation];
     const st = { min: 0, gm: 0, go: 0, ment: S.ment, style: S.style || 'dengeli', reds: [], xi: S.xi.slice(), played: new Set(S.xi.filter(Boolean)), subs: 0, red: 0, oppRed: 0, ev: [], lines: [], paused: false, speed: 1, done: false, cards: {}, injured: [], ga: {} };
     const opp = fx.opp, oAD = oppAD(opp), oXI = clubXI(CLUB(opp.id) || { players: [] });
+    let m2 = null;
+    const meH = fx.home ? 'h' : 'a', opH = fx.home ? 'a' : 'h';
+    const tv = c => { if (m2 && !quick) m2.push(c); };
     const meName = me().name, line = (txt, cls) => { st.lines.unshift({ m: st.min, txt, cls }); if (!quick) drawLines(); };
-    const lams = () => { const mAD = myAD(st.xi, st.ment, st.red * 3.5), o = { att: oAD.att - st.oppRed * 3.5, def: oAD.def - st.oppRed * 3.5 }; const [lh, la] = fx.home ? lambdas(mAD, o) : lambdas(o, mAD); const pm = planMod(st.style, st.xi, (oAD.att + oAD.def) > (mAD.att + mAD.def) + 2); return fx.home ? { me: lh * pm.me, op: la * pm.op } : { me: la * pm.me, op: lh * pm.op }; };
+    const lams = () => { const mAD = myAD(st.xi, st.ment, st.red * 3.5), o = { att: oAD.att - st.oppRed * 3.5, def: oAD.def - st.oppRed * 3.5 }; const [lh, la] = fx.home ? lambdas(mAD, o) : lambdas(o, mAD); const pm = planMod(st.style, st.xi, (oAD.att + oAD.def) > (mAD.att + mAD.def) + 2); const r = fx.home ? { me: lh * pm.me, op: la * pm.op } : { me: la * pm.me, op: lh * pm.op }; /* fark 4'ü geçince öndeki takım tempoyu düşürür */ if (st.gm - st.go >= 4) r.me *= .4; if (st.go - st.gm >= 4) r.op *= .4; return r; };
     // gol şekli: plana ve golcünün mevkisine uygun (stoper ara pasla değil kafayla / kornerden atar)
     const POSHOW = { ST: ['corner', 'cross', 'rebound', 'long', 'fk'], BK: ['cross', 'rebound', 'long', 'cutback', 'corner'], OS: ['long', 'through', 'rebound', 'cutback', 'target', 'fk', 'pen', 'corner'], KN: ['cutin', 'through', 'cutback', 'cross', 'long', 'pen', 'rebound'], FV: ['through', 'cross', 'cutback', 'pen', 'rebound', 'corner', 'target', 'long'] };
     const howFor = (p, styleKey) => { const w = GW[styleKey] || GW.dengeli, ok = (POSHOW[p.pos] || Object.keys(w)).filter(k => k !== 'fk' || traitsOf(p).includes('FREEKICK_MASTER') || p.pos === 'OS'); return wpick(ok, k => (w[k] || .3) * (k === 'cross' && traitsOf(p).includes('AERIAL_THREAT') ? 2 : 1) * (k === 'cutin' && traitsOf(p).includes('FINESSE_SHOT') ? 2.5 : 1)); };
@@ -234,15 +237,15 @@ const Career = (() => {
       if (Math.random() < L.me / 90) { st.gm++; let [s, a] = scorerMe(); const how = howFor(s.p, st.style); if (how === 'pen' || how === 'fk') a = null;
         if (how === 'pen') line(`🟨 ${m}' ${T(`Penaltı! ${s.p.name} ceza sahasında düşürüldü, ${pick(oXI).name} sarı kart gördü.`, `Penalty! ${s.p.name} is brought down in the box; ${pick(oXI).name} is booked.`)}`);
         if (how === 'fk') line(`${m}' ${T(`Ceza sahası önünde faul, baraj kuruluyor.`, `Foul on the edge of the box; the wall is set.`)}`);
-        s.p.g++; s.p.sg++; if (a) { a.p.a++; a.p.sa++; } st.ev.push({ t: 'me', sc: s.p.name, as: a && a.p.name, min: m, how, style: st.style }); line(`⚽ ${m}' ${T('GOL!', 'GOAL!')} ${s.p.name} ${GOALS()[how]}${a ? ' — ' + T('asist', 'assist') + ': ' + a.p.name : ''}. ${meName} ${st.gm}–${st.go}`, 'goal'); }
-      if (Math.random() < L.op / 90) { st.go++; let [s, a] = scorerOp(); const how = howFor(s, 'dengeli'); if (how === 'pen' || how === 'fk') a = null; if (how === 'pen') line(`${m}' ${T(`${opp.name} lehine penaltı!`, `Penalty to ${opp.name}!`)}`); st.ev.push({ t: 'op', sc: s.name, as: a && a.name, min: m, how }); line(`⚽ ${m}' ${opp.name}: ${s.name} ${GOALS()[how]}. ${st.gm}–${st.go}`, 'conc'); }
+        s.p.g++; s.p.sg++; if (a) { a.p.a++; a.p.sa++; } st.ev.push({ t: 'me', sc: s.p.name, as: a && a.p.name, min: m, how, style: st.style }); tv({ side: meH, min: m, sc: s.p.name, as: a && a.p.name, out: 'goal', how, style: st.style }); line(`⚽ ${m}' ${T('GOL!', 'GOAL!')} ${s.p.name} ${GOALS()[how]}${a ? ' — ' + T('asist', 'assist') + ': ' + a.p.name : ''}. ${meName} ${st.gm}–${st.go}`, 'goal'); }
+      if (Math.random() < L.op / 90) { st.go++; let [s, a] = scorerOp(); const how = howFor(s, 'dengeli'); if (how === 'pen' || how === 'fk') a = null; if (how === 'pen') line(`${m}' ${T(`${opp.name} lehine penaltı!`, `Penalty to ${opp.name}!`)}`); st.ev.push({ t: 'op', sc: s.name, as: a && a.name, min: m, how }); tv({ side: opH, min: m, sc: s.name, as: a && a.name, out: 'goal', how }); line(`⚽ ${m}' ${opp.name}: ${s.name} ${GOALS()[how]}. ${st.gm}–${st.go}`, 'conc'); }
       // büyük fırsatlar ve olaylar (renk katar)
-      if (Math.random() < .035) { const mine = Math.random() < L.me / (L.me + L.op); const nm = mine ? (scorerMe()[0].p.name) : scorerOp()[0].name; line(`${m}' ${pick([T(`${nm} direğe nişanladı, top auta çıktı.`, `${nm} aims for the far post — just wide.`), T(`${nm}'nin şutunu kaleci son anda çeldi!`, `Great save to deny ${nm}!`), T(`${nm} ofsayta takıldı.`, `${nm} is caught offside.`), T(`${nm} vuruşunda top üst direği yalayarak dışarı çıktı!`, `${nm} clips the bar!`)])}`, 'ch'); }
+      if (Math.random() < .035) { const mine = Math.random() < L.me / (L.me + L.op); const nm = mine ? (scorerMe()[0].p.name) : scorerOp()[0].name; if (Math.random() < .75) tv({ side: mine ? meH : opH, min: m, sc: nm, out: pick(['save', 'save', 'miss', 'post', 'block']) }); line(`${m}' ${pick([T(`${nm} direğe nişanladı, top auta çıktı.`, `${nm} aims for the far post — just wide.`), T(`${nm}'nin şutunu kaleci son anda çeldi!`, `Great save to deny ${nm}!`), T(`${nm} ofsayta takıldı.`, `${nm} is caught offside.`), T(`${nm} vuruşunda top üst direği yalayarak dışarı çıktı!`, `${nm} clips the bar!`)])}`, 'ch'); }
       // kartlar
-      if (Math.random() < .011) { const cand = st.xi.map((id, i) => ({ p: P(id), pos: F[i][0] })).filter(x => x.p && x.pos !== 'KL'); const x = wpick(cand, c => ({ ST: 2, BK: 1.6, OS: 1.6, KN: .8, FV: .7 })[c.pos] || 1); if (x) { const n = (st.cards[x.p.id] || 0) + 1; st.cards[x.p.id] = n; if (n >= 2) { line(`🟥 ${m}' ${x.p.name} ${T('ikinci sarıdan kırmızı kart gördü! 10 kişi kaldık.', 'is sent off for a second yellow! Down to ten.')}`, 'red'); st.reds.push({ t: 'me', name: x.p.name, min: m, red: true, dogso: false }); sendOff(x.p); } else { x.p.yc++; line(`🟨 ${m}' ${x.p.name} ${T('sarı kart gördü.', 'is booked.')}`); } } }
-      if (Math.random() < .0009) { const cand = st.xi.map(id => P(id)).filter(p => p && p.pos !== 'KL'); const p = pick(cand); if (p) { line(`🟥 ${m}' ${p.name} ${T('son adam olarak rakibi düşürdü — direkt kırmızı kart!', 'brings down the last man — straight red!')}`, 'red'); st.reds.push({ t: 'me', name: p.name, min: m, red: true, dogso: true }); p.sus = 2; sendOff(p); } }
+      if (Math.random() < .011) { const cand = st.xi.map((id, i) => ({ p: P(id), pos: F[i][0] })).filter(x => x.p && x.pos !== 'KL'); const x = wpick(cand, c => ({ ST: 2, BK: 1.6, OS: 1.6, KN: .8, FV: .7 })[c.pos] || 1); if (x) { const n = (st.cards[x.p.id] || 0) + 1; st.cards[x.p.id] = n; if (n >= 2) { line(`🟥 ${m}' ${x.p.name} ${T('ikinci sarıdan kırmızı kart gördü! 10 kişi kaldık.', 'is sent off for a second yellow! Down to ten.')}`, 'red'); st.reds.push({ t: 'me', name: x.p.name, min: m, red: true, dogso: false }); tv({ kind: 'red', side: opH, min: m, fouler: x.p.name, dogso: false, out: pick(['save', 'miss', 'block']) }); sendOff(x.p); } else { x.p.yc++; line(`🟨 ${m}' ${x.p.name} ${T('sarı kart gördü.', 'is booked.')}`); } } }
+      if (Math.random() < .0009) { const cand = st.xi.map(id => P(id)).filter(p => p && p.pos !== 'KL'); const p = pick(cand); if (p) { line(`🟥 ${m}' ${p.name} ${T('son adam olarak rakibi düşürdü — direkt kırmızı kart!', 'brings down the last man — straight red!')}`, 'red'); st.reds.push({ t: 'me', name: p.name, min: m, red: true, dogso: true }); tv({ kind: 'red', side: opH, min: m, fouler: p.name, dogso: true, out: pick(['save', 'miss', 'block']) }); p.sus = 2; sendOff(p); } }
       if (Math.random() < .011) line(`🟨 ${m}' ${opp.name}: ${pick(oXI).name} ${T('sarı kart gördü.', 'is booked.')}`);
-      if (Math.random() < .0008 && !st.oppRed) { st.oppRed = 1; const rp = pick(oXI.filter(x => x.pos !== 'KL' && x.pos !== 'FV')); st.reds.push({ t: 'op', name: rp.name, min: m, red: true, dogso: true }); line(`🟥 ${m}' ${rp.name} ${T(`kırmızı kart gördü, ${opp.name} 10 kişi kaldı!`, `is sent off — ${opp.name} are down to ten!`)}`, 'red'); }
+      if (Math.random() < .0008 && !st.oppRed) { st.oppRed = 1; const rp = pick(oXI.filter(x => x.pos !== 'KL' && x.pos !== 'FV')); st.reds.push({ t: 'op', name: rp.name, min: m, red: true, dogso: true }); tv({ kind: 'red', side: meH, min: m, fouler: rp.name, dogso: true, out: pick(['save', 'miss', 'block']) }); line(`🟥 ${m}' ${rp.name} ${T(`kırmızı kart gördü, ${opp.name} 10 kişi kaldı!`, `is sent off — ${opp.name} are down to ten!`)}`, 'red'); }
       // kondisyon ve sakatlık
       st.xi.forEach(id => { const p = P(id); if (!p) return; p.cond = clamp(p.cond - (.22 + (p.age > 30 ? .05 : 0) + (st.ment === 'tumhucum' || st.ment === 'hucum' ? .03 : 0)), 0, 100);
         const risk = .00012 * (p.cond < 55 ? 3.2 : p.cond < 70 ? 1.8 : 1) * (1 - S.fac.med * .08);
@@ -255,7 +258,7 @@ const Career = (() => {
     function autoSubFor(outId) {
       const i = st.xi.indexOf(outId); if (i < 0) return; const pos = F[i][0];
       const cand = S.squad.filter(p => avail(p) && !st.xi.includes(p.id) && !st.played.has(p.id)).sort((a, b) => eff(b, pos) - eff(a, pos))[0];
-      if (cand && st.subs < 5) { st.xi[i] = cand.id; st.played.add(cand.id); st.subs++; line(`🔁 ${st.min}' ${P(outId).name} ⟶ ${cand.name}`); } else st.xi[i] = null;
+      if (cand && st.subs < 5) { if (m2) m2.sub(meH, P(outId).name, cand.name); st.xi[i] = cand.id; st.played.add(cand.id); st.subs++; line(`🔁 ${st.min}' ${P(outId).name} ⟶ ${cand.name}`); } else st.xi[i] = null;
     }
     function end() {
       st.done = true; clearInterval(timer);
@@ -263,6 +266,7 @@ const Career = (() => {
       const L = lams(); res.lh = fx.home ? L.me : L.op; res.la = fx.home ? L.op : L.me;
       line(`🏁 ${T('Maç sona erdi', 'Full time')}: ${fx.home ? meName : opp.name} ${res.gh}–${res.ga} ${fx.home ? opp.name : meName}`, 'ft');
       st.played.forEach(id => { const p = P(id); if (p) { p.apps++; } });
+      if (m2) m2.end();
       S.matchLog = { lines: st.lines.slice(0, 40), ev: st.ev, res, xi: st.xi.slice(), opp: opp.id, home: fx.home, week: S.week };
       finishWeek(res, st);
       if (!quick) renderLive(); onEnd && onEnd();
@@ -271,21 +275,21 @@ const Career = (() => {
     if (quick) { while (!st.done) minuteTick(); return; }
     // ---------- arayüz ----------
     ov = document.createElement('div'); ov.className = 'cr-live-ov';
+    ov.innerHTML = `<div class="cr-live" role="dialog" aria-modal="true" aria-label="${T('Canlı maç', 'Live match')}"><div class="cr-top"></div><div class="cr-pitch2d" hidden></div><div class="cr-dyn"></div><div class="cr-sub" hidden></div></div>`;
     document.body.appendChild(ov); document.body.classList.add('cr-live-open');
     function drawLines() { const box = ov && ov.querySelector('.cr-feed'); if (box) box.innerHTML = st.lines.slice(0, 30).map(l => `<p class="${l.cls || ''}">${esc(l.txt)}</p>`).join(''); }
     function renderLive() {
       if (!ov) return;
       const L = lams(), share = clamp(Math.round(L.me / (L.me + L.op) * 100), 25, 75);
-      ov.innerHTML = `<div class="cr-live" role="dialog" aria-modal="true" aria-label="${T('Canlı maç', 'Live match')}">
-        <header class="cr-score"><span>${esc(fx.home ? meName : opp.name)}</span><b>${fx.home ? st.gm : st.go} – ${fx.home ? st.go : st.gm}</b><span>${esc(fx.home ? opp.name : meName)}</span><em>${st.done ? T('MS', 'FT') : st.min + "'"}</em></header>
+      ov.querySelector('.cr-top').innerHTML = `<header class="cr-score"><span>${esc(fx.home ? meName : opp.name)}</span><b>${fx.home ? st.gm : st.go} – ${fx.home ? st.go : st.gm}</b><span>${esc(fx.home ? opp.name : meName)}</span><em>${st.done ? T('MS', 'FT') : st.min + "'"}</em></header>
         <div class="cr-prog"><i style="width:${st.min / 90 * 100}%"></i></div>
-        <div class="cr-mom"><span>${T('Baskı', 'Momentum')}</span><div><i style="width:${share}%"></i></div><small>${share}% – ${100 - share}%</small></div>
-        <div class="cr-feed" aria-live="polite"></div>
+        <div class="cr-mom"><span>${T('Baskı', 'Momentum')}</span><div><i style="width:${share}%"></i></div><small>${share}% – ${100 - share}%</small></div>`;
+      if (m2) m2.setMomentum(fx.home ? share : 100 - share);
+      ov.querySelector('.cr-dyn').innerHTML = `<div class="cr-feed" aria-live="polite"></div>
         ${st.done ? `<div class="cr-live-bar">${typeof Match2D !== 'undefined' && st.ev.length ? `<button class="pill ghost" data-l="hl">📺 ${T('2D özet izle', 'Watch 2D highlights')}</button>` : ''}<button class="pill" data-l="close">${T('Devam ▶', 'Continue ▶')}</button></div>`
-          : `<div class="cr-live-bar"><button class="pill ghost" data-l="pause">${st.paused ? '▶ ' + T('Devam et', 'Resume') : '⏸ ' + T('Durdur', 'Pause')}</button><button class="pill ghost" data-l="spd">⏩ ${st.speed}x</button><button class="pill ghost" data-l="sub">🔁 ${T('Oyuncu değiştir', 'Substitute')} (${5 - st.subs})</button><button class="pill ghost" data-l="skip">⏭ ${T('Sona atla', 'Skip to end')}</button></div>
+          : `<div class="cr-live-bar">${typeof Match2D !== 'undefined' ? `<button class="pill ghost ${m2 ? 'on' : ''}" data-l="tv">📺 ${m2 ? T('2D açık', '2D on') : T('2D izle', 'Watch 2D')}</button>` : ''}<button class="pill ghost" data-l="pause">${st.paused ? '▶ ' + T('Devam et', 'Resume') : '⏸ ' + T('Durdur', 'Pause')}</button><button class="pill ghost" data-l="spd">⏩ ${st.speed}x</button><button class="pill ghost" data-l="sub">🔁 ${T('Oyuncu değiştir', 'Substitute')} (${5 - st.subs})</button><button class="pill ghost" data-l="skip">⏭ ${T('Sona atla', 'Skip to end')}</button></div>
           <div class="cr-ment" aria-label="${T('Mentalite', 'Mentality')}">${Object.entries(MENT()).map(([k, v]) => `<button data-m="${k}" class="${st.ment === k ? 'on' : ''}">${v[0]}</button>`).join('')}</div>
-          <p class="cr-plan-lbl">📋 ${T('Hücum planı', 'Attacking plan')}</p><div class="cr-ment cr-plan">${Object.entries(PLANS()).map(([k, v]) => `<button data-pl="${k}" class="${st.style === k ? 'on' : ''}">${v}</button>`).join('')}</div>`}
-        <div class="cr-sub" hidden></div></div>`;
+          <p class="cr-plan-lbl">📋 ${T('Hücum planı', 'Attacking plan')}</p><div class="cr-ment cr-plan">${Object.entries(PLANS()).map(([k, v]) => `<button data-pl="${k}" class="${st.style === k ? 'on' : ''}">${v}</button>`).join('')}</div>`}`;
       drawLines();
       ov.querySelectorAll('[data-m]').forEach(b => b.onclick = () => { st.ment = b.dataset.m; line(`📋 ${st.min}' ${T('Taktik değişti', 'Tactical change')}: ${MENT()[st.ment][0]}`); renderLive(); });
       ov.querySelectorAll('[data-pl]').forEach(b => b.onclick = () => { st.style = b.dataset.pl; const pm = planMod(st.style, st.xi); line(`📋 ${st.min}' ${T('Hücum planı', 'Attacking plan')}: ${PLANS()[st.style]}${pm.me >= 1.06 ? T(' — kadroya çok uygun!', ' — a great fit for this squad!') : pm.me < .97 ? T(' — kadro bu plana pek uygun değil.', ' — the squad doesn’t really suit this plan.') : ''}`); renderLive(); });
@@ -293,7 +297,8 @@ const Career = (() => {
       on('pause', () => { st.paused = !st.paused; renderLive(); });
       on('spd', () => { st.speed = st.speed === 1 ? 2 : st.speed === 2 ? 4 : 1; restart(); renderLive(); });
       on('sub', () => { st.paused = true; renderLive(); openSubs(); });
-      on('skip', () => { st.paused = false; clearInterval(timer); while (!st.done) { const was = quick; quick = true; minuteTick(); quick = was; } renderLive(); });
+      on('tv', () => { if (m2) { stopTV(); S.tv = false; } else { S.tv = true; startTV(); } save(); renderLive(); });
+      on('skip', () => { stopTV(); st.paused = false; clearInterval(timer); while (!st.done) { const was = quick; quick = true; minuteTick(); quick = was; } renderLive(); });
       on('close', close);
       on('hl', () => watch2D());
     }
@@ -305,11 +310,25 @@ const Career = (() => {
         const bench = S.squad.filter(p => avail(p) && !st.xi.includes(p.id) && !st.played.has(p.id));
         box.innerHTML = `<h3>🔁 ${T('Oyuncu değişikliği', 'Substitution')} <small>${5 - st.subs} ${T('hak', 'left')}</small></h3><div class="cr-subcols"><div><p class="eyebrow">${T('Çıkacak', 'Off')}</p>${xiRows}</div><div><p class="eyebrow">${T('Girecek', 'On')}</p>${bench.map(p => `<button data-i="${p.id}" ${outId ? '' : 'disabled'}><span>${PZ(p.pos)}</span><b>${esc(p.name)}</b><em>${p.r}</em></button>`).join('') || `<p class="muted">${T('Yedek yok', 'No subs')}</p>`}</div></div><button class="pill sm" data-x>${T('Kapat ve devam et', 'Close and resume')}</button>`;
         box.querySelectorAll('[data-o]').forEach(b => b.onclick = () => { outId = b.dataset.o; draw(); });
-        box.querySelectorAll('[data-i]').forEach(b => b.onclick = () => { if (!outId || st.subs >= 5) return; const i = st.xi.indexOf(outId), inn = P(b.dataset.i); st.xi[i] = inn.id; st.played.add(inn.id); st.subs++; line(`🔁 ${st.min}' ${P(outId).name} ⟶ ${inn.name}`); outId = null; if (st.subs >= 5) { st.paused = false; renderLive(); } else draw(); });
-        box.querySelector('[data-x]').onclick = () => { if (forced && st.xi.includes(forced)) autoSubFor(forced); st.paused = false; renderLive(); };
+        box.querySelectorAll('[data-i]').forEach(b => b.onclick = () => { if (!outId || st.subs >= 5) return; const i = st.xi.indexOf(outId), inn = P(b.dataset.i); st.xi[i] = inn.id; st.played.add(inn.id); st.subs++; line(`🔁 ${st.min}' ${P(outId).name} ⟶ ${inn.name}`); if (m2) m2.sub(meH, P(outId).name, inn.name); outId = null; if (st.subs >= 5) { box.hidden = true; st.paused = false; renderLive(); } else draw(); });
+        box.querySelector('[data-x]').onclick = () => { if (forced && st.xi.includes(forced)) autoSubFor(forced); box.hidden = true; st.paused = false; renderLive(); };
       };
       draw();
     }
+    function sides() {
+      const myXI = st.xi.map((id, i) => ({ p: P(id), slot: { x: F[i][1], y: F[i][2] } })).filter(x => x.p);
+      const meSide = { name: meName, short: me().short, c1: me().c1, c2: me().c2, kit: me().kit, logo: me().identity && typeof ClubID !== 'undefined' && ClubID.get() ? ClubID.logo(ClubID.get(), 22) : '', xi: myXI.map(x => ({ name: x.p.name, pos: x.p.pos, r: x.p.r, traits: traitsOf(x.p) })), slots: myXI.map(x => x.slot), style: st.style };
+      const DS = { KL: [[50, 94]], ST: [[37, 80], [63, 80]], BK: [[12, 74], [88, 74]], OS: [[28, 54], [50, 60], [72, 54]], KN: [[14, 24], [86, 24]], FV: [[50, 14]] }, used = {};
+      const opSide = { name: opp.name, short: opp.short, c1: opp.c1, c2: opp.c2, kit: 'duz', xi: oXI.map(p => ({ name: p.name, pos: p.pos, r: p.r })), slots: oXI.map(p => { const k = used[p.pos] = (used[p.pos] || 0) + 1; const c = (DS[p.pos] || [[50, 50]])[k - 1] || [50, 50]; return { x: c[0], y: c[1] }; }) };
+      return fx.home ? { home: meSide, away: opSide } : { home: opSide, away: meSide };
+    }
+    // canlı 2D: metin saati olay anlarında 2D pozisyon bitene kadar bekler
+    function startTV() {
+      if (typeof Match2D === 'undefined' || m2 || st.done) return; const box = ov.querySelector('.cr-pitch2d'); box.hidden = false; box.innerHTML = '';
+      const sd = sides(); m2 = Match2D.show(Object.assign({ live: true, mount: box, gh: 0, ga: 0, lh: 1, la: 1, ev: [] }, sd));
+      if (m2) { m2.setMin(Math.max(1, st.min)); m2.setSpeed(st.speed); m2.setScore(fx.home ? st.gm : st.go, fx.home ? st.go : st.gm); }
+    }
+    function stopTV() { if (m2) { m2.close(); m2 = null; } const box = ov && ov.querySelector('.cr-pitch2d'); if (box) { box.hidden = true; box.innerHTML = ''; } }
     function watch2D() {
       const myXI = st.xi.map((id, i) => ({ p: P(id) || P(S.xi[i]), slot: { x: F[i][1], y: F[i][2] } })).filter(x => x.p);
       const meSide = { name: meName, short: me().short, c1: me().c1, c2: me().c2, kit: me().kit, logo: me().identity && typeof ClubID !== 'undefined' && ClubID.get() ? ClubID.logo(ClubID.get(), 22) : '', xi: myXI.map(x => ({ name: x.p.name, pos: x.p.pos, r: x.p.r, traits: traitsOf(x.p) })), slots: myXI.map(x => x.slot), style: st.style };
@@ -321,9 +340,10 @@ const Career = (() => {
       ov.style.display = 'none';
       Match2D.show({ home: fx.home ? meSide : opSide, away: fx.home ? opSide : meSide, gh: r.gh, ga: r.ga, lh: r.lh, la: r.la, ev, cards }, () => { ov.style.display = ''; });
     }
-    function close() { clearInterval(timer); ov.remove(); document.body.classList.remove('cr-live-open'); render(); }
-    const restart = () => { clearInterval(timer); timer = setInterval(() => { if (!st.paused) minuteTick(); }, 160 / st.speed); };
+    function close() { stopTV(); clearInterval(timer); ov.remove(); document.body.classList.remove('cr-live-open'); render(); }
+    const restart = () => { clearInterval(timer); if (m2) m2.setSpeed(st.speed); timer = setInterval(() => { if (!st.paused && !(m2 && m2.busy())) { minuteTick(); if (m2) m2.setMin(st.min); } }, 160 / st.speed); };
     line(`🏟️ ${T('Maç başladı', 'Kick-off')}! ${fx.home ? meName + ' – ' + opp.name : opp.name + ' – ' + meName}. ${T('Taktik', 'Tactic')}: ${MENT()[st.ment][0]}`);
+    if (S.tv !== false && typeof Match2D !== 'undefined') startTV();
     renderLive(); restart();
   }
 

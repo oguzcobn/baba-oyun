@@ -164,3 +164,10 @@ body.dark-mode .mode-switch{background:#0d111c;border-color:#1a2033}body.dark-mo
 .cr-plan-lbl{margin:2px 0 -2px;font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;opacity:.75}
 .cr-plan button{font-size:12.5px}
 .cr-b.tr{background:transparent;padding:0 1px;font-size:13px}
+
+.cr-top{display:flex;flex-direction:column;gap:8px}
+.cr-dyn{display:flex;flex-direction:column;gap:10px;flex:1 1 auto;min-height:0}
+.cr-pitch2d{flex:0 0 auto;height:clamp(220px,44vh,470px);border-radius:14px;overflow:hidden;background:#151a20}
+.cr-pitch2d[hidden]{display:none}
+.cr-live .pill.ghost.on{background:rgba(255,255,255,.16)}
+@media (max-width:520px){.cr-pitch2d{height:clamp(260px,46vh,520px)}.cr-live .cr-feed{min-height:90px;max-height:24vh}.cr-live-bar .pill{padding:9px 12px;font-size:13px}}
