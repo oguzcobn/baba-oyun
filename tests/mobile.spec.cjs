@@ -199,3 +199,11 @@ test.describe('Draft event-driven physics',()=>{
   expect(result.poss[0]+result.poss[1]).toBe(100);
  });
 });
+
+test.describe('Draft Turkish nationality and chemistry',()=>{
+ test('Turkish players show TR on cards and are included in same-nation links',async({page})=>{
+  await page.goto(BASE+'#draft');
+  const result=await page.evaluate(()=>({efecan:DRAFT_NAT['Efecan Karaca'],berkan:DRAFT_NAT['Berkan Kutlu'],levent:DRAFT_NAT['Levent Mercan'],foreign:DRAFT_NAT['Victor Osimhen']}));
+  expect(result).toEqual({efecan:'TR',berkan:'TR',levent:'TR',foreign:'NG'});
+ });
+});
