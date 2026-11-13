@@ -96,7 +96,7 @@ const App = (() => {
     { id: 'futbol', name: ['Futbol — Tarafını Seç', 'Football — Pick Your Side'], tags: [['Draft', 'Draft'], ['Kariyer', 'Career'], ['2D maç', '2D match']], best: () => T('2 mod', '2 modes') },
     { id: 'career', name: ['Menajerlik Kariyeri', 'Manager Career'], tags: [['Kariyer', 'Career'], ['Transfer', 'Transfers'], ['Canlı maç', 'Live match']], best: () => { try { const s = JSON.parse(localStorage.getItem('baba_career_save')); return s ? T(`Sezon ${s.season} · H${Math.min(s.week + 1, 34)}`, `Season ${s.season} · W${Math.min(s.week + 1, 34)}`) : T('Yeni', 'New'); } catch (e) { return ''; } } },
     { id: 'draft', name: 'Süper Lig Draft', tags: [['Futbol', 'Football'], ['18 kulüp', '18 clubs'], ['İstatistik', 'Stats']], best: () => ls.get('draft_best', 0) + T(' p', ' pts') },
-    { id: 'vadi', name: 'Empires of the Valley', tags: [['Strateji', 'Strategy'], ['Şehir kurma', 'City-building']], best: () => T('1. Bölüm', 'Chapter 1') },
+    { id: 'vadi', name: 'Empires of the Valley', tags: [['Strateji', 'Strategy'], ['Şehir kurma', 'City-building']], best: () => T('3 Bölümlük Sefer', 'Three-Chapter Campaign') },
     { id: '2048', name: '2048', tags: [['Bulmaca', 'Puzzle'], ['Kaydır', 'Swipe']], best: () => ls.get('bb_best_2048', 0) },
     { id: 'sudoku', name: 'Sudoku', tags: [['Mantık', 'Logic'], ['3 seviye', '3 levels']], best: () => { const b = ls.get('bb_best_sudoku', null); return b ? fmtT(b) : '—'; } },
     { id: 'mines', name: ['Mayın Tarlası', 'Minesweeper'], tags: [['Klasik', 'Classic'], ['Dikkat', 'Focus']], best: () => { const b = ls.get('bb_best_mines', null); return b ? fmtT(b) : '—'; } },
@@ -185,7 +185,7 @@ const App = (() => {
   function vadi() {
     const b = shell('Empires of<br>the Valley', `<div class="vd-bar"><p class="bb-tip">${T('Vadide küçük bir köyden medeniyete. Kayıtlar bu cihazda tutulur.', 'From a small village in the valley to a civilisation. Saves are kept on this device.')}</p><div class="vd-acts"><button class="bb-btn" data-a="full">⛶ ${T('Tam ekran', 'Full screen')}</button><a class="bb-btn" href="${VADI_URL}" target="_blank" rel="noopener">${T('Yeni sekmede aç', 'Open in a new tab')} ↗</a></div></div>
       <div class="vd-frame"><iframe src="${VADI_URL}" title="Empires of the Valley" allow="fullscreen; autoplay" allowfullscreen loading="eager"></iframe></div>
-      <p class="bb-tip">${T('Kısayollar: Boşluk duraklat · 1/2/3 hız · B inşa · R yol · Esc iptal. Telefonda dar geliyorsa “Yeni sekmede aç”ı kullan.', 'Shortcuts: Space pause · 1/2/3 speed · B build · R road · Esc cancel. If it feels cramped on a phone, use “Open in a new tab”.')}</p>`, T('Strateji · şehir kurma', 'Strategy · city-building'));
+      <p class="bb-tip">${T('Kısayollar: Boşluk duraklat · 1/2/3 hız · B inşa · R yol · G ordu hareketi · Esc iptal. Telefonda dar geliyorsa “Yeni sekmede aç”ı kullan.', 'Shortcuts: Space pause · 1/2/3 speed · B build · R road · G move troops · Esc cancel. If it feels cramped on a phone, use “Open in a new tab”.')}</p>`, T('Strateji · şehir kurma', 'Strategy · city-building'));
     const fr = b.querySelector('.vd-frame'), fb = b.querySelector('[data-a=full]');
     const req = fr.requestFullscreen || fr.webkitRequestFullscreen;
     if (!req) fb.hidden = true;
