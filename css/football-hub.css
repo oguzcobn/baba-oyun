@@ -1,0 +1,45 @@
+/* BABA. — Futbol giriş sayfası (#futbol) · bölünmüş "tarafını seç" sahnesi */
+.fh{position:relative;display:flex;min-height:calc(100svh - 64px);margin:0;overflow:hidden;background:#111;isolation:isolate}
+.fh-side{position:relative;flex:1 1 50%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;padding:clamp(24px,5vw,64px) clamp(18px,4vw,56px) clamp(32px,6vh,72px);color:#fff;text-decoration:none;overflow:hidden;transition:flex-grow .55s cubic-bezier(.2,.8,.2,1)}
+.fh-left{background:radial-gradient(120% 90% at 30% 20%,#ff9a7a 0,#ff6a48 38%,#e3462c 70%,#b9311e 100%)}
+.fh-right{background:radial-gradient(120% 90% at 70% 20%,#1d3a57 0,#0f2238 45%,#081422 80%,#050c15 100%)}
+.fh-grain{position:absolute;inset:0;opacity:.55;mix-blend-mode:screen;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 1.4 -.55'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");pointer-events:none}
+.fh-grain::after{content:"";position:absolute;inset:0;background-image:radial-gradient(circle,rgba(255,255,255,.9) 0 1.4px,transparent 2px);background-size:56px 56px;background-position:12px 30px;opacity:.25;animation:fhSnow 22s linear infinite}
+@keyframes fhSnow{to{background-position:12px 590px}}
+.fh-mesh{position:absolute;inset:0;opacity:.5;pointer-events:none;background-image:radial-gradient(circle at 50% 50%,transparent 0 5px,rgba(90,160,210,.35) 5.5px 6.5px,transparent 7px),radial-gradient(circle at 50% 50%,transparent 0 5px,rgba(90,160,210,.35) 5.5px 6.5px,transparent 7px);background-size:16px 14px;background-position:0 0,8px 7px;mask-image:radial-gradient(120% 100% at 60% 40%,#000 30%,transparent 85%)}
+.fh-art{position:absolute;top:8%;width:min(78%,520px);height:auto;z-index:1;filter:drop-shadow(0 30px 40px rgba(0,0,0,.45));transition:transform .6s cubic-bezier(.2,.8,.2,1)}
+.fh-art-l{left:8%;animation:fhFloat 7s ease-in-out infinite}
+.fh-art-r{right:6%;animation:fhFloat 8s ease-in-out infinite reverse}
+@keyframes fhFloat{50%{transform:translateY(-14px) rotate(-1.5deg)}}
+.fh-ball{transform-origin:330px 290px;animation:fhSpin 9s linear infinite}
+@keyframes fhSpin{to{transform:rotate(360deg)}}
+.fh-info{position:relative;z-index:3;width:min(500px,100%);text-align:center;display:flex;flex-direction:column;align-items:center;gap:10px}
+.fh-k{margin:0;font-size:12px;font-weight:800;letter-spacing:.22em;text-transform:uppercase;opacity:.85}
+.fh-info h2{margin:0;font-size:clamp(30px,4.4vw,56px);line-height:.92;letter-spacing:-.04em;font-weight:900;text-transform:uppercase}
+.fh-info p{margin:0;font-size:15px;line-height:1.5;opacity:.9;max-width:36ch}
+.fh-meta{font-weight:700;font-size:13.5px!important;opacity:1!important;background:rgba(0,0,0,.22);padding:6px 12px;border-radius:999px}
+.fh-btn{margin-top:8px;display:inline-flex;align-items:center;justify-content:center;min-width:230px;padding:18px 28px;background:#d8f424;color:#111;font-weight:900;font-size:15px;letter-spacing:.06em;text-transform:uppercase;box-shadow:0 10px 30px rgba(0,0,0,.35);transition:transform .2s,background .2s}
+.fh-side:hover .fh-btn,.fh-side:focus-visible .fh-btn{background:#f0ff5a;transform:translateY(-2px)}
+.fh-side:focus-visible{outline:4px solid #d8f424;outline-offset:-8px}
+.fh:has(.fh-left:hover) .fh-left,.fh:has(.fh-right:hover) .fh-right{flex-grow:1.35}
+.fh-side:hover .fh-art{transform:scale(1.04) translateY(-6px)}
+.fh-title{position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);z-index:2;pointer-events:none;text-align:center;display:flex;flex-direction:column;align-items:center;mix-blend-mode:normal}
+.fh-title b{display:block;font-size:clamp(58px,11vw,176px);line-height:.86;font-weight:900;letter-spacing:-.045em;color:rgba(255,255,255,.9);white-space:nowrap;text-shadow:0 8px 40px rgba(0,0,0,.25);
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.2' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 -1.2 1.25'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 6px 30px rgba(0,0,0,.25))}
+.fh-title small{margin-top:14px;font-size:clamp(12px,1.4vw,18px);letter-spacing:.6em;font-weight:500;color:rgba(255,255,255,.9);padding-left:.6em}
+.fh-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+body:has(.fh) .gp-head{display:none}
+body:has(.fh) main#view{max-width:none;padding:0;overflow:visible}
+.fh-k{white-space:nowrap;letter-spacing:.16em}
+@media (max-width:760px){
+  .fh-k{white-space:normal;letter-spacing:.14em}
+  .fh{flex-direction:column;min-height:auto}
+  .fh-side{min-height:72svh;padding-top:46%}
+  .fh-art{top:5%;width:86%}
+  .fh-art-l{left:7%}.fh-art-r{right:7%}
+  .fh-title{top:72svh;transform:translate(-50%,-50%)}
+  .fh-title b{font-size:clamp(48px,16vw,84px)}
+  .fh-title small{display:none}
+  .fh:has(.fh-left:hover) .fh-left,.fh:has(.fh-right:hover) .fh-right{flex-grow:1}
+}
+@media (prefers-reduced-motion:reduce){.fh-art,.fh-ball,.fh-grain::after{animation:none!important}}
