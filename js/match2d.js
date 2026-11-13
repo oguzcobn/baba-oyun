@@ -8,6 +8,7 @@ const Match2D = (() => {
   'use strict';
   const T = (tr, en) => (typeof I18N !== 'undefined' && I18N.lang === 'en') ? en : tr;
   const W = 105, H = 68, GY0 = 30.34, GY1 = 37.66;
+  const STAND = 11; // metres of stadium surrounding the pitch
   const rnd = n => Math.floor(Math.random() * n), pick = a => a[rnd(a.length)], lerp = (a, b, t) => a + (b - a) * t, clamp = (x, a, b) => Math.max(a, Math.min(b, x));
   const esc = x => String(x == null ? '' : x).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const poisson = l => { let L = Math.exp(-l), k = 0, p = 1; do { k++; p *= Math.random(); } while (p > L); return k - 1; };
@@ -63,7 +64,9 @@ const Match2D = (() => {
     // dar ve dikey ekranlarda saha dikey çizilir (oyuncular daha büyük görünür)
     const vert = innerWidth < 640 && innerHeight > innerWidth;
     if (vert) { cv.width = 680; cv.height = 1050; ov.querySelector('.m2d').classList.add('vert'); }
-    const SC = 10, proj = (x, y) => vert ? [(H - y) * SC, x * SC] : [x * SC, y * SC];
+    const SC = 10, proj = (x, y) => vert ? [(H - y + STAND) * SC, (x + STAND) * SC] : [(x + STAND) * SC, (y + STAND) * SC];
+    cv.width = (vert ? H : W) * SC + STAND * 2 * SC;
+    cv.height = (vert ? W : H) * SC + STAND * 2 * SC;
     let speed = 1, score = [0, 0], ci = -1, raf = 0, closed = false;
     const com = (min, txt, cls) => { q('.m2d-cm').textContent = min + "'"; const p = q('.m2d-com p'); p.textContent = txt; p.className = cls || ''; };
 
@@ -95,10 +98,10 @@ const Match2D = (() => {
       // Reuse actual possession pass participants and target locations for simulated goals.
       if(Array.isArray(c.trail)&&c.trail.some(x=>x.type==='pass')){
         const passes=c.trail.filter(x=>x.type==='pass').slice(-3);
-        const actual=passes.map(x=>({p:find(att,x.to),at:{x:dir[att]===1?x.tx:105-x.tx,y:dir[att]===1?x.ty:68-x.ty}}));
+        const actual=passes.map(x=>({p:find(att,x.to),at:{x:x.tx,y:x.ty}}));
         const shot=c.trail.findLast?c.trail.findLast(x=>x.type==='shot'):c.trail.filter(x=>x.type==='shot').pop();
-        if(shot)actual.push({p:shooter,at:{x:dir[att]===1?shot.x:105-shot.x,y:dir[att]===1?shot.y:68-shot.y}});
-        if(actual.length>1){pts.splice(0,pts.length,{p:find(att,passes[0].player),at:{x:dir[att]===1?passes[0].x:105-passes[0].x,y:dir[att]===1?passes[0].y:68-passes[0].y}},...actual.filter((v,i,a)=>i===0||v.p!==a[i-1].p));}
+        if(shot)actual.push({p:shooter,at:{x:shot.x,y:shot.y}});
+        if(actual.length>1){pts.splice(0,pts.length,{p:find(att,passes[0].player),at:{x:passes[0].x,y:passes[0].y}},...actual.filter((v,i,a)=>i===0||v.p!==a[i-1].p));}
       }
       // herkesi formasyonuna yerleştir, topu ilk oyuncuya ver
       ['h', 'a'].forEach(s => P[s].forEach(p => { const f = toField(s, shapeFor(p, s, pts[0].at.x, pts[0].at.y)); p.x = p.tx = f.x; p.y = p.ty = f.y; }));
@@ -115,7 +118,13 @@ const Match2D = (() => {
         beats.push({ k: 'hold', d: last ? .35 : .55 });
       }
       const gy = c.out === 'miss' ? (Math.random() < .5 ? GY0 - 2 - Math.random() * 4 : GY1 + 2 + Math.random() * 4) : c.out === 'post' ? (Math.random() < .5 ? GY0 : GY1) : GY0 + 1 + Math.random() * 5.3;
-      beats.push({ k: 'shot', d: .55, out: c.out, gy, txt: T(`${tn(shooter)} vuruyor…`, `${tn(shooter)} shoots…`) });
+      // Do not animate implausible full-pitch shots: carry possession into the final third first.
+      const finalPoint=pts[pts.length-1].at;
+      if(finalPoint.x<72){
+        const strikerPoint={x:clamp(82+Math.random()*9,82,94),y:clamp(finalPoint.y,22,46)};
+        beats.push({k:'carry',d:Math.max(1.5,(strikerPoint.x-finalPoint.x)/9),at:strikerPoint,to:shooter,txt:T('Hücum üçüncü bölgeye taşınıyor…','The attack advances into the final third…')});
+      }
+      beats.push({ k: 'shot', d: .85, out: c.out, gy, txt: T(`${tn(shooter)} vuruyor…`, `${tn(shooter)} shoots…`) });
       beats.push({ k: 'result', d: c.out === 'goal' ? 2.4 : 1.6, out: c.out, shooter, assister, c });
       beat = null; bt = 0; flash = ''; q('.m2d-flash').hidden = true;
       q('.m2d-min').textContent = c.min + "'"; q('.m2d-cnt').textContent = (ci + 1) + '/' + clips.length;
@@ -131,8 +140,8 @@ const Match2D = (() => {
     function startBeat() {
       beat = beats.shift(); bt = 0; if (!beat) return nextClip();
       if (beat.txt) com(clips[ci].min, beat.txt);
-      if (beat.k === 'pass') { const f = toField(att, beat.at); beat.from = { x: ball.x, y: ball.y }; beat.dest = f; beat.to.tx = f.x; beat.to.ty = f.y; beat.to.rs = Math.hypot(f.x - beat.to.x, f.y - beat.to.y) / beat.d * 1.05; holder = null; }
-      if (beat.k === 'shot') { const gx = dir[att] > 0 ? W - (beat.out === 'goal' ? 1.4 : beat.out === 'miss' ? .4 : .5) : (beat.out === 'goal' ? 1.4 : beat.out === 'miss' ? .4 : .5), gy = dir[att] > 0 ? beat.gy : H - beat.gy;
+      if (beat.k === 'pass' || beat.k === 'carry') { const f = toField(att, beat.at); beat.from = { x: ball.x, y: ball.y }; beat.dest = f; beat.to.tx = f.x; beat.to.ty = f.y; beat.to.rs = Math.min(11,Math.hypot(f.x - beat.to.x, f.y - beat.to.y) / beat.d); holder = beat.k === 'carry' ? beat.to : null; }
+      if (beat.k === 'shot') { const gx = dir[att] > 0 ? W - (beat.out === 'goal' ? -1.1 : beat.out === 'miss' ? -.4 : .5) : (beat.out === 'goal' ? -1.1 : beat.out === 'miss' ? -.4 : .5), gy = dir[att] > 0 ? beat.gy : H - beat.gy;
         beat.from = { x: ball.x, y: ball.y }; beat.dest = { x: gx, y: gy };
         const kp = P[att === 'h' ? 'a' : 'h'].find(p => p.pos === 'KL');
         if (beat.out === 'save' && kp) { const t = .82; beat.dest = { x: lerp(ball.x, gx, t), y: lerp(ball.y, gy, t) }; kp.tx = beat.dest.x; kp.ty = beat.dest.y; }
@@ -173,11 +182,11 @@ const Match2D = (() => {
       const dt = Math.min(.05, (ts - (last || ts)) / 1000) * speed; last = ts;
       if (beat) {
         bt += dt; const k = clamp(bt / beat.d, 0, 1);
-        if (beat.k === 'pass' || beat.k === 'shot') { const e = beat.k === 'shot' ? k : k * (2 - k); ball.x = lerp(beat.from.x, beat.dest.x, e); ball.y = lerp(beat.from.y, beat.dest.y, e); ball.z = beat.lob ? Math.sin(k * Math.PI) * 4 : beat.k === 'shot' ? Math.sin(k * Math.PI) * 1.2 : 0; }
+        if (beat.k === 'pass' || beat.k === 'shot' || beat.k === 'carry') { const e = k; ball.x = lerp(beat.from.x, beat.dest.x, e); ball.y = lerp(beat.from.y, beat.dest.y, e); ball.z = beat.lob ? Math.sin(k * Math.PI) * 4 : beat.k === 'shot' ? Math.sin(k * Math.PI) * 1.2 : 0; }
         else if (beat.k === 'result') { if (beat.out === 'post' || beat.out === 'save') { ball.x = lerp(ball.x, ball.tx, dt * 3); ball.y = lerp(ball.y, ball.ty, dt * 3); } ball.z = 0; }
-        if (k >= 1) { if (beat.k === 'pass') { holder = beat.to; } startBeat(); }
+        if (k >= 1) { if (beat.k === 'pass' || beat.k === 'carry') { holder = beat.to; } startBeat(); }
       }
-      if (holder) { holder.tx += dir[att] * dt * 3; ball.x = lerp(ball.x, holder.x + dir[att] * .9, .4); ball.y = lerp(ball.y, holder.y, .4); }
+      if (holder && (!beat || (beat.k !== 'pass' && beat.k !== 'shot' && beat.k !== 'carry'))) { holder.tx += dir[att] * dt * 3; ball.x = lerp(ball.x, holder.x + dir[att] * .9, .4); ball.y = lerp(ball.y, holder.y, .4); }
       // takım şekilleri topa göre
       const bxAtt = dir[att] > 0 ? ball.x : W - ball.x, byAtt = dir[att] > 0 ? ball.y : H - ball.y;
       if (beat && beat.k !== 'result') ['h', 'a'].forEach(s => P[s].forEach(p => {
@@ -189,7 +198,7 @@ const Match2D = (() => {
       }));
       // en yakın savunmacı baskı yapar
       if (beat && beat.k !== 'result' && beat.k !== 'shot') { const def = att === 'h' ? 'a' : 'h'; const pr = P[def].filter(p => p.pos !== 'KL').sort((a, b) => Math.hypot(a.x - ball.x, a.y - ball.y) - Math.hypot(b.x - ball.x, b.y - ball.y))[0]; if (pr) { pr.tx = lerp(pr.tx, ball.x - dir[att] * 1.8, .5); pr.ty = lerp(pr.ty, ball.y, .5); } }
-      ['h', 'a'].forEach(s => P[s].forEach(p => { const sp = (p === (beat && beat.to) && beat.k === 'pass' ? Math.max(9, (p.rs || 0) / 2.2) : 6) * dt, dx = p.tx - p.x, dy = p.ty - p.y, d = Math.hypot(dx, dy); if (d > .01) { const m = Math.min(d, sp * 2.2); p.x += dx / d * m; p.y += dy / d * m; } }));
+      ['h', 'a'].forEach(s => P[s].forEach(p => { const sp = (p === (beat && beat.to) && beat.k === 'pass' ? Math.min(10,Math.max(6, (p.rs || 0))) : 6) * dt, dx = p.tx - p.x, dy = p.ty - p.y, d = Math.hypot(dx, dy); if (d > .01) { const m = Math.min(d, sp); p.x += dx / d * m; p.y += dy / d * m; } }));
       // üst üste binmeyi önle (top sahibine dokunma)
       const all = P.h.concat(P.a);
       for (let i = 0; i < all.length; i++) for (let j = i + 1; j < all.length; j++) { const A = all[i], B = all[j], dx = B.x - A.x, dy = B.y - A.y, d = Math.hypot(dx, dy) || .01; if (d < 3) { const m = (3 - d) / 2, ux = dx / d, uy = dy / d; if (A !== holder) { A.x -= ux * m; A.y -= uy * m; } if (B !== holder) { B.x += ux * m; B.y += uy * m; } } }
@@ -199,7 +208,20 @@ const Match2D = (() => {
 
     /* --------- çizim --------- */
     function draw() {
-      const s = SC; if (vert) ctx.setTransform(0, s, -s, 0, H * s, 0); else ctx.setTransform(s, 0, 0, s, 0, 0);
+      const s = SC;
+      ctx.setTransform(1,0,0,1,0,0);ctx.fillStyle='#151a20';ctx.fillRect(0,0,cv.width,cv.height);
+      // FM-inspired original stadium: tiered seats, aisles, advertising and a running apron.
+      for(let row=0;row<9;row++){
+        ctx.fillStyle=row%2?'#283b43':'#314850';
+        ctx.fillRect(row*3,row*3,cv.width-row*6,cv.height-row*6);
+      }
+      for(let x=12;x<cv.width-12;x+=12)for(let y=12;y<cv.height-12;y+=12){
+        if(x>STAND*s-5&&x<cv.width-STAND*s+5&&y>STAND*s-5&&y<cv.height-STAND*s+5)continue;
+        const n=(x*17+y*31)%7;ctx.fillStyle=n<2?'#f2c56d':n<4?'#90a5a7':'#6d8c96';ctx.fillRect(x,y,5,4);
+      }
+      ctx.fillStyle='#182b2b';ctx.fillRect(STAND*s-15,STAND*s-15,W*s+30,H*s+30);
+      ctx.strokeStyle='#d9ece3';ctx.lineWidth=5;ctx.strokeRect(STAND*s-7,STAND*s-7,W*s+14,H*s+14);
+      if (vert) ctx.setTransform(0, s, -s, 0, (H+STAND)*s, STAND*s); else ctx.setTransform(s, 0, 0, s, STAND*s, STAND*s);
       for (let i = 0; i < 12; i++) { ctx.fillStyle = i % 2 ? '#2f8f3a' : '#2a8434'; ctx.fillRect(i * W / 12, 0, W / 12, H); }
       ctx.strokeStyle = 'rgba(255,255,255,.85)'; ctx.lineWidth = .28;
       ctx.strokeRect(.5, .5, W - 1, H - 1); ctx.beginPath(); ctx.moveTo(W / 2, .5); ctx.lineTo(W / 2, H - .5); ctx.stroke();
@@ -219,7 +241,7 @@ const Match2D = (() => {
       // top sahibi / hedef oyuncunun adı
       const lab = holder || (beat && beat.to);
       if (lab) { const t = surname(lab.name), [X, Y] = proj(lab.x, lab.y); ctx.font = `600 ${1.8 * SC}px system-ui,sans-serif`; const w = ctx.measureText(t).width + 14; ctx.fillStyle = 'rgba(0,0,0,.65)'; ctx.fillRect(X - w / 2, Y - 46, w, 24); ctx.fillStyle = '#fff'; ctx.fillText(t, X, Y - 34); }
-      if (vert) ctx.setTransform(0, s, -s, 0, H * s, 0); else ctx.setTransform(s, 0, 0, s, 0, 0);
+      if (vert) ctx.setTransform(0, s, -s, 0, (H+STAND)*s, STAND*s); else ctx.setTransform(s, 0, 0, s, STAND*s, STAND*s);
       // top
       ctx.beginPath(); ctx.arc(ball.x + .3 + ball.z * .3, ball.y + .4 + ball.z * .3, .6, 0, 7); ctx.fillStyle = 'rgba(0,0,0,.3)'; ctx.fill();
       ctx.beginPath(); ctx.arc(ball.x, ball.y - ball.z * .5, .7 + ball.z * .06, 0, 7); ctx.fillStyle = '#fff'; ctx.fill(); ctx.lineWidth = .15; ctx.strokeStyle = '#111'; ctx.stroke();
