@@ -207,3 +207,11 @@ test.describe('Draft Turkish nationality and chemistry',()=>{
   expect(result).toEqual({efecan:'TR',berkan:'TR',levent:'TR',foreign:'NG'});
  });
 });
+
+test.describe('2D replay fixes',()=>{
+ test('2D engine loads and stadium viewport supports outer stands',async({page})=>{
+  await page.goto(BASE+'#draft');
+  expect(await page.evaluate(()=>typeof Match2D?.show==='function')).toBeTruthy();
+  expect(await page.evaluate(()=>[...document.scripts].some(s=>s.src.includes('match2d.js?v=56')))).toBeTruthy();
+ });
+});
