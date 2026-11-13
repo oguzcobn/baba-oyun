@@ -1,0 +1,45 @@
+/* BABA. Draft — 2D maç özeti (FM2006 tarzı) */
+body.m2d-open{overflow:hidden}
+.m2d-ov{position:fixed;inset:0;z-index:9500;background:rgba(8,12,10,.82);backdrop-filter:blur(6px);display:grid;place-items:center;padding:12px;animation:m2dIn .2s}
+@keyframes m2dIn{from{opacity:0}}
+.m2d{width:min(980px,100%);max-height:100%;display:flex;flex-direction:column;gap:8px;color:#fff;font-family:inherit}
+.m2d-top{display:grid;grid-template-columns:1fr auto 1fr auto;align-items:center;gap:12px;background:#111a14;border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:10px 14px;font-weight:700}
+.m2d-tm{display:flex;align-items:center;gap:8px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:clamp(13px,2.4vw,17px)}
+.m2d-tm.r{justify-content:flex-end}
+.m2d-tm i{width:14px;height:14px;border-radius:50%;flex:none;box-shadow:0 0 0 2px rgba(255,255,255,.7)}
+.m2d-sc{font-size:clamp(22px,4vw,32px);font-variant-numeric:tabular-nums;letter-spacing:-.02em;padding:0 6px}
+.m2d-min{font-style:normal;background:#ff4d00;color:#fff;border-radius:8px;padding:3px 9px;font-size:14px;font-variant-numeric:tabular-nums;min-width:44px;text-align:center}
+.m2d-pitch{position:relative;border-radius:14px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.5);border:3px solid #1e5a27;background:#2a8434}
+.m2d-pitch canvas{display:block;width:100%;height:auto;aspect-ratio:105/68}
+.m2d-flash{position:absolute;inset:0;display:grid;place-content:center;text-align:center;pointer-events:none;background:radial-gradient(circle,rgba(0,0,0,.35),transparent 70%);animation:m2dPop .5s cubic-bezier(.2,1.4,.4,1)}
+.m2d-flash[hidden]{display:none}
+.m2d-flash b{font-size:clamp(40px,9vw,88px);font-weight:900;letter-spacing:-.04em;color:#fff;text-shadow:0 4px 0 var(--c,#ff4d00),0 10px 30px rgba(0,0,0,.6)}
+.m2d-flash span{font-size:clamp(16px,3vw,24px);font-weight:700;text-shadow:0 2px 8px rgba(0,0,0,.7)}
+@keyframes m2dPop{from{transform:scale(.6);opacity:0}}
+.m2d-com{display:flex;gap:10px;align-items:flex-start;background:#f4f1e8;color:#1b1b1b;border-radius:12px;padding:10px 14px;min-height:46px;font-size:15px;border-left:5px solid #ff4d00}
+.m2d-cm{font-weight:800;font-variant-numeric:tabular-nums;color:#ff4d00;min-width:34px}
+.m2d-com p{margin:0;line-height:1.4}
+.m2d-com p.goal{font-weight:800;color:#0b7a33}
+.m2d-com p.miss{color:#7a4b00}
+.m2d-com p.end{font-weight:700}
+.m2d-bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.m2d-cnt{font-size:13px;opacity:.75;margin-right:auto;font-variant-numeric:tabular-nums}
+.m2d-bar button{font:inherit;font-weight:700;font-size:14px;border-radius:999px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.08);color:#fff;padding:9px 16px;cursor:pointer}
+.m2d-bar button:hover{background:rgba(255,255,255,.18)}
+.m2d-bar button.pr{background:#ff4d00;border-color:transparent}
+.m2d-bar button[hidden]{display:none}
+.m2d.vert{height:100%;justify-content:center}
+.m2d.vert .m2d-pitch{align-self:center;height:calc(100dvh - 260px);max-height:calc(100vw * 105 / 68);aspect-ratio:68/105}
+.m2d.vert .m2d-pitch canvas{width:100%;height:100%;aspect-ratio:68/105}
+@media (max-width:560px){.m2d-ov{padding:6px}.m2d-top{grid-template-columns:1fr auto 1fr;padding:8px 10px}.m2d-min{grid-column:1/-1;justify-self:center}.m2d-com{font-size:14px}.m2d-bar button{padding:8px 12px;font-size:13px}}
+/* kariyer modu kadro masası */
+.dr-squad{display:flex;flex-direction:column;gap:6px}
+.dr-squad-row{display:grid;grid-template-columns:38px 1fr auto;gap:8px;align-items:center;border:1px solid var(--line,rgba(0,0,0,.12));border-radius:12px;padding:7px 10px;background:var(--card,#fff);color:inherit;font:inherit;text-align:left;cursor:pointer}
+.dr-squad-row.sel{outline:2px solid #ff4d00;outline-offset:1px}
+.dr-squad-row.ok{box-shadow:0 0 0 2px rgba(11,122,51,.45)}
+.dr-squad-row.inj{opacity:.6}
+.dr-squad-row .pz{font-size:11px;font-weight:800;border-radius:6px;padding:3px 0;text-align:center;background:rgba(255,77,0,.12);color:#c23a00}
+.dr-squad-row b{font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dr-squad-row em{font-style:normal;font-weight:800;font-variant-numeric:tabular-nums}
+.dr-squad h4{margin:10px 0 2px;font-size:12px;letter-spacing:.12em;text-transform:uppercase;opacity:.65}
+.dr-hl-toggle{display:flex;gap:8px;align-items:center;font-size:14px;font-weight:600;margin:6px 0}
