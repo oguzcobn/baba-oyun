@@ -22,7 +22,7 @@ const Match2D = (() => {
 
   /* --------- klipleri oluştur: goller + kaçan / kurtarılan büyük fırsatlar --------- */
   function makeClips(o) {
-    const clips = o.ev.map(e => ({ side: e.t, min: e.min, sc: e.sc, as: e.as, out: 'goal' })), ch = [];
+    const clips = o.ev.map(e => ({ side: e.t, min: e.min, sc: e.sc, as: e.as, trail:e.trail, out: 'goal' })), ch = [];
     ['h', 'a'].forEach(side => {
       const team = o[side === 'h' ? 'home' : 'away'], n = Math.min(3, poisson((side === 'h' ? o.lh : o.la) * 1.15 + .35));
       for (let i = 0; i < n; i++) {
@@ -47,7 +47,8 @@ const Match2D = (() => {
     const matchStats={h:{shots:0,on:0,xg:0},a:{shots:0,on:0,xg:0}};
     const shotQuality=c=>{const base=c.out==='goal'?.27:c.out==='save'?.19:c.out==='post'?.13:c.out==='block'?.09:.07;return Math.min(.65,base+(c.as?.035:0));};
     clips.forEach(c=>{const st=matchStats[c.side];st.shots++;if(c.out==='goal'||c.out==='save')st.on++;st.xg+=shotQuality(c)});
-    const pct=clamp(Math.round(50+((o.lh||1)-(o.la||1))*7),30,70);
+    if(o.physics){['h','a'].forEach((side,i)=>{matchStats[side]={shots:o.physics.shots[i],on:o.physics.on[i],xg:o.physics.xg[i]};});}
+    const pct=o.physics?o.physics.possession[0]:clamp(Math.round(50+((o.lh||1)-(o.la||1))*7),30,70);
     let hc = o.home.c1 || '#c00', ac = o.away.c1 || '#036';
     if (cdist(hc, ac) < 120) ac = (o.away.c2 && cdist(hc, o.away.c2) > 120) ? o.away.c2 : (lum(hc) > 140 ? '#1d1d1d' : '#f4f4f4');
     const ov = document.createElement('div'); ov.className = 'm2d-ov';
@@ -91,6 +92,14 @@ const Match2D = (() => {
         { p: assister || mid, at: wide ? { x: 84 + rnd(12), y: Math.random() < .5 ? 6 + rnd(8) : 54 + rnd(8) } : { x: 74 + rnd(8), y: 18 + rnd(32) } },
         { p: shooter, at: { x: 86 + rnd(10), y: 22 + rnd(24) } }
       ].filter((x, i, a) => i === 0 || x.p !== a[i - 1].p);
+      // Reuse actual possession pass participants and target locations for simulated goals.
+      if(Array.isArray(c.trail)&&c.trail.some(x=>x.type==='pass')){
+        const passes=c.trail.filter(x=>x.type==='pass').slice(-3);
+        const actual=passes.map(x=>({p:find(att,x.to),at:{x:dir[att]===1?x.tx:105-x.tx,y:dir[att]===1?x.ty:68-x.ty}}));
+        const shot=c.trail.findLast?c.trail.findLast(x=>x.type==='shot'):c.trail.filter(x=>x.type==='shot').pop();
+        if(shot)actual.push({p:shooter,at:{x:dir[att]===1?shot.x:105-shot.x,y:dir[att]===1?shot.y:68-shot.y}});
+        if(actual.length>1){pts.splice(0,pts.length,{p:find(att,passes[0].player),at:{x:dir[att]===1?passes[0].x:105-passes[0].x,y:dir[att]===1?passes[0].y:68-passes[0].y}},...actual.filter((v,i,a)=>i===0||v.p!==a[i-1].p));}
+      }
       // herkesi formasyonuna yerleştir, topu ilk oyuncuya ver
       ['h', 'a'].forEach(s => P[s].forEach(p => { const f = toField(s, shapeFor(p, s, pts[0].at.x, pts[0].at.y)); p.x = p.tx = f.x; p.y = p.ty = f.y; }));
       const f0 = toField(att, pts[0].at); Object.assign(pts[0].p, { x: f0.x, y: f0.y, tx: f0.x, ty: f0.y });
