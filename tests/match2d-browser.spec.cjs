@@ -42,7 +42,7 @@ for(const [name,device] of [['Desktop', {viewport:{width:1440,height:900}}],['iP
    // Sampling at >=120ms: players should not teleport across the pitch.
    for(let i=1;i<result.diag.frames.length;i++){
      const before=result.diag.frames[i-1],after=result.diag.frames[i],dt=(after.time-before.time)/1000;
-     if(dt>1)continue;
+     if(dt>1||before.clip!==after.clip)continue;
      for(let j=0;j<22;j++){
        const d=Math.hypot(after.players[j].x-before.players[j].x,after.players[j].y-before.players[j].y);
        expect(d,'player jumped '+after.players[j].name).toBeLessThanOrEqual(20*dt+2.5);

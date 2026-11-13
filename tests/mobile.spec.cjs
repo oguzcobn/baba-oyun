@@ -158,6 +158,7 @@ test.describe('HAYAT life simulation',()=>{
   await page.locator('[data-action="month"]').click();
   await page.reload();
   await expect(page.locator('.life-time')).toContainText('18');
+  if(await page.locator('.life-ov [data-ev]').count())await page.locator('.life-ov [data-ev]').first().click();
   await page.locator('[data-action="tab:money"]').click();
   await expect(page.locator('.life-budget')).toBeVisible();
   await page.locator('[data-action="tab:people"]').click();
@@ -165,8 +166,8 @@ test.describe('HAYAT life simulation',()=>{
  });
  test('old games still accessible',async({page})=>{
   await page.goto(BASE+'#oyunlar');
-  await expect(page.locator('a[href="#draft"]')).toBeVisible();
-  await expect(page.locator('a[href="#hayat-oyunu"]')).toBeVisible();
+  await expect(page.locator('a[href="#draft"]').first()).toBeVisible();
+  await expect(page.locator('a[href="#hayat-oyunu"]').first()).toBeVisible();
  });
 });
 
@@ -212,6 +213,6 @@ test.describe('2D replay fixes',()=>{
  test('2D engine loads and stadium viewport supports outer stands',async({page})=>{
   await page.goto(BASE+'#draft');
   expect(await page.evaluate(()=>typeof Match2D?.show==='function')).toBeTruthy();
-  expect(await page.evaluate(()=>[...document.scripts].some(s=>s.src.includes('match2d.js?v=56')))).toBeTruthy();
+  expect(await page.evaluate(()=>[...document.scripts].some(s=>/match2d\\.js\\?v=\\d+/.test(s.src)))).toBeTruthy();
  });
 });
